@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacidad y Condiciones — Coordinación UNAMEL | ND Serwis</title>
+  <meta name="description" content="Política de Privacidad, Términos de Servicio y Solicitud de Eliminación de Datos de la aplicación móvil Coordinación UNAMEL de ND Serwis Sp. z o.o.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-light: #3b82f6;
+      --primary-dark: #172554;
+      --accent: #d97706;
+      --text: #1f2937;
+      --text-muted: #4b5563;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --badge-bg: #eff6ff;
+      --badge-text: #1d4ed8;
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      padding: 0;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+      color: white;
+      padding: 2.5rem 1.5rem 2rem;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .header-content {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .app-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 2.1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      opacity: 0.9;
+      max-width: 650px;
+      margin: 0 auto 1.25rem;
+    }
+
+    .meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1.2rem;
+      font-size: 0.85rem;
+      opacity: 0.85;
+    }
+
+    .meta-bar span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Navegación y Selector de Idioma */
+    .top-controls {
+      max-width: 900px;
+      margin: -1.25rem auto 1.5rem;
+      padding: 0 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .nav-tabs {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .nav-btn {
+      background: none;
+      border: none;
+      padding: 8px 18px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn.active {
+      background: var(--primary-light);
+      color: white;
+      box-shadow: 0 2px 6px rgba(59, 130, 246, 0.35);
+    }
+
+    .lang-switcher {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 3px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .lang-btn {
+      background: none;
+      border: none;
+      padding: 6px 12px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .lang-btn.active {
+      background: var(--primary-dark);
+      color: white;
+    }
+
+    /* Contenido Principal */
+    main {
+      max-width: 900px;
+      margin: 0 auto 3rem;
+      padding: 0 1rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2.2rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+      margin-bottom: 2rem;
+    }
+
+    h2 {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin-top: 1.8rem;
+      margin-bottom: 0.8rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 2px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h2:first-of-type {
+      margin-top: 0;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #334155;
+      margin-top: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: #374151;
+    }
+
+    ul, ol {
+      margin-bottom: 1.2rem;
+      padding-left: 1.5rem;
+      color: #374151;
+    }
+
+    li {
+      margin-bottom: 0.45rem;
+    }
+
+    strong {
+      color: #111827;
+    }
+
+    /* Cajas destacadas */
+    .callout {
+      background-color: #f0fdf4;
+      border-left: 4px solid #16a34a;
+      padding: 1rem 1.25rem;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 1.2rem 0;
+      font-size: 0.95rem;
+      color: #166534;
+    }
+
+    .callout.alert {
+      background-color: #fffbeb;
+      border-left-color: #d97706;
+      color: #92400e;
+    }
+
+    .callout.info {
+      background-color: #eff6ff;
+      border-left-color: #2563eb;
+      color: #1e40af;
+    }
+
+    /* Tablas de Seguridad de Datos */
+    .table-container {
+      overflow-x: auto;
+      margin: 1.2rem 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f8fafc;
+      color: #1e293b;
+      font-weight: 600;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 11px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #334155;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .tag-yes {
+      display: inline-block;
+      padding: 2px 8px;
+      background: #dcfce7;
+      color: #15803d;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.78rem;
+    }
+
+    .tag-no {
+      display: inline-block;
+      padding: 2px 8px;
+      background: #fee2e2;
+      color: #b91c1c;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.78rem;
+    }
+
+    /* Contact box */
+    .contact-card {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 1.2rem;
+      margin-top: 1rem;
+    }
+
+    .contact-card a {
+      color: var(--primary-light);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .contact-card a:hover {
+      text-decoration: underline;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: #64748b;
+      font-size: 0.88rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 1.65rem; }
+      .card { padding: 1.5rem 1.1rem; }
+      .top-controls { justify-content: center; }
+      .nav-tabs { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-content">
+      <div class="app-badge">
+        <span>🔒 Portal Oficial de Transparencia & Cumplimiento</span>
+      </div>
+      <h1 id="header-title">Coordinación UNAMEL</h1>
+      <p class="subtitle" id="header-subtitle">Política de Privacidad, Términos del Servicio y Solicitud de Eliminación de Datos para Google Play Console.</p>
+      <div class="meta-bar">
+        <span>🏢 <strong>Desarrollador:</strong> ND Serwis Sp. z o.o.</span>
+        <span>📦 <strong>ID de Paquete:</strong> com.ndserwis.unamel.coordinacion</span>
+        <span>📅 <strong>Vigencia:</strong> Septiembre 2026</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTROLES (PESTAÑAS E IDIOMAS) -->
+  <div class="top-controls">
+    <div class="nav-tabs" role="tablist">
+      <button class="nav-btn active" onclick="switchTab('privacy')" id="tab-privacy-btn">Privacidad</button>
+      <button class="nav-btn" onclick="switchTab('terms')" id="tab-terms-btn">Términos y Condiciones</button>
+      <button class="nav-btn" onclick="switchTab('deletion')" id="tab-deletion-btn">Eliminar Datos</button>
+    </div>
+
+    <div class="lang-switcher" aria-label="Cambiar idioma">
+      <button class="lang-btn active" onclick="switchLang('es')">🇪🇸 Español</button>
+      <button class="lang-btn" onclick="switchLang('en')">🇬🇧 English</button>
+      <button class="lang-btn" onclick="switchLang('pl')">🇵🇱 Polski</button>
+    </div>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main>
+
+    <!-- ==================== SECCIÓN: POLÍTICA DE PRIVACIDAD ==================== -->
+    <div id="section-privacy" class="card tab-content">
+
+      <!-- ESPAÑOL -->
+      <div class="lang-content lang-es">
+        <h2>1. Introducción y Ámbito de Aplicación</h2>
+        <p>La presente <strong>Política de Privacidad</strong> describe el tratamiento de datos personales realizado por la aplicación móvil <strong>Coordinación UNAMEL</strong> (paquete <code>com.ndserwis.unamel.coordinacion</code>), desarrollada y gestionada por <strong>ND Serwis Sp. z o.o.</strong> para uso exclusivo de trabajadores, colaboradores y personal de coordinación que operan en la planta fabril de <strong>UNAMEL</strong>.</p>
+        <p>El propósito fundamental de la aplicación es brindar a cada trabajador un medio seguro, directo y privado para consultar su disponibilidad, sus turnos de trabajo asignados, su cómputo horario diario y mensual, así como permitir la descarga directa de su certificado mensual de horas en formato PDF.</p>
+
+        <div class="callout info">
+          <strong>Cumplimiento del RGPD / RODO:</strong> Este servicio cumple estrictamente con el Reglamento General de Protección de Datos de la Unión Europea (RGPD 2016/679) y las leyes polacas aplicables de protección de datos personales.
+        </div>
+
+        <h2>2. Datos Personales Procesados</h2>
+        <p>Para la correcta prestación del servicio de coordinación laboral, la aplicación procesa exclusivamente las siguientes categorías de información:</p>
+        <ul>
+          <li><strong>Identificación Laboral:</strong> Nombre y apellidos del trabajador, número de carnet/tarjeta de acceso y número de teléfono de contacto operativo.</li>
+          <li><strong>Credenciales de Acceso:</strong> Número de identificación (PESEL) y clave PIN (últimos 4 dígitos del PESEL). <em>El PESEL se procesa con enmascaramiento y nunca se divulga de forma pública ni a terceros ajenos a la relación laboral.</em></li>
+          <li><strong>Datos de Jornada y Turnos:</strong> Turno asignado (Turno 1: 06:00-14:00, Turno 2: 14:00-22:00, Turno 3: 22:00-06:00), horas de fichaje (entrada y salida registradas), pausas/descansos reglamentarios y cálculo de horas netas devengadas.</li>
+          <li><strong>Asignaciones Físicas en Planta:</strong> Número de casillero (szafka) y número de tarjeta de control de acceso.</li>
+          <li><strong>Programación Futura:</strong> Horarios previstos para la semana siguiente asignados por el equipo de coordinación.</li>
+        </ul>
+
+        <h2>3. Declaración de Seguridad de los Datos (Google Play Data Safety)</h2>
+        <p>En conformidad con los requisitos de transparencia de <strong>Google Play Console</strong>, se especifica el tratamiento de los datos:</p>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Dato / Categoría</th>
+                <th>¿Recopilado?</th>
+                <th>¿Compartido con terceros?</th>
+                <th>Finalidad Principal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Nombre y Apellidos</strong></td>
+                <td><span class="tag-yes">Sí</span></td>
+                <td><span class="tag-no">No</span></td>
+                <td>Gestión de cuenta y coordinación operativa</td>
+              </tr>
+              <tr>
+                <td><strong>Número Telefónico</strong></td>
+                <td><span class="tag-yes">Sí</span></td>
+                <td><span class="tag-no">No</span></td>
+                <td>Contacto operativo y asistencia laboral</td>
+              </tr>
+              <tr>
+                <td><strong>Identificador de Empleado</strong></td>
+                <td><span class="tag-yes">Sí</span></td>
+                <td><span class="tag-no">No</span></td>
+                <td>Asignación de turnos y emisión de certificados</td>
+              </tr>
+              <tr>
+                <td><strong>Horas de trabajo / Fichajes</strong></td>
+                <td><span class="tag-yes">Sí</span></td>
+                <td><span class="tag-no">No</span></td>
+                <td>Cómputo de horas para nómina y liquidación</td>
+              </tr>
+              <tr>
+                <td><strong>Notificaciones Push (FCM)</strong></td>
+                <td><span class="tag-yes">Sí</span></td>
+                <td><span class="tag-no">No</span></td>
+                <td>Aviso de publicación de turnos o cambios</td>
+              </tr>
+              <tr>
+                <td><strong>Ubicación GPS en tiempo real</strong></td>
+                <td><span class="tag-no">No</span></td>
+                <td><span class="tag-no">No</span></td>
+                <td>No se recopila ni se rastrea ubicación</td>
+              </tr>
+              <tr>
+                <td><strong>Información Financiera / Pagos</strong></td>
+                <td><span class="tag-no">No</span></td>
+                <td><span class="tag-no">No</span></td>
+                <td>La app no procesa cobros ni datos bancarios</td>
+              </tr>
+              <tr>
+                <td><strong>Cámara, Micrófono, Fotos</strong></td>
+                <td><span class="tag-no">No</span></td>
+                <td><span class="tag-no">No</span></td>
+                <td>Sin acceso a sensores ni multimedia privada</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>4. Cifrado en Tránsito y Almacenamiento Seguro</h2>
+        <p>Todos los datos transmitidos entre la aplicación móvil y los servidores en la nube viajan cifrados mediante protocolos criptográficos modernos estándar de la industria (<strong>HTTPS con TLS 1.3 / TLS 1.2</strong>).</p>
+        <p>En el dispositivo móvil, la información de consulta rápida se conserva en el almacenamiento privado seguro de la aplicación (caché fuera de línea cifrada/protegida), evitando que otras aplicaciones instaladas en el dispositivo puedan interceptarla.</p>
+
+        <h2>5. Servicios de Terceros y Tecnologías Utilizadas</h2>
+        <p>Para la infraestructura y entrega de información se emplean servicios verificados de Google:</p>
+        <ul>
+          <li><strong>Firebase Authentication & Firestore:</strong> Gestión de acceso seguro y sincronización de graficos de turnos y horas.</li>
+          <li><strong>Firebase Cloud Messaging (FCM):</strong> Envío de avisos y alertas operativas directamente al dispositivo del trabajador.</li>
+          <li><strong>Google Play Services:</strong> Infraestructura base de distribución, actualizaciones y diagnóstico de estabilidad.</li>
+        </ul>
+        <p><em>No se integran redes de publicidad (Ads), herramientas de seguimiento comercial (trackers) ni intermediarios de venta de datos con fines lucrativos.</em></p>
+
+        <h2>6. Generación de Reportes PDF y Permisos del Dispositivo</h2>
+        <p>La aplicación incluye una utilidad para generar en formato PDF el certificado mensual de horas trabajadas. El archivo resultante se guarda de forma autónoma en la carpeta de descargas del usuario (<code>Downloads</code>) utilizando las APIs estándar de almacenamiento con permisos de ámbito de Android (Scoped Storage). La aplicación no accede a fotografías, archivos privados ni otras carpetas del dispositivo móvil.</p>
+
+        <h2>7. Derechos del Usuario (ARCO / RGPD)</h2>
+        <p>De acuerdo con la normativa europea, todo usuario tiene derecho a:</p>
+        <ol>
+          <li><strong>Acceder</strong> a sus datos personales almacenados en cualquier momento mediante la app.</li>
+          <li><strong>Rectificar</strong> cualquier error en el registro de horas o datos operativos notificando a su coordinador asignado.</li>
+          <li><strong>Solicitar la Supresión</strong> (derecho al olvido) o bloqueo de su cuenta de usuario una vez finalizada su relación de servicio con ND Serwis.</li>
+        </ol>
+
+        <div class="contact-card">
+          <h3>📬 Canal Oficial de Privacidad y Delegado de Protección de Datos</h3>
+          <p>Para cualquier consulta o ejercicio de derechos ARCO/RGPD, comuníquese con:</p>
+          <p><strong>ND Serwis Sp. z o.o. — Área de Coordinación UNAMEL</strong><br>
+          Correo electrónico: <a href="mailto:privacy@ndserwis.pl">privacy@ndserwis.pl</a> / <a href="mailto:soporte.unamel@cma.com">soporte.unamel@cma.com</a></p>
+        </div>
+      </div>
+
+      <!-- ENGLISH -->
+      <div class="lang-content lang-en hidden">
+        <h2>1. Overview and Scope</h2>
+        <p>This <strong>Privacy Policy</strong> details how the <strong>Coordinación UNAMEL</strong> mobile application (package name <code>com.ndserwis.unamel.coordinacion</code>), developed and operated by <strong>ND Serwis Sp. z o.o.</strong>, collects, manages, and protects workplace data for employees and operational coordinators working at the <strong>UNAMEL</strong> manufacturing facility.</p>
+        <p>The primary purpose of the application is to offer employees a private, direct, and reliable channel to view their assigned shifts, track monthly clock-in and clock-out hours, and autonomously download their monthly work certificate in PDF format.</p>
+
+        <div class="callout info">
+          <strong>GDPR Compliance:</strong> This application complies with the General Data Protection Regulation (EU GDPR 2016/679) and applicable Polish personal data protection regulations.
+        </div>
+
+        <h2>2. Processed Information</h2>
+        <ul>
+          <li><strong>Worker Identification:</strong> Full name, employee badge ID, assigned access card ID, and phone number.</li>
+          <li><strong>Access Credentials:</strong> National ID (PESEL) and 4-digit PIN. <em>PESEL numbers are masked and never exposed to unauthorized third parties.</em></li>
+          <li><strong>Work Hours & Shifts:</strong> Assigned shift (Shift 1: 06:00-14:00, Shift 2: 14:00-22:00, Shift 3: 22:00-06:00), daily clock-in/out timestamps, mandatory breaks, and calculated net hours.</li>
+          <li><strong>Facility Allocations:</strong> Assigned locker number (szafka) and facility entry card.</li>
+          <li><strong>Upcoming Schedules:</strong> Advance shift planning for the subsequent work week.</li>
+        </ul>
+
+        <h2>3. Google Play Data Safety Disclosure</h2>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Data Category</th>
+                <th>Collected?</th>
+                <th>Shared with 3rd Parties?</th>
+                <th>Primary Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Name</strong></td>
+                <td><span class="tag-yes">Yes</span></td>
+                <td><span class="tag-no">No</span></td>
+                <td>Account management & coordination</td>
+              </tr>
+              <tr>
+                <td><strong>Phone Number</strong></td>
+                <td><span class="tag-yes">Yes</span></td>
+                <td><span class="tag-no">No</span></td>
+                <td>Operational communications</td>
+              </tr>
+              <tr>
+                <td><strong>User ID / Badge</strong></td>
+                <td><span class="tag-yes">Yes</span></td>
+                <td><span class="tag-no">No</span></td>
+                <td>Shift assignment & certificate generation</td>
+              </tr>
+              <tr>
+                <td><strong>Work Hours / Timestamps</strong></td>
+                <td><span class="tag-yes">Yes</span></td>
+                <td><span class="tag-no">No</span></td>
+                <td>Payroll calculation & auditing</td>
+              </tr>
+              <tr>
+                <td><strong>Push Notifications (FCM)</strong></td>
+                <td><span class="tag-yes">Yes</span></td>
+                <td><span class="tag-no">No</span></td>
+                <td>Shift adjustments & announcements</td>
+              </tr>
+              <tr>
+                <td><strong>Precise GPS Location</strong></td>
+                <td><span class="tag-no">No</span></td>
+                <td><span class="tag-no">No</span></td>
+                <td>No location tracking is performed</td>
+              </tr>
+              <tr>
+                <td><strong>Financial / Payment Data</strong></td>
+                <td><span class="tag-no">No</span></td>
+                <td><span class="tag-no">No</span></td>
+                <td>No financial transactions in app</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>4. Data Encryption & Storage</h2>
+        <p>All data transmitted between the client app and servers is encrypted in transit using industry-standard <strong>HTTPS / TLS 1.3/1.2</strong>. Data cached on the device for offline functionality is held within sandboxed private application storage, inaccessible to external applications.</p>
+
+        <h2>5. Third-Party Infrastructure</h2>
+        <p>We utilize trusted enterprise services provided by Google:</p>
+        <ul>
+          <li><strong>Firebase Authentication & Firestore:</strong> Secure access token management and database synchronization.</li>
+          <li><strong>Firebase Cloud Messaging (FCM):</strong> Real-time delivery of schedule updates.</li>
+        </ul>
+        <p><em>No third-party marketing SDKs, ad networks, or data brokers are integrated.</em></p>
+
+        <div class="contact-card">
+          <h3>📬 Privacy Inquiries & Data Rights</h3>
+          <p>Contact ND Serwis Coordination at: <a href="mailto:privacy@ndserwis.pl">privacy@ndserwis.pl</a> / <a href="mailto:soporte.unamel@cma.com">soporte.unamel@cma.com</a></p>
+        </div>
+      </div>
+
+      <!-- POLISH -->
+      <div class="lang-content lang-pl hidden">
+        <h2>1. Informacje ogólne i zakres</h2>
+        <p>Niniejsza <strong>Polityka Prywatności</strong> określa zasady przetwarzania danych osobowych przez aplikację mobilną <strong>Koordynacja UNAMEL</strong> (<code>com.ndserwis.unamel.coordinacion</code>), zarządzaną przez <strong>ND Serwis Sp. z o.o.</strong> dla pracowników fabryki <strong>UNAMEL</strong>.</p>
+        <p>Aplikacja służy do wglądu w grafik pracy, ewidencję godzin oraz samodzielnego pobierania miesięcznych raportów godzin w formacie PDF.</p>
+
+        <div class="callout info">
+          <strong>Zgodność z RODO:</strong> Aplikacja przetwarza dane zgodnie z Ogólnym Rozporządzeniem o Ochronie Danych (RODO / GDPR 2016/679).
+        </div>
+
+        <h2>2. Przetwarzane dane</h2>
+        <ul>
+          <li><strong>Identyfikacja pracownika:</strong> Imię i nazwisko, numer identyfikacyjny karty, telefon kontaktowy.</li>
+          <li><strong>Logowanie:</strong> Numer PESEL oraz 4-cyfrowy kod PIN (ostatnie cyfry PESEL). PESEL jest maskowany i bezpiecznie chroniony.</li>
+          <li><strong>Czas pracy:</strong> Zmiana (1, 2, 3), godziny wejścia i wyjścia, przerwy oraz suma godzin netto.</li>
+          <li><strong>Infrastruktura:</strong> Numer szafki pracowniczej oraz numer karty dostępowej.</li>
+        </ul>
+
+        <h2>3. Bezpieczeństwo danych (Google Play Data Safety)</h2>
+        <p>Wszystkie dane przesyłane są w bezpiecznym, szyfrowanym kanale <strong>HTTPS / TLS</strong>. Dane nie są udostępniane podmiotom trzecim w celach marketingowych.</p>
+
+        <div class="contact-card">
+          <h3>📬 Kontakt w sprawach ochrony danych</h3>
+          <p>Adres e-mail: <a href="mailto:privacy@ndserwis.pl">privacy@ndserwis.pl</a></p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ==================== SECCIÓN: TÉRMINOS Y CONDICIONES ==================== -->
+    <div id="section-terms" class="card tab-content hidden">
+
+      <!-- ESPAÑOL -->
+      <div class="lang-content lang-es">
+        <h2>Términos y Condiciones de Uso</h2>
+        <p><strong>Última actualización:</strong> Septiembre 2026</p>
+
+        <h3>1. Aceptación de las Condiciones</h3>
+        <p>Al descargar, instalar o utilizar la aplicación <strong>Coordinación UNAMEL</strong>, usted acepta cumplir con estos Términos y Condiciones. El acceso está restringido exclusivamente a personal activo contratado o coordinado por <strong>ND Serwis Sp. z o.o.</strong> con funciones asignadas en la planta <strong>UNAMEL</strong>.</p>
+
+        <h3>2. Credenciales y Responsabilidad de Acceso</h3>
+        <p>El usuario es responsable de salvaguardar su clave PIN de acceso personal. Cualquier consulta o descarga de certificados realizada con sus credenciales se presumirá efectuada por el titular. En caso de pérdida de dispositivo o sospecha de acceso no autorizado, debe informar inmediatamente a su coordinador de turno.</p>
+
+        <h3>3. Uso Autorizado y Restricciones</h3>
+        <p>El usuario se compromete a:</p>
+        <ul>
+          <li>Utilizar la aplicación únicamente con fines informativos sobre su relación laboral individual.</li>
+          <li>No intentar realizar ingeniería inversa, descompilar ni alterar el código fuente de la aplicación.</li>
+          <li>No utilizar sistemas automatizados para extraer datos de la plataforma.</li>
+        </ul>
+
+        <h3>4. Validez de los Certificados en PDF</h3>
+        <p>Los reportes mensuales en PDF generados a través de la aplicación representan el cómputo consolidado de horas registrado en los sistemas de coordinación de ND Serwis y UNAMEL. Cualquier discrepancia u omisión en los fichajes debe conciliarse directamente con la administración de ND Serwis antes de las fechas límite de cierre contable.</p>
+
+        <h3>5. Modificaciones y Disponibilidad del Servicio</h3>
+        <p>ND Serwis Sp. z o.o. se reserva el derecho de actualizar la aplicación para implementar mejoras de rendimiento, parches de seguridad o adaptación a nuevos requisitos legales y operativos.</p>
+      </div>
+
+      <!-- ENGLISH -->
+      <div class="lang-content lang-en hidden">
+        <h2>Terms and Conditions of Service</h2>
+        <p><strong>Last Updated:</strong> September 2026</p>
+
+        <h3>1. Acceptance of Terms</h3>
+        <p>By downloading or using the <strong>Coordinación UNAMEL</strong> application, you agree to these Terms. Access is granted solely to personnel affiliated with <strong>ND Serwis Sp. z o.o.</strong> working at the <strong>UNAMEL</strong> factory.</p>
+
+        <h3>2. Credential Security</h3>
+        <p>Users are responsible for keeping their PIN confidential. Any action performed through your credentials is deemed authorized by you. If you suspect unauthorized access, contact your coordinator immediately.</p>
+
+        <h3>3. Acceptable Use</h3>
+        <p>Users must not decompile, reverse-engineer, or attempt unauthorized extraction of operational data. The tool is strictly designed for workplace schedule consulting and hours reporting.</p>
+      </div>
+
+      <!-- POLISH -->
+      <div class="lang-content lang-pl hidden">
+        <h2>Regulamin korzystania z aplikacji</h2>
+        <p><strong>Aktualizacja:</strong> Wrzesień 2026</p>
+        <p>Dostęp do aplikacji posiadają wyłącznie upoważnieni pracownicy i współpracownicy firmy <strong>ND Serwis Sp. z o.o.</strong> realizujący zadania w fabryce <strong>UNAMEL</strong>. Zabronione jest udostępnianie danych logowania osobom trzecim.</p>
+      </div>
+
+    </div>
+
+    <!-- ==================== SECCIÓN: SOLICITUD DE ELIMINACIÓN DE DATOS ==================== -->
+    <div id="section-deletion" class="card tab-content hidden">
+
+      <!-- ESPAÑOL -->
+      <div class="lang-content lang-es">
+        <h2>Solicitud de Eliminación de Cuenta y Datos Personales</h2>
+        <p>En cumplimiento con las directrices de <strong>Google Play Store</strong> y el <strong>Artículo 17 del RGPD (Derecho de Supresión)</strong>, los usuarios de la aplicación Coordinación UNAMEL pueden solicitar en cualquier momento la eliminación total o parcial de sus datos de acceso y perfil.</p>
+
+        <div class="callout alert">
+          <strong>Aviso sobre Registros Laborales y Fiscales:</strong> Conforme a las leyes laborales y tributarias de la República de Polonia y la Unión Europea, cierta información contractual, horas efectivamente pagadas y registros de nómina deben conservarse durante los periodos legalmente obligatorios para auditorías tributarias y de seguridad social.
+        </div>
+
+        <h3>¿Cómo solicitar la eliminación de su cuenta?</h3>
+        <p>Para solicitar el borrado de sus datos móviles y revocación de credenciales:</p>
+        <ol>
+          <li>Envíe un correo electrónico a: <a href="mailto:privacy@ndserwis.pl?subject=Solicitud%20de%20Baja%20y%20Eliminacion%20de%20Datos%20-%20App%20UNAMEL"><strong>privacy@ndserwis.pl</strong></a> con copia a <a href="mailto:soporte.unamel@cma.com"><strong>soporte.unamel@cma.com</strong></a>.</li>
+          <li>Indique en el asunto: <code>Solicitud de Eliminación de Datos - App Coordinación UNAMEL</code>.</li>
+          <li>En el cuerpo del mensaje, detalle su <strong>Nombre completo</strong> y su <strong>Número de trabajador / carnet</strong>.</li>
+        </ol>
+
+        <h3>Tiempo de Respuesta</h3>
+        <p>El equipo de soporte y coordinación procesará la solicitud en un plazo máximo de <strong>72 horas hábiles</strong>. Tras la confirmación:</p>
+        <ul>
+          <li>Se desvinculará su dispositivo en los servicios de Firebase y notificaciones push.</li>
+          <li>Se eliminará el perfil de acceso activo a la app móvil.</li>
+          <li>Se limpiará cualquier copia de credenciales móviles en el servidor.</li>
+        </ul>
+
+        <div class="contact-card">
+          <p>👉 <strong>Enlace directo para solicitar borrado por correo:</strong></p>
+          <p><a href="mailto:privacy@ndserwis.pl?subject=Solicitud%20de%20Baja%20y%20Eliminacion%20de%20Datos%20-%20App%20UNAMEL&body=Deseo%20solicitar%20la%20eliminacion%20de%20mi%20cuenta%20y%20datos%20de%20la%20app%20Coordinacion%20UNAMEL.%0ANombre:%20%0ANumero%20Trabajador:%20" style="display:inline-block; background:var(--primary-light); color:white; padding:10px 18px; border-radius:6px; text-decoration:none; margin-top:8px;">Solicitar Eliminación de Datos vía Email</a></p>
+        </div>
+      </div>
+
+      <!-- ENGLISH -->
+      <div class="lang-content lang-en hidden">
+        <h2>Account and Data Deletion Request</h2>
+        <p>In accordance with <strong>Google Play Policies</strong> and <strong>GDPR Article 17 (Right to Erasure)</strong>, users can request the deletion of their user account and associated personal data.</p>
+        
+        <h3>How to Request Account Deletion</h3>
+        <p>Please send an email to <a href="mailto:privacy@ndserwis.pl?subject=Account%20Deletion%20Request%20-%20UNAMEL%20App"><strong>privacy@ndserwis.pl</strong></a> including:</p>
+        <ul>
+          <li>Subject: <code>Account Deletion Request - UNAMEL App</code></li>
+          <li>Your Full Name and Employee Badge ID</li>
+        </ul>
+        <p>Requests are fulfilled within <strong>72 business hours</strong>, revoking app authentication tokens and removing mobile device registry entries.</p>
+      </div>
+
+      <!-- POLISH -->
+      <div class="lang-content lang-pl hidden">
+        <h2>Wniosek o usunięcie konta i danych osobowych</h2>
+        <p>Zgodnie z wymogami <strong>Google Play</strong> oraz <strong>art. 17 RODO</strong>, pracownik ma prawo złożyć wniosek o usunięcie konta i powiązanych danych.</p>
+        <p>Wniosek należy przesłać na adres: <a href="mailto:privacy@ndserwis.pl"><strong>privacy@ndserwis.pl</strong></a> podając imię, nazwisko oraz numer pracownika.</p>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>&copy; 2026 <strong>ND Serwis Sp. z o.o.</strong> &amp; <strong>UNAMEL</strong>. Todos los derechos reservados.</p>
+    <p style="margin-top: 4px; font-size: 0.8rem;">Página pública oficial de cumplimiento normativo para Google Play Console.</p>
+  </footer>
+
+  <!-- SCRIPT DE INTERACTIVIDAD (PESTAÑAS E IDIOMAS) -->
+  <script>
+    function switchTab(tabId) {
+      // Ocultar todas las pestañas
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+
+      // Mostrar la seleccionada
+      const targetSection = document.getElementById('section-' + tabId);
+      if (targetSection) {
+        targetSection.classList.remove('hidden');
+      }
+
+      // Activar botón
+      const targetBtn = document.getElementById('tab-' + tabId + '-btn');
+      if (targetBtn) {
+        targetBtn.classList.add('active');
+      }
+
+      // Actualizar hash en URL
+      window.location.hash = tabId;
+    }
+
+    function switchLang(lang) {
+      // Actualizar botones de idioma
+      document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      // Ocultar todos los idiomas y mostrar el seleccionado
+      document.querySelectorAll('.lang-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.lang-' + lang).forEach(el => el.classList.remove('hidden'));
+
+      // Textos dinámicos en cabecera
+      const titles = {
+        'es': {
+          title: 'Coordinación UNAMEL',
+          sub: 'Política de Privacidad, Términos del Servicio y Solicitud de Eliminación de Datos para Google Play Console.'
+        },
+        'en': {
+          title: 'UNAMEL Coordination',
+          sub: 'Privacy Policy, Terms of Service, and Data Deletion Request for Google Play Console.'
+        },
+        'pl': {
+          title: 'Koordynacja UNAMEL',
+          sub: 'Polityka Prywatności, Regulamin oraz Wniosek o Usunięcie Danych dla Google Play Console.'
+        }
+      };
+
+      if (titles[lang]) {
+        document.getElementById('header-title').innerText = titles[lang].title;
+        document.getElementById('header-subtitle').innerText = titles[lang].sub;
+      }
+    }
+
+    // Soporte para enlaces directos con hash (ej: #privacy, #terms, #deletion)
+    window.addEventListener('DOMContentLoaded', () => {
+      const hash = window.location.hash.replace('#', '');
+      if (['privacy', 'terms', 'deletion'].includes(hash)) {
+        switchTab(hash);
+      }
+    });
+  </script>
+</body>
+</html>
