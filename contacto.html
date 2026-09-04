@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contacto y Soporte — Coordinación UNAMEL | ND Serwis</title>
+  <meta name="description" content="Página oficial de contacto y soporte técnico para la aplicación Coordinación UNAMEL (ND Serwis Sp. z o.o.).">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-dark: #172554;
+      --primary-light: #2563eb;
+      --text: #1f2937;
+      --text-muted: #6b7280;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      color: white;
+      text-align: center;
+      padding: 2.5rem 1rem;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+
+    h1 {
+      font-size: 1.85rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+
+    header p {
+      opacity: 0.9;
+      font-size: 0.95rem;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    main {
+      flex: 1;
+      max-width: 600px;
+      width: 100%;
+      margin: -1.5rem auto 2.5rem;
+      padding: 0 1rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .contact-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 1rem 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .contact-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .icon {
+      font-size: 1.5rem;
+      line-height: 1;
+      padding-top: 2px;
+    }
+
+    .details h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--primary-dark);
+      margin-bottom: 2px;
+    }
+
+    .details p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+    }
+
+    .details a {
+      color: var(--primary-light);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      word-break: break-all;
+    }
+
+    .details a:hover {
+      text-decoration: underline;
+    }
+
+    .btn-email {
+      display: block;
+      width: 100%;
+      text-align: center;
+      background: var(--primary-light);
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 1.8rem;
+      transition: background 0.2s;
+    }
+
+    .btn-email:hover {
+      background: var(--primary);
+    }
+
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 1.25rem;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      text-decoration: none;
+    }
+
+    .back-link:hover {
+      color: var(--primary);
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge">Soporte y Atención al Trabajador</div>
+    <h1>Contacto — Coordinación UNAMEL</h1>
+    <p>Canal oficial de asistencia técnica y laboral de ND Serwis para la fábrica UNAMEL.</p>
+  </header>
+
+  <main>
+    <div class="card">
+
+      <div class="contact-item">
+        <div class="icon">🏢</div>
+        <div class="details">
+          <h3>Empresa Responsable</h3>
+          <p>ND Serwis Sp. z o.o. (Coordinación de Planta UNAMEL)</p>
+          <span style="font-size:0.85rem; color:#6b7280;">Aplicación móvil interna para personal autorizado.</span>
+        </div>
+      </div>
+
+      <div class="contact-item">
+        <div class="icon">✉️</div>
+        <div class="details">
+          <h3>Soporte Técnico y Consultas</h3>
+          <p>Dudas sobre la app, registros de horas o reportes PDF:</p>
+          <a href="mailto:soporte.unamel@cma.com">soporte.unamel@cma.com</a>
+        </div>
+      </div>
+
+      <div class="contact-item">
+        <div class="icon">🔒</div>
+        <div class="details">
+          <h3>Privacidad y Eliminación de Datos</h3>
+          <p>Consultas sobre protección de datos o baja de cuenta (RGPD/RODO):</p>
+          <a href="mailto:privacy@ndserwis.pl">privacy@ndserwis.pl</a>
+        </div>
+      </div>
+
+      <div class="contact-item">
+        <div class="icon">⏱️</div>
+        <div class="details">
+          <h3>Horario de Atención</h3>
+          <p>Lunes a Viernes: 08:00 – 18:00 (CET)</p>
+          <p style="font-size: 0.82rem;">Turnos operativos atendidos directamente por el Líder de Línea o Coordinador en planta.</p>
+        </div>
+      </div>
+
+      <a class="btn-email" href="mailto:soporte.unamel@cma.com?subject=Consulta%20App%20Coordinacion%20UNAMEL">
+        ✉️ Enviar un Correo de Soporte
+      </a>
+
+      <a class="back-link" href="./index.html">← Ver Política de Privacidad y Términos</a>
+
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2026 ND Serwis Sp. z o.o. &amp; UNAMEL. Todos los derechos reservados.
+  </footer>
+
+</body>
+</html>
