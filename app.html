@@ -930,7 +930,7 @@
 
       display: grid;
 
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(65px, 1fr));
 
       gap: 8px;
 
@@ -1618,6 +1618,14 @@
             <div class="metric-val" id="metric-late" style="color: var(--warning);">1</div>
 
             <div class="metric-label">Retardos</div>
+
+          </div>
+
+          <div class="metric-box">
+
+            <div class="metric-val" id="metric-early" style="color: #b45309;">1</div>
+
+            <div class="metric-label">Salida Temp.</div>
 
           </div>
 
@@ -2473,6 +2481,26 @@
           titulo: "Retardo (Llegada 06:22)",
 
           hora: "06:22"
+
+        },
+
+        {
+
+          nombre: "Dylan Zinyuku",
+
+          telefono: "48881226921",
+
+          turno: "1",
+
+          grupo: "C",
+
+          linea: "L?der",
+
+          tipo: "SALIDA_TEMPRANA",
+
+          titulo: "Salida Temprana (Accidente Laboral / Salud)",
+
+          hora: "21:19"
 
         }
 
