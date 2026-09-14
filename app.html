@@ -1038,6 +1038,101 @@
 
 
 
+
+    /* ESTILOS DE LLAMADO DE LISTA Y ASISTENCIA DIARIA */
+    .roll-call-header {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+    }
+    .roll-call-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .stat-pill {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .pill-present { background: #dcfce7; color: #166534; }
+    .pill-absent { background: #fee2e2; color: #991b1b; }
+    .pill-late { background: #ffedd5; color: #9a3412; }
+    .pill-early { background: #fef3c7; color: #854d0e; }
+    .pill-pending { background: #f1f5f9; color: #475569; }
+
+    .attendance-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--border);
+      gap: 6px;
+    }
+    .badge-status-btn {
+      border: none;
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+    .badge-status-btn:active {
+      transform: scale(0.96);
+    }
+    .btn-take-attendance {
+      background: var(--primary-light);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 5px 9px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .btn-take-attendance:active {
+      transform: scale(0.96);
+    }
+
+    /* Opciones del Modal de Llamado de Lista */
+    .status-opt-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .status-opt-card {
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 8px;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.85rem;
+      background: #fafafa;
+      transition: all 0.15s;
+    }
+    .status-opt-card.selected {
+      border-color: var(--primary);
+      background: #eff6ff;
+      color: var(--primary);
+    }
+
     /* BARRA DE NAVEGACIÓN INFERIOR (5 PESTAÑAS) */
 
     .bottom-nav {
@@ -1573,6 +1668,25 @@
 
 
 
+        <!-- Barra de Control de Llamado de Lista Diario -->
+        <div id="roll-call-panel" class="roll-call-header">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:1.1rem;">📋</span>
+              <span style="font-weight:800; font-size:0.9rem; color:var(--primary);">Llamado de Lista Diario</span>
+              <span id="lbl-rollcall-date" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">(Hoy)</span>
+            </div>
+            <input type="date" id="attendance-date-picker" onchange="onAttendanceDateChanged(this.value)" style="padding:3px 6px; border:1px solid var(--border); border-radius:6px; font-size:0.75rem; font-weight:600; color:var(--text); background:white;">
+          </div>
+          <div id="roll-call-stats-bar" class="roll-call-stats">
+            <span class="stat-pill pill-present" id="stat-pill-present">✅ 0 Presentes</span>
+            <span class="stat-pill pill-absent" id="stat-pill-absent">❌ 0 Ausentes</span>
+            <span class="stat-pill pill-late" id="stat-pill-late">⏱️ 0 Retardos</span>
+            <span class="stat-pill pill-early" id="stat-pill-early">🚪 0 Salidas</span>
+            <span class="stat-pill pill-pending" id="stat-pill-pending">⏳ 0 Pendientes</span>
+          </div>
+        </div>
+
         <div id="groups-container">
 
           <!-- Renderizado de líderes y trabajadores -->
@@ -1709,7 +1823,57 @@
 
 
 
-  <!-- MODAL INFORMACIÓN PERSONAL -->
+  <!-- MODAL LLAMADO DE LISTA Y NOVEDAD DIARIA -->
+  <div id="modal-attendance" class="modal-overlay" onclick="if(event.target===this) closeAttendanceModal()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-att-title" style="font-size:1.1rem; font-weight:800; color:var(--primary); margin:0;">Tomar Asistencia</h3>
+          <p id="modal-att-sub" style="font-size:0.78rem; color:var(--text-muted); margin:3px 0 0 0;">Trabajador</p>
+        </div>
+        <button class="btn-close-modal" onclick="closeAttendanceModal()">✕</button>
+      </div>
+
+      <input type="hidden" id="modal-att-emp-id">
+
+      <label style="font-size:0.8rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px;">Seleccionar Estado:</label>
+      <div class="status-opt-grid">
+        <div id="opt-status-ASISTIO" class="status-opt-card" onclick="selectStatusOpt('ASISTIO')" style="color:#166534; border-color:#bbf7d0; background:#f0fdf4;">
+          ✅ Asistió
+        </div>
+        <div id="opt-status-NO_ASISTIO" class="status-opt-card" onclick="selectStatusOpt('NO_ASISTIO')" style="color:#991b1b; border-color:#fecaca; background:#fef2f2;">
+          ❌ No asistió
+        </div>
+        <div id="opt-status-RETARDO" class="status-opt-card" onclick="selectStatusOpt('RETARDO')" style="color:#9a3412; border-color:#fed7aa; background:#fff7ed;">
+          ⏱️ Retardo
+        </div>
+        <div id="opt-status-SALIDA_TEMPRANA" class="status-opt-card" onclick="selectStatusOpt('SALIDA_TEMPRANA')" style="color:#854d0e; border-color:#fef08a; background:#fefce8;">
+          🚪 Salida Temp.
+        </div>
+      </div>
+
+      <div id="modal-att-early-time-box" style="display:none; margin-bottom:12px;">
+        <label style="font-size:0.8rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">Hora de Salida Temprana:</label>
+        <input type="time" id="modal-att-early-time" class="form-input" style="padding:6px 10px; font-size:0.88rem;">
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label style="font-size:0.8rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">Motivo o Novedad (Opcional):</label>
+        <input type="text" id="modal-att-notes" class="form-input" placeholder="Ej: Retraso de transporte, permiso personal...">
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:16px;">
+        <button class="btn-primary" onclick="saveAttendanceRecord()" style="flex:1;">
+          <span>💾 Guardar Asistencia</span>
+        </button>
+        <button onclick="closeAttendanceModal()" style="background:#f1f5f9; color:var(--text); border:none; border-radius:12px; padding:12px 18px; font-weight:700; cursor:pointer;">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+
+    <!-- MODAL INFORMACIÓN PERSONAL -->
 
   <div id="modal-drawer" class="modal-overlay" onclick="if(event.target===this) closeDrawer()">
 
@@ -1952,6 +2116,7 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       fetchLiveEmployees();
+      initAttendanceSystem();
       const savedUserId = localStorage.getItem('unamel_user_id');
       changeLanguage(currentLang);
       if (savedUserId) {
@@ -2177,11 +2342,278 @@
       renderCoordinationTab();
     }
 
+    // ==========================================
+    // SISTEMA OFICIAL DE ASISTENCIA Y LLAMADO DE LISTA
+    // ==========================================
+    let selectedAttendanceDate = getTodayDateStr();
+    let attendanceRecordsMap = {}; // Key: employeeId -> record
+    let attendanceListenerUnsub = null;
+    let selectedAttendanceStatus = 'ASISTIO';
+
+    function getTodayDateStr() {
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function initAttendanceSystem() {
+      const picker = document.getElementById('attendance-date-picker');
+      if (picker && !picker.value) {
+        picker.value = selectedAttendanceDate;
+      }
+      loadLocalAttendance();
+      listenFirestoreAttendance(selectedAttendanceDate);
+    }
+
+    function onAttendanceDateChanged(newDate) {
+      if (!newDate) return;
+      selectedAttendanceDate = newDate;
+      const dateLbl = document.getElementById('lbl-rollcall-date');
+      if (dateLbl) {
+        dateLbl.innerText = (newDate === getTodayDateStr()) ? '(Hoy)' : `(${newDate})`;
+      }
+      listenFirestoreAttendance(selectedAttendanceDate);
+      renderGroupsTab();
+      renderCoordinationTab();
+    }
+
+    function loadLocalAttendance() {
+      try {
+        const raw = localStorage.getItem('unamel_attendance_' + selectedAttendanceDate);
+        if (raw) {
+          attendanceRecordsMap = JSON.parse(raw);
+        } else {
+          attendanceRecordsMap = {};
+        }
+      } catch (e) {
+        attendanceRecordsMap = {};
+      }
+    }
+
+    function saveLocalAttendance() {
+      try {
+        localStorage.setItem('unamel_attendance_' + selectedAttendanceDate, JSON.stringify(attendanceRecordsMap));
+      } catch (e) {}
+    }
+
+    function listenFirestoreAttendance(dateStr) {
+      if (attendanceListenerUnsub) {
+        attendanceListenerUnsub();
+        attendanceListenerUnsub = null;
+      }
+      loadLocalAttendance();
+
+      if (!db) {
+        renderAttendanceStats();
+        return;
+      }
+
+      try {
+        attendanceListenerUnsub = db.collection('asistencia_diaria')
+          .doc(dateStr)
+          .collection('registros')
+          .onSnapshot(snapshot => {
+            if (snapshot && !snapshot.empty) {
+              snapshot.forEach(doc => {
+                const data = doc.data();
+                const empId = String(data.employeeId || doc.id);
+                attendanceRecordsMap[empId] = {
+                  employeeId: empId,
+                  employeeName: data.employeeName || '',
+                  grupo: data.grupo || '',
+                  turno: data.turno || '1',
+                  fecha: data.fecha || dateStr,
+                  status: data.status || 'PENDIENTE',
+                  markedBy: data.markedBy || '',
+                  markedAt: data.markedAt || Date.now(),
+                  isCorrected: !!data.isCorrected,
+                  notes: data.notes || '',
+                  earlyExitTime: data.earlyExitTime || ''
+                };
+              });
+              saveLocalAttendance();
+              renderGroupsTab();
+              renderCoordinationTab();
+            }
+          }, err => {
+            console.warn('Escucha en tiempo real de asistencia limitada:', err);
+          });
+      } catch (err) {
+        console.warn('Error configurando listener de asistencia Firestore:', err);
+      }
+    }
+
+    function getStatusBadgeDetails(status, earlyExitTime) {
+      const s = (status || 'PENDIENTE').toUpperCase();
+      switch (s) {
+        case 'ASISTIO':
+          return { label: 'Asistió', emoji: '✅', bg: '#dcfce7', color: '#166534', border: '#bbf7d0' };
+        case 'NO_ASISTIO':
+          return { label: 'No asistió', emoji: '❌', bg: '#fee2e2', color: '#991b1b', border: '#fecaca' };
+        case 'RETARDO':
+          return { label: 'Retardo', emoji: '⏱️', bg: '#ffedd5', color: '#9a3412', border: '#fed7aa' };
+        case 'SALIDA_TEMPRANA':
+          const extra = earlyExitTime ? ` (${earlyExitTime})` : '';
+          return { label: 'Salida Temp.' + extra, emoji: '🚪', bg: '#fef3c7', color: '#854d0e', border: '#fef08a' };
+        default:
+          return { label: 'Pendiente', emoji: '⏳', bg: '#f1f5f9', color: '#475569', border: '#e2e8f0' };
+      }
+    }
+
+    function openAttendanceModal(empId) {
+      const emp = allEmployees.find(e => String(e.id) === String(empId));
+      if (!emp) return;
+
+      document.getElementById('modal-att-emp-id').value = emp.id;
+      document.getElementById('modal-att-title').innerText = 'Tomar Asistencia: ' + emp.nombre_completo;
+      document.getElementById('modal-att-sub').innerText = `Turno ${emp.turno_actual || 1} · Grupo ${emp.grupo || 'A'} · Fecha: ${selectedAttendanceDate}`;
+
+      const existing = attendanceRecordsMap[String(emp.id)];
+      const currentStatus = existing ? existing.status : 'ASISTIO';
+      selectStatusOpt(currentStatus);
+
+      document.getElementById('modal-att-notes').value = existing ? (existing.notes || '') : '';
+      document.getElementById('modal-att-early-time').value = existing ? (existing.earlyExitTime || '') : '';
+
+      document.getElementById('modal-attendance').style.display = 'flex';
+    }
+
+    function closeAttendanceModal() {
+      document.getElementById('modal-attendance').style.display = 'none';
+    }
+
+    function selectStatusOpt(status) {
+      selectedAttendanceStatus = status;
+      ['ASISTIO', 'NO_ASISTIO', 'RETARDO', 'SALIDA_TEMPRANA'].forEach(s => {
+        const el = document.getElementById('opt-status-' + s);
+        if (el) {
+          if (s === status) {
+            el.classList.add('selected');
+            el.style.transform = 'scale(1.02)';
+          } else {
+            el.classList.remove('selected');
+            el.style.transform = 'scale(1)';
+          }
+        }
+      });
+
+      const earlyBox = document.getElementById('modal-att-early-time-box');
+      if (earlyBox) {
+        earlyBox.style.display = (status === 'SALIDA_TEMPRANA') ? 'block' : 'none';
+      }
+    }
+
+    async function saveAttendanceRecord() {
+      const empId = document.getElementById('modal-att-emp-id').value;
+      const emp = allEmployees.find(e => String(e.id) === String(empId));
+      if (!emp) {
+        closeAttendanceModal();
+        return;
+      }
+
+      const notes = document.getElementById('modal-att-notes').value.trim();
+      const earlyTime = document.getElementById('modal-att-early-time').value.trim();
+      const currentMarker = currentUser ? (currentUser.nombre_completo + ' (' + (currentUser.rol_app || 'Líder') + ')') : 'Coordinación UNAMEL';
+
+      const existing = attendanceRecordsMap[String(emp.id)];
+      const isCorrection = !!existing && existing.status !== selectedAttendanceStatus;
+
+      const record = {
+        employeeId: String(emp.id),
+        employeeName: emp.nombre_completo,
+        grupo: emp.grupo || '',
+        turno: String(emp.turno_actual || '1'),
+        fecha: selectedAttendanceDate,
+        status: selectedAttendanceStatus,
+        markedBy: currentMarker,
+        markedAt: Date.now(),
+        isCorrected: isCorrection,
+        notes: notes,
+        earlyExitTime: (selectedAttendanceStatus === 'SALIDA_TEMPRANA') ? earlyTime : ''
+      };
+
+      // Guardar en memoria y localStorage de inmediato
+      attendanceRecordsMap[String(emp.id)] = record;
+      saveLocalAttendance();
+      closeAttendanceModal();
+
+      // Renderizar UI al instante
+      renderGroupsTab();
+      renderCoordinationTab();
+
+      // Sincronizar en segundo plano con Cloud Firestore
+      if (db) {
+        try {
+          await db.collection('asistencia_diaria')
+            .doc(selectedAttendanceDate)
+            .collection('registros')
+            .doc(String(emp.id))
+            .set(record, { merge: true });
+          console.log('Asistencia guardada en vivo en Firestore para:', emp.nombre_completo);
+        } catch (e) {
+          console.warn('Guardado en caché local, pendiente de sincronización Firestore:', e);
+        }
+      }
+    }
+
+    function renderAttendanceStats() {
+      let pres = 0, abs = 0, late = 0, early = 0, pend = 0;
+      const activeWorkers = allEmployees.filter(e => String(e.id) !== '0');
+
+      activeWorkers.forEach(emp => {
+        const rec = attendanceRecordsMap[String(emp.id)];
+        const st = rec ? rec.status : 'PENDIENTE';
+        if (st === 'ASISTIO') pres++;
+        else if (st === 'NO_ASISTIO') abs++;
+        else if (st === 'RETARDO') late++;
+        else if (st === 'SALIDA_TEMPRANA') early++;
+        else pend++;
+      });
+
+      const pPres = document.getElementById('stat-pill-present');
+      const pAbs = document.getElementById('stat-pill-absent');
+      const pLate = document.getElementById('stat-pill-late');
+      const pEarly = document.getElementById('stat-pill-early');
+      const pPend = document.getElementById('stat-pill-pending');
+
+      if (pPres) pPres.innerText = `✅ ${pres} Presentes`;
+      if (pAbs) pAbs.innerText = `❌ ${abs} Ausentes`;
+      if (pLate) pLate.innerText = `⏱️ ${late} Retardos`;
+      if (pEarly) pEarly.innerText = `🚪 ${early} Salidas`;
+      if (pPend) pPend.innerText = `⏳ ${pend} Pendientes`;
+
+      // Sincronizar métricas de pestaña Coordinación
+      const mTot = document.getElementById('metric-total');
+      const mPres = document.getElementById('metric-present');
+      const mAbs = document.getElementById('metric-absent');
+      const mLate = document.getElementById('metric-late');
+      const mEarly = document.getElementById('metric-early');
+
+      if (mTot) mTot.innerText = activeWorkers.length;
+      if (mPres) mPres.innerText = pres;
+      if (mAbs) mAbs.innerText = abs;
+      if (mLate) mLate.innerText = late;
+      if (mEarly) mEarly.innerText = early;
+    }
+
     function renderGroupsTab() {
       const container = document.getElementById('groups-container');
       if (!container) return;
       container.innerHTML = '';
       const dict = I18N[currentLang] || I18N['es'];
+
+      // Actualizar estadísticas del llamado de lista en la barra superior
+      renderAttendanceStats();
+
+      const isLeaderOrCoord = currentUser && (
+        String(currentUser.id) === '0' ||
+        (currentUser.rol_app || '').toUpperCase().includes('COORDINADOR') ||
+        (currentUser.rol_app || '').toUpperCase().includes('ADMIN') ||
+        (currentUser.rol_app || '').toUpperCase().includes('LIDER') ||
+        (currentUser.posicion || '').toLowerCase().includes('lider')
+      );
 
       let list = allEmployees.filter(e => String(e.id) !== '0');
       if (currentShiftFilter !== 'TODOS') {
@@ -2199,6 +2631,56 @@
       list.forEach(emp => {
         const isLider = (emp.posicion || '').toLowerCase().includes('lider') || (emp.rol_app || '').includes('LIDER');
         const card = document.createElement('div');
+        
+        // Estado del llamado de lista para este empleado
+        const attRec = attendanceRecordsMap[String(emp.id)];
+        const attStatus = attRec ? attRec.status : 'PENDIENTE';
+        const badgeInfo = getStatusBadgeDetails(attStatus, attRec ? attRec.earlyExitTime : '');
+
+        let attendanceRowHtml = '';
+        if (isLeaderOrCoord) {
+          const hasIncident = (attStatus === 'NO_ASISTIO' || attStatus === 'RETARDO' || attStatus === 'SALIDA_TEMPRANA');
+          let waBtnHtml = '';
+          if (hasIncident && emp.telefono) {
+            const cleanTel = emp.telefono.replace(/[^0-9]/g, '');
+            const waMsg = encodeURIComponent(
+              `Hola ${emp.nombre_completo}, un saludo de la Coordinación UNAMEL.
+
+` +
+              `Hoy ${selectedAttendanceDate} en el Turno ${emp.turno_actual || 1} registramos: ${badgeInfo.label}.
+` +
+              (attRec && attRec.notes ? `Observación: ${attRec.notes}
+` : '') +
+              `
+Por favor comunícate a la mayor brevedad.
+- Coordinación UNAMEL`
+            );
+            waBtnHtml = `
+              <a href="https://wa.me/${cleanTel}?text=${waMsg}" target="_blank" class="btn-wa" style="padding:4px 8px; font-size:0.72rem;">
+                <span>💬 WhatsApp</span>
+              </a>
+            `;
+          }
+
+          attendanceRowHtml = `
+            <div class="attendance-row">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <button class="badge-status-btn" onclick="openAttendanceModal('${emp.id}')" style="background:${badgeInfo.bg}; color:${badgeInfo.color}; border:1px solid ${badgeInfo.border};">
+                  <span>${badgeInfo.emoji} ${badgeInfo.label}</span>
+                  ${attRec && attRec.isCorrected ? '<span style="font-size:0.65rem; color:#0e7490; font-weight:800;">(Corregido)</span>' : ''}
+                </button>
+                ${attRec && attRec.notes ? `<span style="font-size:0.72rem; color:var(--text-muted); max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">"${attRec.notes}"</span>` : ''}
+              </div>
+              <div style="display:flex; gap:6px; align-items:center;">
+                ${waBtnHtml}
+                <button class="btn-take-attendance" onclick="openAttendanceModal('${emp.id}')">
+                  <span>📝 Pasar Lista</span>
+                </button>
+              </div>
+            </div>
+          `;
+        }
+
         if (isLider) {
           card.className = 'leader-card';
           card.innerHTML = `
@@ -2208,18 +2690,22 @@
             </div>
             <div style="font-size:1.08rem; font-weight:800; color:#78350f;">${emp.nombre_completo}</div>
             <div style="font-size:0.8rem; color:#92400e; margin-top:3px;">${dict.tel_word || 'Tel:'} ${emp.telefono || dict.unregistered || 'Sin registrar'} • ${dict.locker_word || 'Casillero:'} ${emp.casillero_szafka || '--'}</div>
+            ${attendanceRowHtml}
           `;
         } else {
           card.className = 'worker-card';
           const posLabel = (emp.posicion && emp.posicion.toLowerCase().includes('lider')) ? (dict.leader_badge || 'Lider') : (dict.pos_production || emp.posicion || 'produkcja');
           card.innerHTML = `
-            <div>
-              <div style="font-weight:700; font-size:0.92rem;">${emp.nombre_completo}</div>
-              <div style="font-size:0.75rem; color:var(--text-muted);">${dict.shift_word || 'Turno'} ${emp.turno_actual || 1} · ${dict.group_word || 'Grupo'} ${emp.grupo || 'A'} · ${dict.line_word || 'Línea'} ${emp.sub_group || 1}</div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-weight:700; font-size:0.92rem;">${emp.nombre_completo}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted);">${dict.shift_word || 'Turno'} ${emp.turno_actual || 1} · ${dict.group_word || 'Grupo'} ${emp.grupo || 'A'} · ${dict.line_word || 'Línea'} ${emp.sub_group || 1}</div>
+              </div>
+              <div style="text-align:right;">
+                <span style="font-size:0.78rem; font-weight:600; color:var(--text-muted);">${posLabel}</span>
+              </div>
             </div>
-            <div style="text-align:right;">
-              <span style="font-size:0.78rem; font-weight:600; color:var(--text-muted);">${posLabel}</span>
-            </div>
+            ${attendanceRowHtml}
           `;
         }
         container.appendChild(card);
@@ -2239,42 +2725,31 @@
       incList.innerHTML = '';
       const dict = I18N[currentLang] || I18N['es'];
 
-      const sampleIncidents = [
-        {
-          nombre: "Yussuf Ali Mohamed",
-          telefono: "48792011234",
-          turno: "1",
-          grupo: "C",
-          linea: "1",
-          tipo: "NO_ASISTIO",
-          hora: "06:15"
-        },
-        {
-          nombre: "Sasha Chipo Nyewera",
-          telefono: "48721998877",
-          turno: "1",
-          grupo: "C",
-          linea: "2",
-          tipo: "RETARDO",
-          hora: "06:22"
-        },
-        {
-          nombre: "Dylan Zinyuku",
-          telefono: "48881226921",
-          turno: "1",
-          grupo: "C",
-          linea: "Líder",
-          tipo: "SALIDA_TEMPRANA",
-          hora: "21:19"
+      // Extraer incidentes reales marcados para la fecha seleccionada
+      const realIncidents = [];
+      allEmployees.forEach(emp => {
+        const rec = attendanceRecordsMap[String(emp.id)];
+        if (rec && (rec.status === 'NO_ASISTIO' || rec.status === 'RETARDO' || rec.status === 'SALIDA_TEMPRANA')) {
+          realIncidents.push({
+            employeeId: emp.id,
+            nombre: emp.nombre_completo,
+            telefono: emp.telefono ? emp.telefono.replace(/[^0-9]/g, '') : '',
+            turno: emp.turno_actual || '1',
+            grupo: emp.grupo || 'A',
+            linea: emp.sub_group || '1',
+            tipo: rec.status,
+            notes: rec.notes || '',
+            hora: rec.earlyExitTime || new Date(rec.markedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          });
         }
-      ];
+      });
 
-      if (sampleIncidents.length === 0) {
-        incList.innerHTML = `<p style="font-size:0.85rem; color:var(--text-muted); padding:8px 0;">${dict.no_incidents || 'No hay novedades reportadas hoy.'}</p>`;
+      if (realIncidents.length === 0) {
+        incList.innerHTML = `<p style="font-size:0.85rem; color:var(--text-muted); padding:8px 0; text-align:center;">${dict.no_incidents || 'No hay novedades reportadas hoy para esta fecha.'}</p>`;
         return;
       }
 
-      sampleIncidents.forEach(inc => {
+      realIncidents.forEach(inc => {
         const item = document.createElement('div');
         const isRetardo = inc.tipo === 'RETARDO';
         const isEarly = inc.tipo === 'SALIDA_TEMPRANA';
@@ -2295,9 +2770,17 @@
         }
 
         const waMsg = encodeURIComponent(
-          `Hola ${inc.nombre}, un cordial saludo de la Coordinación de UNAMEL.\n\n` +
-          `Registramos hoy un reporte en el Turno ${inc.turno} (${badgeText}).\n\n` +
-          `Por favor confírmanos tu estado a la mayor brevedad.\n\n- Coordinación UNAMEL / ND Serwis`
+          `Hola ${inc.nombre}, un cordial saludo de la Coordinación de UNAMEL.
+
+` +
+          `Registramos un reporte en el Turno ${inc.turno} (${badgeText}).
+` +
+          (inc.notes ? `Nota: ${inc.notes}
+` : '') +
+          `
+Por favor confírmanos tu estado a la mayor brevedad.
+
+- Coordinación UNAMEL / ND Serwis`
         );
         const waUrl = `https://wa.me/${inc.telefono}?text=${waMsg}`;
 
@@ -2308,9 +2791,10 @@
               ${badgeText}
             </span>
           </div>
-          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;">
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">
             ${dict.shift_word || 'Turno'} ${inc.turno} · ${dict.group_word || 'Grupo'} ${inc.grupo} · ${dict.reported_at || 'Reportado a las'} ${inc.hora}
           </div>
+          ${inc.notes ? `<div style="font-size:0.75rem; color:#475569; margin-bottom:8px; font-style:italic;">"${inc.notes}"</div>` : ''}
           <div style="display:flex; gap:8px;">
             <a href="${waUrl}" target="_blank" class="btn-wa">
               <span>${dict.wa_btn || '💬 Contactar por WhatsApp'}</span>
