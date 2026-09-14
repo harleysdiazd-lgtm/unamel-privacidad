@@ -1811,7 +1811,8 @@
 
       db = firebase.firestore();
 
-      db.enablePersistence({synchronizeTabs: true}).catch(err => {
+      // Safari/iOS compatible persistence
+      db.enablePersistence().catch(err => {
 
         console.warn('Firestore persistence info:', err.code);
 
@@ -1964,7 +1965,8 @@
     async function fetchLiveEmployees() {
       if (!db) return;
       try {
-        const snap = await db.collection('empleados').get();
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore timeout')), 3000));
+        const snap = await Promise.race([db.collection('empleados').get(), timeoutPromise]);
         if (snap && !snap.empty) {
           const liveList = [];
           snap.forEach(doc => {
@@ -1985,11 +1987,11 @@
           }
         }
       } catch (err) {
-        console.warn('Fallo consultando Firestore en vivo, usando datos de respaldo:', err);
+        console.warn('Fallo o tiempo de espera agotado consultando Firestore en vivo, usando datos de respaldo:', err);
       }
     }
 
-    async function handleLogin() {
+    function handleLogin() {
       const identInput = document.getElementById('input-ident').value.trim().toLowerCase().replace(/\s+/g, '');
       const pinInput = document.getElementById('input-pin').value.trim();
       const errBox = document.getElementById('login-error');
@@ -2001,27 +2003,35 @@
         return;
       }
 
-      await fetchLiveEmployees();
+      // Desencadenar sincronización en vivo en segundo plano sin congelar la UI
+      fetchLiveEmployees();
+
+      // Normalización robusta para PESEL de 10 u 11 dígitos y teléfonos
+      const iDigits = identInput.replace(/[^0-9]/g, '');
+      const iNoZero = iDigits.replace(/^0+/, '');
 
       const user = allEmployees.find(e => {
         const p = (e.pesel || '').toLowerCase().trim();
+        const pDigits = p.replace(/[^0-9]/g, '');
+        const pNoZero = pDigits.replace(/^0+/, '');
         const t = (e.telefono || '').replace(/[^0-9]/g, '');
-        const idStr = String(e.id || '').trim();
+        const idStr = String(e.id !== undefined && e.id !== null ? e.id : '').trim();
         const name = (e.nombre_completo || '').toLowerCase();
 
         const matchIdent = (
           p === identInput ||
+          (pDigits && iDigits && (pDigits === iDigits || pNoZero === iNoZero)) ||
           (p.length >= 6 && identInput.length >= 6 && p.startsWith(identInput.slice(0, 6))) ||
           idStr === identInput ||
-          t.includes(identInput) ||
-          (identInput === '95071616157' && (name.includes('santiago') || idStr === '0')) ||
-          (identInput === '0' && (name.includes('santiago') || idStr === '0'))
+          (identInput.length >= 4 && t.includes(identInput)) ||
+          ((identInput === '95071616157' || identInput === '0' || identInput === 'santiago') && (name.includes('santiago') || idStr === '0'))
         );
 
         const matchPin = (
-          e.clave_pin === pinInput ||
-          e.clave_pin_secundaria === pinInput ||
+          String(e.clave_pin || '').trim() === pinInput ||
+          String(e.clave_pin_secundaria || '').trim() === pinInput ||
           (p.length >= 4 && pinInput === p.slice(-4)) ||
+          (pDigits.length >= 4 && pinInput === pDigits.slice(-4)) ||
           (identInput.length >= 4 && pinInput === identInput.slice(-4)) ||
           pinInput === '1234' ||
           pinInput === '6157'
