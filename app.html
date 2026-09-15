@@ -1660,13 +1660,24 @@
 
           <div class="shift-chip" onclick="filterGroups('1', this)">Turno 1 · Grupo C</div>
 
-          <div class="shift-chip" onclick="filterGroups('2', this)">Turno 2 · Grupo A</div>
+          <div class="shift-chip" onclick="filterGroups('2', this)">Turno 2 · Grupo B</div>
 
-          <div class="shift-chip" onclick="filterGroups('3', this)">Turno 3 · Grupo B</div>
+          <div class="shift-chip" onclick="filterGroups('3', this)">Turno 3 · Grupo A</div>
 
         </div>
 
 
+
+        <!-- Banner Informativo para Líderes de Línea -->
+        <div id="leader-group-banner" class="card" style="display:none; background:#fefce8; border:1px solid #fde047; padding:12px 14px; margin-bottom:12px; border-radius:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div id="leader-banner-title" style="font-size:0.95rem; font-weight:800; color:#854d0e;">👥 Mi Grupo Asignado</div>
+              <div id="leader-banner-sub" style="font-size:0.78rem; color:#a16207; margin-top:2px;">Llamado de lista diario y novedades de turno</div>
+            </div>
+            <span id="leader-banner-badge" style="background:#fef08a; color:#854d0e; font-size:0.72rem; font-weight:800; padding:3px 8px; border-radius:8px; border:1px solid #eab308;">⭐ LÍDER</span>
+          </div>
+        </div>
 
         <!-- Barra de Control de Llamado de Lista Diario -->
         <div id="roll-call-panel" class="roll-call-header">
@@ -2051,7 +2062,11 @@
         const s2 = navButtons[2].querySelector('span:last-child');
         if (s2 && dict.next_week) s2.innerText = dict.next_week;
         const s3 = navButtons[3].querySelector('span:last-child');
-        if (s3 && dict.groups) s3.innerText = dict.groups;
+        if (s3) {
+          const uRole = currentUser ? (currentUser.rol_app || currentUser.rol || '').toUpperCase() : '';
+          const isCoord = currentUser && (String(currentUser.id) === '0' || uRole.includes('COORDINADOR') || uRole.includes('ADMIN'));
+          s3.innerText = isCoord ? (dict.groups || 'Grupos') : (dict.my_group || 'Mi Grupo');
+        }
         const s4 = navButtons[4].querySelector('span:last-child');
         if (s4 && dict.coordination) s4.innerText = dict.coordination;
       }
@@ -2605,7 +2620,8 @@
       const mLate = document.getElementById('metric-late');
       const mEarly = document.getElementById('metric-early');
 
-      if (mTot) mTot.innerText = activeWorkers.length;
+      const allActive = allEmployees.filter(e => String(e.id) !== '0');
+      if (mTot) mTot.innerText = allActive.length;
       if (mPres) mPres.innerText = pres;
       if (mAbs) mAbs.innerText = abs;
       if (mLate) mLate.innerText = late;
@@ -2641,10 +2657,34 @@
 
       let list = allEmployees.filter(e => String(e.id) !== '0');
 
+      // Actualizar Banner de Líder de Línea
+      const leaderBanner = document.getElementById('leader-group-banner');
+      if (leaderBanner) {
+        if (isLineLeader) {
+          leaderBanner.style.display = 'block';
+          const bTitle = document.getElementById('leader-banner-title');
+          const bSub = document.getElementById('leader-banner-sub');
+          const lGrp = (currentUser.grupo || 'B').trim().toUpperCase();
+          const lTurno = currentUser.turno_actual || (lGrp === 'A' ? '3' : (lGrp === 'B' ? '2' : '1'));
+          if (bTitle) bTitle.innerText = `👥 Mi Grupo Asignado: Grupo ${lGrp}`;
+          if (bSub) bSub.innerText = `Turno ${lTurno} · Personal bajo supervisión directa`;
+        } else {
+          leaderBanner.style.display = 'none';
+        }
+      }
+
       if (isLineLeader) {
         // Regla estricta RBAC: Para cada Líder de Línea SOLO aparece su propio Grupo asignado
-        const leaderGroup = (currentUser.grupo || '').trim().toUpperCase();
-        list = list.filter(e => (e.grupo || '').trim().toUpperCase() === leaderGroup);
+        let leaderGroup = (currentUser.grupo || '').trim().toUpperCase();
+        if (!leaderGroup) {
+          const name = (currentUser.nombre_completo || '').toLowerCase();
+          if (name.includes('blanco') || name.includes('henry')) leaderGroup = 'A';
+          else if (name.includes('omar') || name.includes('osman') || name.includes('ahmed')) leaderGroup = 'B';
+          else if (name.includes('dylan') || name.includes('zinyuku')) leaderGroup = 'C';
+        }
+        if (leaderGroup) {
+          list = list.filter(e => (e.grupo || '').trim().toUpperCase() === leaderGroup);
+        }
       } else if (currentShiftFilter !== 'TODOS') {
         list = list.filter(e => String(e.turno_actual) === currentShiftFilter);
       }
@@ -2850,6 +2890,12 @@ Por favor confírmanos tu estado a la mayor brevedad.
       if (target) target.style.display = 'block';
 
       if (btn) btn.classList.add('active');
+
+      if (tabId === 'groups') {
+        renderGroupsTab();
+      } else if (tabId === 'coordination') {
+        renderCoordinationTab();
+      }
 
     }
 
