@@ -3928,7 +3928,7 @@ Por favor confírmanos tu estado a la mayor brevedad.
       const workerName = currentUser ? (currentUser.nombre_completo || 'Colaborador') : 'Colaborador';
 
       try {
-        if (window.db) {
+        if (db) {
           await db.collection('encuestas').add({
             workerId: workerId,
             workerName: workerName,
@@ -3965,7 +3965,7 @@ Por favor confírmanos tu estado a la mayor brevedad.
       listEl.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);"><span>⏳ Cargando respuestas desde Firestore...</span></div>';
 
       try {
-        if (!window.db) {
+        if (!db) {
           listEl.innerHTML = '<div style="text-align:center; padding:20px; color:#ef4444;">Sin conexión a Firestore.</div>';
           return;
         }
