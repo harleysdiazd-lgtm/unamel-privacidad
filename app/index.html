@@ -2005,7 +2005,7 @@
 
     // Datos maestros locales de respaldo (Fallback Offline)
 
-    const FALLBACK_DATA = {"metadata": {"app": "Coordinacion UNAMEL", "version": "1.0.7", "fecha_sincronizacion": "2026-09-18 02:44:11", "origen_excel": "Coordinacion UNAMEL - Disponiibilidad.xlsm", "origen_horas": "Coordinacion UNAMEL.xlsm", "periodo_programacion": "Programación 20 Septiembre - 25 Septiembre", "mes_activo": "Septiembre", "total_empleados_activos": 35, "total_despedidos": 33}, "rotacion_turnos": {"2": {"turno": "2", "horario": "14:00 - 22:00", "grupo": "A", "lider": "Henry Armando Blanco Arrieta"}, "3": {"turno": "3", "horario": "22:00 - 06:00", "grupo": "C", "lider": "Dylan  Zinyuku"}, "1": {"turno": "1", "horario": "06:00 - 14:00", "grupo": "B", "lider": "Ahmed Omar Osman"}}, "grupos_lideres": {"A": {"grupo": "A", "turno": "2", "horario": "14:00 - 22:00", "lider": "Henry Armando Blanco Arrieta", "posicion": "Lider linii"}, "C": {"grupo": "C", "turno": "3", "horario": "22:00 - 06:00", "lider": "Dylan  Zinyuku", "posicion": "Lider linii"}, "B": {"grupo": "B", "turno": "1", "horario": "06:00 - 14:00", "lider": "Ahmed Omar Osman", "posicion": "Lider linii"}}, "empleados": []};
+    const FALLBACK_DATA = {"metadata": {"app": "Coordinacion UNAMEL", "version": "1.0.7", "fecha_sincronizacion": "2026-09-18 03:18:32", "origen_excel": "Coordinacion UNAMEL - Disponiibilidad.xlsm", "origen_horas": "Coordinacion UNAMEL.xlsm", "periodo_programacion": "Programación 20 Septiembre - 25 Septiembre", "mes_activo": "Septiembre", "total_empleados_activos": 35, "total_despedidos": 33}, "rotacion_turnos": {"2": {"turno": "2", "horario": "14:00 - 22:00", "grupo": "A", "lider": "Henry Armando Blanco Arrieta"}, "3": {"turno": "3", "horario": "22:00 - 06:00", "grupo": "C", "lider": "Dylan  Zinyuku"}, "1": {"turno": "1", "horario": "06:00 - 14:00", "grupo": "B", "lider": "Ahmed Omar Osman"}}, "grupos_lideres": {"A": {"grupo": "A", "turno": "2", "horario": "14:00 - 22:00", "lider": "Henry Armando Blanco Arrieta", "posicion": "Lider linii"}, "C": {"grupo": "C", "turno": "3", "horario": "22:00 - 06:00", "lider": "Dylan  Zinyuku", "posicion": "Lider linii"}, "B": {"grupo": "B", "turno": "1", "horario": "06:00 - 14:00", "lider": "Ahmed Omar Osman", "posicion": "Lider linii"}}, "empleados": []};
 
     let allEmployees = FALLBACK_DATA.empleados || [];
 
@@ -2399,14 +2399,63 @@
         dias.forEach(d => {
           const row = document.createElement('div');
           row.className = 'data-row';
+          
+          const isHourOnly = (d.alcance_afectacion === 'CANTIDAD_HORAS');
+          const estado = d.estado_dia || 'NORMAL';
+          const label = d.comentario || d.estado_label || (estado === 'NORMAL' ? 'Jornada Normal' : 'Incidencia');
+          
+          let cardBg = 'var(--surface)';
+          let cardBorder = 'var(--border)';
+          let badgeColor = 'var(--success)';
+          let badgeBg = '#f0fdf4';
+          let badgeBorder = '#bbf7d0';
+          let iconPrefix = '✅ ';
+          
+          if (estado === 'INCAPACIDAD_MEDICA') {
+            badgeColor = '#1976d2';
+            badgeBg = '#e3f2fd';
+            badgeBorder = '#90caf9';
+            iconPrefix = '🩺 ';
+            if (!isHourOnly) { cardBg = '#f0f7ff'; cardBorder = '#90caf9'; }
+          } else if (estado === 'NO_AUTORIZADO') {
+            badgeColor = '#f57f17';
+            badgeBg = '#fffde7';
+            badgeBorder = '#fff59d';
+            iconPrefix = '⚠️ ';
+            if (!isHourOnly) { cardBg = '#fffef0'; cardBorder = '#fbc02d'; }
+          } else if (estado === 'POR_CONFIRMAR') {
+            badgeColor = '#e65100';
+            badgeBg = '#fff3e0';
+            badgeBorder = '#ffcc80';
+            iconPrefix = '⏳ ';
+            if (!isHourOnly) { cardBg = '#fff9f0'; cardBorder = '#fb8c00'; }
+          } else if (estado === 'PENALIZACION') {
+            badgeColor = '#d32f2f';
+            badgeBg = '#ffebee';
+            badgeBorder = '#ef9a9a';
+            iconPrefix = '⛔ ';
+            if (!isHourOnly) { cardBg = '#fff5f5'; cardBorder = '#e53935'; }
+          }
+          
+          row.style.background = cardBg;
+          row.style.borderColor = cardBorder;
+          if (estado !== 'NORMAL' && !isHourOnly) {
+            row.style.borderWidth = '1.5px';
+          }
+          
+          const scopePrefix = isHourOnly ? '⏱️ Horas: ' : (estado !== 'NORMAL' ? '📅 Turno: ' : '');
+
           row.innerHTML = `
             <div>
-              <div style="font-weight:700;">Día ${d.dia} de ${d.mes || 'Agosto'}</div>
-              <div style="font-size:0.75rem; color:var(--text-muted);">${d.hora_inicio || '06:00'} - ${d.hora_fin || '18:00'}</div>
+              <div style="font-weight:700;">Día ${d.dia} de ${d.mes || 'Septiembre'}</div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">${d.hora_inicio || '--'} - ${d.hora_fin || '--'}</div>
+              ${estado !== 'NORMAL' && !isHourOnly ? `<div style="font-size:0.72rem; color:${badgeColor}; font-weight:700; margin-top:2px;">${iconPrefix}${scopePrefix}${label}</div>` : ''}
             </div>
             <div style="text-align:right;">
-              <span style="font-weight:800; color:var(--primary); font-size:1rem;">${d.horas_trabajadas || 12} h</span>
-              <div style="font-size:0.7rem; color:var(--success); font-weight:700;">Jornada Normal</div>
+              <span style="display:inline-block; font-weight:800; font-size:0.95rem; padding:${isHourOnly ? '2px 8px' : '0'}; border-radius:6px; background:${isHourOnly ? badgeBg : 'transparent'}; color:${isHourOnly ? badgeColor : 'var(--primary)'}; border:${isHourOnly ? `1px solid ${badgeBorder}` : 'none'};">
+                ${d.horas_trabajadas} h
+              </span>
+              ${isHourOnly ? `<div style="font-size:0.68rem; color:${badgeColor}; font-weight:700; margin-top:2px;">${iconPrefix}${scopePrefix}${label}</div>` : (estado === 'NORMAL' ? '<div style="font-size:0.7rem; color:var(--success); font-weight:700;">Jornada Normal</div>' : '')}
             </div>
           `;
           hoursListEl.appendChild(row);
@@ -2578,7 +2627,175 @@
       }
     }
 
+
+    // ==========================================
+    // POLÍTICA DE HORARIOS Y VENTANA DE TURNO (15 MIN CORTESÍA / FIN DE SEMANA)
+    // ==========================================
+    function evaluateShiftPolicy(user) {
+      const userRole = user ? (user.rol_app || user.rol || '').toUpperCase() : '';
+      const isCoord = String(user.id) === '0' || userRole.includes('COORDINADOR') || userRole.includes('ADMIN');
+      if (isCoord) {
+        return {
+          canEdit: true,
+          status: 'ACTIVO',
+          title: 'Modo Coordinación Activo',
+          sub: 'Supervisión total y edición habilitada 24/7',
+          color: '#16a34a',
+          bg: '#f0fdf4',
+          border: '#bbf7d0'
+        };
+      }
+
+      // Zona horaria de planta: Europe/Warsaw
+      const now = new Date();
+      const warsawStr = now.toLocaleString('en-US', { timeZone: 'Europe/Warsaw', hour12: false });
+      const warsawDate = new Date(warsawStr);
+      const day = warsawDate.getDay(); // 0=Sunday, 6=Saturday
+      const hours = warsawDate.getHours();
+      const mins = warsawDate.getMinutes();
+      const totalMins = hours * 60 + mins;
+
+      let myShift = String(user.turno_actual || '1');
+      if (!myShift || myShift === '0') {
+        const grp = (user.grupo || '').toUpperCase();
+        myShift = grp === 'C' ? '1' : (grp === 'B' ? '2' : (grp === 'A' ? '3' : '1'));
+      }
+
+      // 1. SÁBADO
+      if (day === 6) {
+        return {
+          canEdit: false,
+          status: 'INACTIVO_FIN_DE_SEMANA',
+          title: '🔒 Planta Inactiva (Sábado)',
+          sub: 'No hay llamados de lista regulares programados hoy',
+          color: '#7c3aed',
+          bg: '#f5f3ff',
+          border: '#ddd6fe'
+        };
+      }
+
+      // 2. DOMINGO
+      if (day === 0) {
+        if (totalMins < 22 * 60) {
+          return {
+            canEdit: false,
+            status: 'INACTIVO_FIN_DE_SEMANA',
+            title: '🔒 En espera del Turno 3',
+            sub: 'El llamado de lista se habilita hoy a las 22:00 (Turno Noche)',
+            color: '#7c3aed',
+            bg: '#f5f3ff',
+            border: '#ddd6fe'
+          };
+        } else {
+          const isMyTurn = (myShift === '3');
+          return {
+            canEdit: isMyTurn,
+            status: isMyTurn ? 'ACTIVO' : 'EN_ESPERA_INICIO',
+            title: isMyTurn ? '🟢 Turno 3 Activo (22:00 - 06:00)' : '🔒 Turno 3 en Curso (Grupo A)',
+            sub: isMyTurn ? 'Llamado de lista abierto' : 'Su turno iniciará en su horario correspondiente',
+            color: isMyTurn ? '#16a34a' : '#2563eb',
+            bg: isMyTurn ? '#f0fdf4' : '#eff6ff',
+            border: isMyTurn ? '#bbf7d0' : '#bfdbfe'
+          };
+        }
+      }
+
+      // 3. LUNES A VIERNES
+      const isNightEarly = totalMins < 6 * 60;
+      const isNightGrace = totalMins >= 6 * 60 && totalMins <= (6 * 60 + 15);
+      const isShift1 = totalMins >= 6 * 60 && totalMins <= 14 * 60;
+      const isShift1Grace = totalMins > 14 * 60 && totalMins <= (14 * 60 + 15);
+      const isShift2 = totalMins > 14 * 60 && totalMins <= 22 * 60;
+      const isShift2Grace = totalMins > 22 * 60 && totalMins <= (22 * 60 + 15);
+      const isNightLate = totalMins > 22 * 60;
+
+      if (isNightEarly || isNightLate) {
+        const isMyTurn = (myShift === '3');
+        return {
+          canEdit: isMyTurn,
+          status: isMyTurn ? 'ACTIVO' : 'EN_ESPERA_INICIO',
+          title: isMyTurn ? '🟢 Turno 3 Activo (22:00 - 06:00)' : '🔒 Turno 3 en Curso (Grupo A)',
+          sub: isMyTurn ? 'Llamado de lista abierto' : 'Su turno iniciará en su horario previsto',
+          color: isMyTurn ? '#16a34a' : '#2563eb',
+          bg: isMyTurn ? '#f0fdf4' : '#eff6ff',
+          border: isMyTurn ? '#bbf7d0' : '#bfdbfe'
+        };
+      } else if (isNightGrace) {
+        const isMyTurn = (myShift === '3');
+        return {
+          canEdit: isMyTurn || myShift === '1',
+          status: isMyTurn ? 'CORTESIA_15_MIN' : 'ACTIVO',
+          title: isMyTurn ? '⏱️ Turno 3: Cortesía de Salida (15 min)' : '🟢 Turno 1 Activo (06:00 - 14:00)',
+          sub: isMyTurn ? 'Cierre de novedades y salidas de última hora' : 'Llamado de lista abierto',
+          color: isMyTurn ? '#ea580c' : '#16a34a',
+          bg: isMyTurn ? '#fff7ed' : '#f0fdf4',
+          border: isMyTurn ? '#fed7aa' : '#bbf7d0'
+        };
+      } else if (isShift1Grace) {
+        const isMyTurn = (myShift === '1');
+        return {
+          canEdit: isMyTurn || myShift === '2',
+          status: isMyTurn ? 'CORTESIA_15_MIN' : 'ACTIVO',
+          title: isMyTurn ? '⏱️ Turno 1: Cortesía de Salida (15 min)' : '🟢 Turno 2 Activo (14:00 - 22:00)',
+          sub: isMyTurn ? 'Cierre de novedades y salidas de última hora' : 'Llamado de lista abierto',
+          color: isMyTurn ? '#ea580c' : '#16a34a',
+          bg: isMyTurn ? '#fff7ed' : '#f0fdf4',
+          border: isMyTurn ? '#fed7aa' : '#bbf7d0'
+        };
+      } else if (isShift2Grace) {
+        const isMyTurn = (myShift === '2');
+        return {
+          canEdit: isMyTurn || myShift === '3',
+          status: isMyTurn ? 'CORTESIA_15_MIN' : 'ACTIVO',
+          title: isMyTurn ? '⏱️ Turno 2: Cortesía de Salida (15 min)' : '🟢 Turno 3 Activo (22:00 - 06:00)',
+          sub: isMyTurn ? 'Cierre de novedades y salidas de última hora' : 'Llamado de lista abierto',
+          color: isMyTurn ? '#ea580c' : '#16a34a',
+          bg: isMyTurn ? '#fff7ed' : '#f0fdf4',
+          border: isMyTurn ? '#fed7aa' : '#bbf7d0'
+        };
+      } else if (isShift1) {
+        const isMyTurn = (myShift === '1');
+        const isPast = (myShift === '3');
+        return {
+          canEdit: isMyTurn,
+          status: isMyTurn ? 'ACTIVO' : (isPast ? 'SOLO_LECTURA_HISTORIAL' : 'EN_ESPERA_INICIO'),
+          title: isMyTurn ? '🟢 Turno 1 Activo (06:00 - 14:00)' : (isPast ? '🔒 Turno 3 Concluido (Solo Lectura)' : 'Turno 1 en Curso (Grupo C)'),
+          sub: isMyTurn ? 'Llamado de lista abierto' : (isPast ? 'Historial cerrado tras los 15 min de cortesía' : 'En espera de inicio a las 14:00'),
+          color: isMyTurn ? '#16a34a' : (isPast ? '#64748b' : '#2563eb'),
+          bg: isMyTurn ? '#f0fdf4' : (isPast ? '#f8fafc' : '#eff6ff'),
+          border: isMyTurn ? '#bbf7d0' : (isPast ? '#e2e8f0' : '#bfdbfe')
+        };
+      } else if (isShift2) {
+        const isMyTurn = (myShift === '2');
+        const isPast = (myShift === '1');
+        return {
+          canEdit: isMyTurn,
+          status: isMyTurn ? 'ACTIVO' : (isPast ? 'SOLO_LECTURA_HISTORIAL' : 'EN_ESPERA_INICIO'),
+          title: isMyTurn ? '🟢 Turno 2 Activo (14:00 - 22:00)' : (isPast ? '🔒 Turno 1 Concluido (Solo Lectura)' : 'Turno 2 en Curso (Grupo B)'),
+          sub: isMyTurn ? 'Llamado de lista abierto' : (isPast ? 'Historial cerrado tras los 15 min de cortesía' : 'En espera de inicio a las 22:00'),
+          color: isMyTurn ? '#16a34a' : (isPast ? '#64748b' : '#2563eb'),
+          bg: isMyTurn ? '#f0fdf4' : (isPast ? '#f8fafc' : '#eff6ff'),
+          border: isMyTurn ? '#bbf7d0' : (isPast ? '#e2e8f0' : '#bfdbfe')
+        };
+      }
+
+      return {
+        canEdit: false,
+        status: 'SOLO_LECTURA_HISTORIAL',
+        title: '🔒 Turno Concluido (Solo Lectura)',
+        sub: 'Historial cerrado. Solo el Coordinador puede editar.',
+        color: '#64748b',
+        bg: '#f8fafc',
+        border: '#e2e8f0'
+      };
+    }
+
     function openAttendanceModal(empId) {
+      const shiftPol = evaluateShiftPolicy(currentUser);
+      if (!shiftPol.canEdit) {
+        alert(shiftPol.title + '\n' + shiftPol.sub);
+        return;
+      }
       const emp = allEmployees.find(e => String(e.id) === String(empId));
       if (!emp) return;
 
@@ -2726,6 +2943,19 @@
       if (!container) return;
       container.innerHTML = '';
       const dict = I18N[currentLang] || I18N['es'];
+
+      // Banner Inteligente de Ventana Horaria y Política de Turno
+      const shiftPol = evaluateShiftPolicy(currentUser);
+      const polBanner = document.createElement('div');
+      polBanner.style.cssText = `display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; margin-bottom:14px; background:${shiftPol.bg}; border:1.5px solid ${shiftPol.border};`;
+      polBanner.innerHTML = `
+        <div style="font-size:1.3rem;">${shiftPol.status === 'ACTIVO' ? '🟢' : (shiftPol.status === 'CORTESIA_15_MIN' ? '⏱️' : '🔒')}</div>
+        <div>
+          <div style="font-weight:800; font-size:0.85rem; color:${shiftPol.color};">${shiftPol.title}</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">${shiftPol.sub}</div>
+        </div>
+      `;
+      container.appendChild(polBanner);
 
       // Actualizar estadísticas del llamado de lista en la barra superior
       renderAttendanceStats();
@@ -2890,6 +3120,123 @@ Por favor comunícate a la mayor brevedad.
         }
         container.appendChild(card);
       });
+
+      // ── BARRA DIVISORIA ELEGANTE DE PERSONAL DE APOYO (TODOS LOS IDIOMAS) ──
+      const dividerEl = document.createElement('div');
+      dividerEl.style.cssText = 'margin: 26px 0 16px; text-align:center;';
+      dividerEl.innerHTML = `
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="flex:1; height:1.5px; background:var(--primary); opacity:0.35;"></div>
+          <span style="background:var(--primary); color:#ffffff; font-weight:800; font-size:0.76rem; padding:6px 14px; border-radius:20px; letter-spacing:0.5px; box-shadow:0 2px 4px rgba(0,0,0,0.12);">
+            ⚡ PERSONAL DE APOYO
+          </span>
+          <div style="flex:1; height:1.5px; background:var(--primary); opacity:0.35;"></div>
+        </div>
+        <div style="font-size:0.68rem; color:var(--text-muted); margin-top:6px; line-height:1.35; font-weight:500;">
+          Personal de Apoyo · Support Personnel · Personel Wsparcia<br>
+          Персонал підтримки · طاقم الدعم · Shaqaalaha Caawinta
+        </div>
+      `;
+      container.appendChild(dividerEl);
+
+      // Determinación de personal de apoyo que ingresa a este turno
+      let targetShift = isCoordOrAdmin ? (currentShiftFilter === 'TODOS' ? 'TODOS' : currentShiftFilter) : (currentUser.turno_actual || '1');
+      let prevShift = targetShift === '1' ? '3' : (targetShift === '2' ? '1' : (targetShift === '3' ? '2' : ''));
+      
+      const supportList = allEmployees.filter(e => {
+        if (String(e.id) === '0') return false;
+        if (list.some(m => String(m.id) === String(e.id))) return false;
+        if (targetShift === 'TODOS') {
+          return e.es_apoyo || (e.horas_extra_apoyo && e.horas_extra_apoyo > 0);
+        } else {
+          return (String(e.turno_actual) === prevShift && e.horas_extra_apoyo > 0) || (e.es_apoyo && String(e.turno_actual) === targetShift);
+        }
+      });
+
+      if (supportList.length === 0) {
+        const emptySup = document.createElement('div');
+        emptySup.style.cssText = 'padding:14px; border-radius:10px; background:var(--surface); border:1px dashed var(--border); text-align:center; font-size:0.78rem; color:var(--text-muted); margin-bottom:12px;';
+        emptySup.innerText = 'No hay personal de apoyo programado para este turno.';
+        container.appendChild(emptySup);
+      } else {
+        supportList.forEach(emp => {
+          const card = document.createElement('div');
+          card.className = 'worker-card';
+          card.style.background = '#fefce8';
+          card.style.border = '1px solid #fef08a';
+
+          const attRec = attendanceRecordsMap[String(emp.id)];
+          const attStatus = attRec ? attRec.status : 'PENDIENTE';
+          const badgeInfo = getStatusBadgeDetails(attStatus, attRec ? attRec.earlyExitTime : '');
+          const extraH = emp.horas_extra_apoyo || 2;
+
+          let attendanceRowHtml = '';
+          if (isLeaderOrCoord) {
+            attendanceRowHtml = `
+              <div class="attendance-row">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <button class="badge-status-btn" onclick="openAttendanceModal('${emp.id}')" style="background:${badgeInfo.bg}; color:${badgeInfo.color}; border:1px solid ${badgeInfo.border};">
+                    <span>${badgeInfo.emoji} ${badgeInfo.label}</span>
+                  </button>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <button class="btn-take-attendance" onclick="openAttendanceModal('${emp.id}')">
+                    <span>📝 Pasar Lista</span>
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+
+          card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <span style="display:inline-block; margin-bottom:4px; font-size:0.72rem; font-weight:800; color:#c2410c; background:#ffedd5; border:1px solid #fed7aa; border-radius:6px; padding:2px 6px;">
+                  ⚡ +${extraH}h Apoyo (${emp.disponibilidad_horas || '10:00'} - 8h normal)
+                </span>
+                <div style="font-weight:700; font-size:0.92rem;">${emp.nombre_completo}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted);">Origen: Turno ${emp.turno_actual || 1} · Grupo ${emp.grupo || 'A'}</div>
+              </div>
+            </div>
+            ${attendanceRowHtml}
+          `;
+          container.appendChild(card);
+        });
+      }
+
+      // ── BOTÓN DE AGREGAR PERSONAL DE APOYO (BLOQUEADO PARA LÍDERES) ──
+      const addBtnContainer = document.createElement('div');
+      addBtnContainer.style.cssText = 'margin:14px 0 24px;';
+      
+      if (!isCoordOrAdmin) {
+        // Bloqueado para Líderes de Línea con candado y tooltip
+        addBtnContainer.innerHTML = `
+          <button onclick="alert('Solo el Coordinador puede autorizar personal de apoyo imprevisto.')" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border-radius:12px; background:#f1f5f9; border:1px dashed #cbd5e1; color:#94a3b8; font-weight:700; font-size:0.85rem; cursor:not-allowed;">
+            <span>🔒</span>
+            <span>➕ Agregar Personal de Apoyo</span>
+          </button>
+          <div style="text-align:center; font-size:0.7rem; color:#94a3b8; margin-top:4px;">Solo el Coordinador puede autorizar personal de apoyo imprevisto</div>
+        `;
+      } else {
+        // Habilitado para Coordinador
+        addBtnContainer.innerHTML = `
+          <button onclick="promptAddSupportWorker()" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border-radius:12px; background:var(--primary); color:#ffffff; font-weight:700; font-size:0.85rem; border:none; box-shadow:0 2px 4px rgba(0,0,0,0.1); cursor:pointer;">
+            <span>➕ Agregar Personal de Apoyo Imprevisto</span>
+          </button>
+        `;
+      }
+      container.appendChild(addBtnContainer);
+    }
+
+    function promptAddSupportWorker() {
+      const workerName = prompt("Ingrese el nombre o ID del trabajador a asignar como apoyo:");
+      if (!workerName) return;
+      const hours = prompt("¿Cuántas horas de apoyo prestará? (2 o 4):", "2");
+      if (hours !== "2" && hours !== "4") {
+        alert("Las horas de apoyo deben ser 2 o 4.");
+        return;
+      }
+      alert(`Personal de apoyo imprevisto registrado: ${workerName} (+${hours}h extra).`);
     }
 
     function filterGroups(shift, element) {
