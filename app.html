@@ -38,203 +38,8 @@
 
   <!-- Firebase SDK Oficial v10 Compat (Cero CORS, Soporte Offline y Tiempo Real) -->
 
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js">
-    // ==========================================
-    // RESTAURACIÓN INMEDIATA DE SESIÓN (SAFARI / PWA PERSISTENCE)
-    // ==========================================
-    (function initSessionAndSync() {
-      try {
-        const savedSession = localStorage.getItem('unamel_user_session');
-        if (savedSession) {
-          const cachedUser = JSON.parse(savedSession);
-          if (cachedUser && (cachedUser.id !== undefined || cachedUser.pesel)) {
-            console.log('[Session] Restaurando sesión activa de forma instantánea:', cachedUser.nombre_completo);
-            loginUser(cachedUser);
-          }
-        }
-      } catch (err) {
-        console.warn('Error al restaurar sesión en caché:', err);
-      }
-
-      // Sincronización en segundo plano con Cloud Firestore
-      fetchLiveEmployees().then(emps => {
-        if (currentUser && emps && emps.length > 0) {
-          const fresh = emps.find(e => String(e.id) === String(currentUser.id) || (e.pesel && e.pesel === currentUser.pesel));
-          if (fresh) {
-            currentUser = Object.assign(currentUser, fresh);
-            localStorage.setItem('unamel_user_session', JSON.stringify(currentUser));
-            renderDashboard();
-          }
-        }
-      });
-
-      // Escuchar actualizaciones de sync_control
-      listenToSyncControl();
-    })();
-
-    function listenToSyncControl() {
-      if (!db) return;
-      try {
-        db.collection('configuracion').doc('sync_control').onSnapshot(doc => {
-          if (!doc || !doc.exists) return;
-          const data = doc.data();
-          const ver = data.version_datos;
-          const lastVer = parseInt(localStorage.getItem('unamel_last_sync_version') || '0', 10);
-          if (ver && ver > lastVer && lastVer > 0) {
-            showToastBanner(data.mensaje_notificacion || '🔔 Horas y programación actualizadas por Coordinación.');
-            localStorage.setItem('unamel_last_sync_version', String(ver));
-            fetchLiveEmployees().then(() => { if (currentUser) renderDashboard(); });
-          } else if (ver) {
-            localStorage.setItem('unamel_last_sync_version', String(ver));
-          }
-        });
-      } catch (e) {
-        console.warn('Error listening to sync_control:', e);
-      }
-    }
-
-    function showToastBanner(msg) {
-      const banner = document.createElement('div');
-      banner.style.cssText = 'position:fixed; top:16px; left:50%; transform:translateX(-50%); background:#1e40af; color:white; padding:10px 18px; border-radius:24px; font-size:0.82rem; font-weight:700; z-index:99999; box-shadow:0 8px 24px rgba(0,0,0,0.25); text-align:center; max-width:90%; transition:all 0.3s;';
-      banner.innerText = msg;
-      document.body.appendChild(banner);
-      setTimeout(() => { banner.style.opacity = '0'; setTimeout(() => banner.remove(), 400); }, 5000);
-    }
-
-    // Funciones de Encuesta
-    let selectedRating = 3;
-    function selectSurveyRating(btn, r) {
-      selectedRating = r;
-      document.querySelectorAll('.survey-opt').forEach(b => {
-        b.style.background = 'var(--surface-variant)';
-        b.style.color = 'var(--text)';
-        b.style.borderColor = 'var(--border)';
-      });
-      btn.style.background = '#dbeafe';
-      btn.style.color = '#1e40af';
-      btn.style.borderColor = '#93c5fd';
-    }
-
-    function openSurveyModal() {
-      document.getElementById('modal-survey').style.display = 'flex';
-    }
-
-    function closeSurveyModal() {
-      document.getElementById('modal-survey').style.display = 'none';
-    }
-
-    function dismissSurveyCard() {
-      const card = document.getElementById('survey-card');
-      if (card) card.style.display = 'none';
-      localStorage.setItem('unamel_survey_dismissed', 'true');
-    }
-
-    function submitSurvey() {
-      closeSurveyModal();
-      dismissSurveyCard();
-      showToastBanner('¡Gracias por tu opinión! Encuesta registrada exitosamente.');
-    }
-
-  </script>
-
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js">
-    // ==========================================
-    // RESTAURACIÓN INMEDIATA DE SESIÓN (SAFARI / PWA PERSISTENCE)
-    // ==========================================
-    (function initSessionAndSync() {
-      try {
-        const savedSession = localStorage.getItem('unamel_user_session');
-        if (savedSession) {
-          const cachedUser = JSON.parse(savedSession);
-          if (cachedUser && (cachedUser.id !== undefined || cachedUser.pesel)) {
-            console.log('[Session] Restaurando sesión activa de forma instantánea:', cachedUser.nombre_completo);
-            loginUser(cachedUser);
-          }
-        }
-      } catch (err) {
-        console.warn('Error al restaurar sesión en caché:', err);
-      }
-
-      // Sincronización en segundo plano con Cloud Firestore
-      fetchLiveEmployees().then(emps => {
-        if (currentUser && emps && emps.length > 0) {
-          const fresh = emps.find(e => String(e.id) === String(currentUser.id) || (e.pesel && e.pesel === currentUser.pesel));
-          if (fresh) {
-            currentUser = Object.assign(currentUser, fresh);
-            localStorage.setItem('unamel_user_session', JSON.stringify(currentUser));
-            renderDashboard();
-          }
-        }
-      });
-
-      // Escuchar actualizaciones de sync_control
-      listenToSyncControl();
-    })();
-
-    function listenToSyncControl() {
-      if (!db) return;
-      try {
-        db.collection('configuracion').doc('sync_control').onSnapshot(doc => {
-          if (!doc || !doc.exists) return;
-          const data = doc.data();
-          const ver = data.version_datos;
-          const lastVer = parseInt(localStorage.getItem('unamel_last_sync_version') || '0', 10);
-          if (ver && ver > lastVer && lastVer > 0) {
-            showToastBanner(data.mensaje_notificacion || '🔔 Horas y programación actualizadas por Coordinación.');
-            localStorage.setItem('unamel_last_sync_version', String(ver));
-            fetchLiveEmployees().then(() => { if (currentUser) renderDashboard(); });
-          } else if (ver) {
-            localStorage.setItem('unamel_last_sync_version', String(ver));
-          }
-        });
-      } catch (e) {
-        console.warn('Error listening to sync_control:', e);
-      }
-    }
-
-    function showToastBanner(msg) {
-      const banner = document.createElement('div');
-      banner.style.cssText = 'position:fixed; top:16px; left:50%; transform:translateX(-50%); background:#1e40af; color:white; padding:10px 18px; border-radius:24px; font-size:0.82rem; font-weight:700; z-index:99999; box-shadow:0 8px 24px rgba(0,0,0,0.25); text-align:center; max-width:90%; transition:all 0.3s;';
-      banner.innerText = msg;
-      document.body.appendChild(banner);
-      setTimeout(() => { banner.style.opacity = '0'; setTimeout(() => banner.remove(), 400); }, 5000);
-    }
-
-    // Funciones de Encuesta
-    let selectedRating = 3;
-    function selectSurveyRating(btn, r) {
-      selectedRating = r;
-      document.querySelectorAll('.survey-opt').forEach(b => {
-        b.style.background = 'var(--surface-variant)';
-        b.style.color = 'var(--text)';
-        b.style.borderColor = 'var(--border)';
-      });
-      btn.style.background = '#dbeafe';
-      btn.style.color = '#1e40af';
-      btn.style.borderColor = '#93c5fd';
-    }
-
-    function openSurveyModal() {
-      document.getElementById('modal-survey').style.display = 'flex';
-    }
-
-    function closeSurveyModal() {
-      document.getElementById('modal-survey').style.display = 'none';
-    }
-
-    function dismissSurveyCard() {
-      const card = document.getElementById('survey-card');
-      if (card) card.style.display = 'none';
-      localStorage.setItem('unamel_survey_dismissed', 'true');
-    }
-
-    function submitSurvey() {
-      closeSurveyModal();
-      dismissSurveyCard();
-      showToastBanner('¡Gracias por tu opinión! Encuesta registrada exitosamente.');
-    }
-
-  </script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 
 
 
@@ -1848,14 +1653,14 @@
 
           <div class="section-title">📅 Detalle Diario de Jornadas</div>
 
-          <!-- Leyenda de Colores de Incidencias y Estados -->
+          <!-- Leyenda de Colores Oficiales (Verde: #C1F0C8, Naranja: #E97132, Gris: #ADADAD, Amarillo: #FFFF00, Azul: #61CBF3, Rojo: #FF0000) -->
           <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:8px; margin-bottom:10px;">
-            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#e8f5e9; color:#2e7d32; border:1px solid #a5d6a7; white-space:nowrap;">🟢 Verde: Ausencia Autorizada</span>
-            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#eeeeee; color:#757575; border:1px solid #bdbdbd; white-space:nowrap;">⚪ Gris: No Programado</span>
-            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#e3f2fd; color:#1976d2; border:1px solid #90caf9; white-space:nowrap;">🔵 Azul: Incapacidad</span>
-            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#fffde7; color:#f57f17; border:1px solid #fff59d; white-space:nowrap;">🟡 Amarillo: No Autorizado</span>
-            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#fff3e0; color:#e65100; border:1px solid #ffcc80; white-space:nowrap;">🟠 Naranja: Por Confirmar</span>
-            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#ffebee; color:#d32f2f; border:1px solid #ef9a9a; white-space:nowrap;">🔴 Rojo: Penalización</span>
+            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#f1fbf3; color:#1b5e20; border:1px solid #c1f0c8; white-space:nowrap;">🟢 Verde: Ausencia Autorizada</span>
+            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#fff4ec; color:#bf360c; border:1px solid #e97132; white-space:nowrap;">🟠 Naranja: Por Confirmar</span>
+            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#f5f5f5; color:#424242; border:1px solid #adadad; white-space:nowrap;">⚪ Gris: No Programado</span>
+            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#fffde7; color:#8d6e63; border:1px solid #ffff00; white-space:nowrap;">🟡 Amarillo: No Autorizado</span>
+            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#f0fafe; color:#0277bd; border:1px solid #61cbf3; white-space:nowrap;">🔵 Azul: Incapacidad Médica</span>
+            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#ffebee; color:#b71c1c; border:1px solid #ff0000; white-space:nowrap;">🔴 Rojo: Penalización</span>
           </div>
 
           <div id="hours-list">
@@ -2295,7 +2100,7 @@
 
     // Datos maestros locales de respaldo (Fallback Offline)
 
-    const FALLBACK_DATA = {"metadata": {"app": "Coordinacion UNAMEL", "version": "1.0.7", "fecha_sincronizacion": "2026-09-18 03:50:58", "origen_excel": "Coordinacion UNAMEL - Disponiibilidad.xlsm", "origen_horas": "Coordinacion UNAMEL.xlsm", "periodo_programacion": "Programación 20 Septiembre - 25 Septiembre", "mes_activo": "Septiembre", "total_empleados_activos": 35, "total_despedidos": 33}, "rotacion_turnos": {"3": {"turno": "3", "horario": "22:00 - 06:00", "grupo": "A", "lider": "Henry Armando Blanco Arrieta"}, "1": {"turno": "1", "horario": "06:00 - 14:00", "grupo": "C", "lider": "Dylan  Zinyuku"}, "2": {"turno": "2", "horario": "14:00 - 22:00", "grupo": "B", "lider": "Ahmed Omar Osman"}}, "grupos_lideres": {"A": {"grupo": "A", "turno": "3", "horario": "22:00 - 06:00", "lider": "Henry Armando Blanco Arrieta", "posicion": "Lider linii"}, "C": {"grupo": "C", "turno": "1", "horario": "06:00 - 14:00", "lider": "Dylan  Zinyuku", "posicion": "Lider linii"}, "B": {"grupo": "B", "turno": "2", "horario": "14:00 - 22:00", "lider": "Ahmed Omar Osman", "posicion": "Lider linii"}}, "empleados": []};
+    const FALLBACK_DATA = {"metadata": {"app": "Coordinacion UNAMEL", "version": "1.0.7", "fecha_sincronizacion": "2026-09-18 04:14:42", "origen_excel": "Coordinacion UNAMEL - Disponiibilidad.xlsm", "origen_horas": "Coordinacion UNAMEL.xlsm", "periodo_programacion": "Programación 20 Septiembre - 25 Septiembre", "mes_activo": "Septiembre", "total_empleados_activos": 35, "total_despedidos": 33}, "rotacion_turnos": {"3": {"turno": "3", "horario": "22:00 - 06:00", "grupo": "A", "lider": "Henry Armando Blanco Arrieta"}, "1": {"turno": "1", "horario": "06:00 - 14:00", "grupo": "C", "lider": "Dylan  Zinyuku"}, "2": {"turno": "2", "horario": "14:00 - 22:00", "grupo": "B", "lider": "Ahmed Omar Osman"}}, "grupos_lideres": {"A": {"grupo": "A", "turno": "3", "horario": "22:00 - 06:00", "lider": "Henry Armando Blanco Arrieta", "posicion": "Lider linii"}, "C": {"grupo": "C", "turno": "1", "horario": "06:00 - 14:00", "lider": "Dylan  Zinyuku", "posicion": "Lider linii"}, "B": {"grupo": "B", "turno": "2", "horario": "14:00 - 22:00", "lider": "Ahmed Omar Osman", "posicion": "Lider linii"}}, "empleados": []};
 
     let allEmployees = FALLBACK_DATA.empleados || [];
 
@@ -2736,41 +2541,42 @@
           let iconPrefix = '✅ ';
           
           if (estado === 'AUSENCIA_AUTORIZADA') {
-            badgeColor = '#2e7d32';
-            badgeBg = '#e8f5e9';
-            badgeBorder = '#a5d6a7';
+            badgeColor = '#1b5e20';
+            badgeBg = '#f1fbf3';
+            badgeBorder = '#c1f0c8';
             iconPrefix = '🟢 ';
-            if (!isHourOnly) { cardBg = '#f1f8f1'; cardBorder = '#81c784'; }
+            if (!isHourOnly) { cardBg = '#f1fbf3'; cardBorder = '#c1f0c8'; }
           } else if (estado === 'NO_PROGRAMADO') {
-            badgeColor = '#757575';
-            badgeBg = '#eeeeee';
-            badgeBorder = '#bdbdbd';
+            badgeColor = '#424242';
+            badgeBg = '#f5f5f5';
+            badgeBorder = '#adadad';
             iconPrefix = '⚪ ';
-            if (!isHourOnly) { cardBg = '#fafafa'; cardBorder = '#e0e0e0'; }
+            if (!isHourOnly) { cardBg = '#f9f9f9'; cardBorder = '#adadad'; }
           } else if (estado === 'INCAPACIDAD_MEDICA') {
-            badgeColor = '#1976d2';
-            badgeBg = '#e3f2fd';
-            badgeBorder = '#90caf9';
-            iconPrefix = '🩺 ';
-            if (!isHourOnly) { cardBg = '#f0f7ff'; cardBorder = '#90caf9'; }
+            badgeColor = '#0277bd';
+            badgeBg = '#f0fafe';
+            badgeBorder = '#61cbf3';
+            iconPrefix = '🔵 ';
+            if (!isHourOnly) { cardBg = '#f0fafe'; cardBorder = '#61cbf3'; }
           } else if (estado === 'NO_AUTORIZADO') {
-            badgeColor = '#f57f17';
+            badgeColor = '#8d6e63';
             badgeBg = '#fffde7';
-            badgeBorder = '#fff59d';
-            iconPrefix = '⚠️ ';
-            if (!isHourOnly) { cardBg = '#fffef0'; cardBorder = '#fbc02d'; }
+            badgeBorder = '#ffff00';
+            iconPrefix = '🟡 ';
+            if (!isHourOnly) { cardBg = '#fffde7'; cardBorder = '#ffff00'; }
           } else if (estado === 'POR_CONFIRMAR') {
-            badgeColor = '#e65100';
-            badgeBg = '#fff3e0';
-            badgeBorder = '#ffcc80';
-            iconPrefix = '⏳ ';
-            if (!isHourOnly) { cardBg = '#fff9f0'; cardBorder = '#fb8c00'; }
+            badgeColor = '#bf360c';
+            badgeBg = '#fff4ec';
+            badgeBorder = '#e97132';
+            iconPrefix = '🟠 ';
+            if (!isHourOnly) { cardBg = '#fff4ec'; cardBorder = '#e97132'; }
           } else if (estado === 'PENALIZACION') {
-            badgeColor = '#d32f2f';
+            badgeColor = '#b71c1c';
             badgeBg = '#ffebee';
-            badgeBorder = '#ef9a9a';
-            iconPrefix = '⛔ ';
-            if (!isHourOnly) { cardBg = '#fff5f5'; cardBorder = '#e53935'; }
+            badgeBorder = '#ff0000';
+            iconPrefix = '🔴 ';
+            if (!isHourOnly) { cardBg = '#ffebee'; cardBorder = '#ff0000'; }
+          }
           }
           
           row.style.background = cardBg;
@@ -3380,17 +3186,17 @@
         const daySched = (emp.dias_trabajados_detalle || []).find(d => d.dia === curDayNum);
         let schedBadgeHtml = '';
         if (daySched && daySched.estado_dia && daySched.estado_dia !== 'NORMAL') {
-          let sBg = '#e8f5e9', sBorder = '#a5d6a7', sColor = '#2e7d32', sLabel = '🟢 Ausencia Autorizada (Permiso)';
+          let sBg = '#f1fbf3', sBorder = '#c1f0c8', sColor = '#1b5e20', sLabel = '🟢 Ausencia Autorizada y Programada';
           if (daySched.estado_dia === 'NO_PROGRAMADO') {
-            sBg = '#eeeeee'; sBorder = '#bdbdbd'; sColor = '#616161'; sLabel = '⚪ No Programado (Día Libre)';
+            sBg = '#f5f5f5'; sBorder = '#adadad'; sColor = '#424242'; sLabel = '⚪ No Programado (Día Libre)';
           } else if (daySched.estado_dia === 'INCAPACIDAD_MEDICA') {
-            sBg = '#e3f2fd'; sBorder = '#90caf9'; sColor = '#1976d2'; sLabel = '🔵 Incapacidad Médica';
+            sBg = '#f0fafe'; sBorder = '#61cbf3'; sColor = '#0277bd'; sLabel = '🔵 Incapacidad Médica';
           } else if (daySched.estado_dia === 'NO_AUTORIZADO') {
-            sBg = '#fffde7'; sBorder = '#fff59d'; sColor = '#f57f17'; sLabel = '🟡 Ausencia No Autorizada';
+            sBg = '#fffde7'; sBorder = '#ffff00'; sColor = '#8d6e63'; sLabel = '🟡 Ausencia No Autorizada';
           } else if (daySched.estado_dia === 'POR_CONFIRMAR') {
-            sBg = '#fff3e0'; sBorder = '#ffcc80'; sColor = '#e65100'; sLabel = '🟠 Por Confirmar';
+            sBg = '#fff4ec'; sBorder = '#e97132'; sColor = '#bf360c'; sLabel = '🟠 Por Confirmar';
           } else if (daySched.estado_dia === 'PENALIZACION') {
-            sBg = '#ffebee'; sBorder = '#ef9a9a'; sColor = '#d32f2f'; sLabel = '🔴 Penalización';
+            sBg = '#ffebee'; sBorder = '#ff0000'; sColor = '#b71c1c'; sLabel = '🔴 Penalización';
           }
           const commentNote = daySched.comentario ? `: ${daySched.comentario}` : '';
           schedBadgeHtml = `<div style="margin-top:6px;"><span style="display:inline-block; font-size:0.7rem; font-weight:800; padding:2px 8px; border-radius:6px; background:${sBg}; border:1px solid ${sBorder}; color:${sColor};">${sLabel}${commentNote}</span></div>`;
