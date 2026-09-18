@@ -2189,7 +2189,7 @@
         'Miércoles': currentLang === 'ar' ? 'الأربعاء' : (currentLang === 'pl' ? 'Środa' : (currentLang === 'uk' ? 'Середа' : (currentLang === 'en' ? 'Wednesday' : (currentLang === 'so' ? 'Arbaco' : 'Miércoles')))),
         'Miercoles': currentLang === 'ar' ? 'الأربعاء' : (currentLang === 'pl' ? 'Środa' : (currentLang === 'uk' ? 'Середа' : (currentLang === 'en' ? 'Wednesday' : (currentLang === 'so' ? 'Arbaco' : 'Miércoles')))),
         'Jueves': currentLang === 'ar' ? 'الخميس' : (currentLang === 'pl' ? 'Czwartek' : (currentLang === 'uk' ? 'Четвер' : (currentLang === 'en' ? 'Thursday' : (currentLang === 'so' ? 'Khamiis' : 'Jueves')))),
-        'Viernes': currentLang === 'ar' ? 'الجمعة' : (currentLang === 'pl' ? 'Piątek' : (currentLang === 'uk' ? 'П'ятниця' : (currentLang === 'en' ? 'Friday' : (currentLang === 'so' ? 'Jimce' : 'Viernes')))),
+        'Viernes': currentLang === 'ar' ? 'الجمعة' : (currentLang === 'pl' ? 'Piątek' : (currentLang === 'uk' ? "П'ятниця" : (currentLang === 'en' ? 'Friday' : (currentLang === 'so' ? 'Jimce' : 'Viernes')))),
         'Sábado': currentLang === 'ar' ? 'السبت' : (currentLang === 'pl' ? 'Sobota' : (currentLang === 'uk' ? 'Субота' : (currentLang === 'en' ? 'Saturday' : (currentLang === 'so' ? 'Sabti' : 'Sábado')))),
         'Sabado': currentLang === 'ar' ? 'السبت' : (currentLang === 'pl' ? 'Sobota' : (currentLang === 'uk' ? 'Субота' : (currentLang === 'en' ? 'Saturday' : (currentLang === 'so' ? 'Sabti' : 'Sábado')))),
         'Domingo': currentLang === 'ar' ? 'الأحد' : (currentLang === 'pl' ? 'Niedziela' : (currentLang === 'uk' ? 'Неділя' : (currentLang === 'en' ? 'Sunday' : (currentLang === 'so' ? 'Axad' : 'Domingo'))))
@@ -2368,9 +2368,11 @@
       const coordTitle = document.querySelector('#tab-coordination .section-title');
       if (coordTitle && dict.incidents_title) coordTitle.innerText = dict.incidents_title;
 
-      // Re-render dynamic cards
-      renderGroupsTab();
-      renderCoordinationTab();
+      // Re-render dynamic cards only if user is logged in
+      if (currentUser) {
+        renderGroupsTab();
+        renderCoordinationTab();
+      }
     }
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -2970,7 +2972,9 @@
     // POLÍTICA DE HORARIOS Y VENTANA DE TURNO (15 MIN CORTESÍA / FIN DE SEMANA)
     // ==========================================
     function evaluateShiftPolicy(user) {
-      const userRole = user ? (user.rol_app || user.rol || '').toUpperCase() : '';
+      if (!user) user = currentUser;
+      if (!user) return { canEdit: false, status: 'INACTIVO', title: 'Sin Sesión', sub: '', color: '#666', bg: '#f5f5f5', border: '#ddd' };
+      const userRole = (user.rol_app || user.rol || '').toUpperCase();
       const isCoord = String(user.id) === '0' || String(user.id) === '2023' || userRole.includes('COORDINADOR') || userRole.includes('ADMIN');
       if (isCoord) {
         return {
@@ -3294,6 +3298,7 @@
     let supportGroupUserExpanded = false;
 
     function renderGroupsTab() {
+      if (!currentUser) return;
       const container = document.getElementById('groups-container');
       if (!container) return;
       container.innerHTML = '';
@@ -3689,6 +3694,7 @@ Por favor comunícate a la mayor brevedad.
     }
 
     function renderCoordinationTab() {
+      if (!currentUser) return;
       const incList = document.getElementById('incidents-list');
       if (!incList) return;
       incList.innerHTML = '';
