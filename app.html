@@ -1519,6 +1519,23 @@
 
         </div>
 
+        <!-- Tarjeta de Resultados de Encuestas (Solo Coordinador y Administración) -->
+        <div id="survey-admin-card" class="card" style="display:none; margin-top:12px; border:1.5px solid #a78bfa; background:linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.2rem;">📊</span>
+              <span style="font-weight:800; font-size:0.95rem; color:#6d28d9;">Resultados de Encuestas</span>
+            </div>
+            <span style="font-size:0.7rem; font-weight:700; background:#ddd6fe; color:#5b21b6; padding:2px 8px; border-radius:10px;">SUPERVISIÓN</span>
+          </div>
+          <div style="font-size:0.8rem; color:#475569; margin-bottom:12px;">
+            Consulta las respuestas, comentarios y calificaciones de clima laboral registradas por los colaboradores.
+          </div>
+          <button class="btn-drawer" style="background:#7c3aed; color:white; border:none;" onclick="openSurveyResultsModal()">
+            <span>Ver Respuestas de Colaboradores →</span>
+          </button>
+        </div>
+
 
 
         <div class="card">
@@ -1981,6 +1998,27 @@
     </div>
   </div>
 
+  <!-- MODAL RESULTADOS DE ENCUESTAS (COORDINADOR / ADMINISTRACIÓN) -->
+  <div id="modal-survey-results" class="modal-overlay" onclick="if(event.target===this) closeSurveyResultsModal()">
+    <div class="modal-content" style="max-width: 480px; max-height: 85vh; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <h3 style="font-size:1.15rem; font-weight:800; color:var(--primary); display:flex; align-items:center; gap:8px;">
+          <span>📊</span> <span>Respuestas de Encuestas</span>
+        </h3>
+        <button class="btn-close-modal" onclick="closeSurveyResultsModal()">✕</button>
+      </div>
+      <div id="survey-results-list" style="padding:10px 0; overflow-y:auto; flex:1; max-height:60vh;">
+        <div style="text-align:center; padding:20px; color:var(--text-muted);">
+          <span>⏳ Cargando respuestas...</span>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button type="button" onclick="loadSurveyResults()" class="btn-action" style="flex:1;">🔄 Actualizar</button>
+        <button type="button" onclick="closeSurveyResultsModal()" class="btn-primary" style="flex:1;">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modal-drawer" class="modal-overlay" onclick="if(event.target===this) closeDrawer()">
 
     <div class="modal-content">
@@ -2100,7 +2138,7 @@
 
     // Datos maestros locales de respaldo (Fallback Offline)
 
-    const FALLBACK_DATA = {"metadata": {"app": "Coordinacion UNAMEL", "version": "1.0.7", "fecha_sincronizacion": "2026-09-18 04:14:42", "origen_excel": "Coordinacion UNAMEL - Disponiibilidad.xlsm", "origen_horas": "Coordinacion UNAMEL.xlsm", "periodo_programacion": "Programación 20 Septiembre - 25 Septiembre", "mes_activo": "Septiembre", "total_empleados_activos": 35, "total_despedidos": 33}, "rotacion_turnos": {"3": {"turno": "3", "horario": "22:00 - 06:00", "grupo": "A", "lider": "Henry Armando Blanco Arrieta"}, "1": {"turno": "1", "horario": "06:00 - 14:00", "grupo": "C", "lider": "Dylan  Zinyuku"}, "2": {"turno": "2", "horario": "14:00 - 22:00", "grupo": "B", "lider": "Ahmed Omar Osman"}}, "grupos_lideres": {"A": {"grupo": "A", "turno": "3", "horario": "22:00 - 06:00", "lider": "Henry Armando Blanco Arrieta", "posicion": "Lider linii"}, "C": {"grupo": "C", "turno": "1", "horario": "06:00 - 14:00", "lider": "Dylan  Zinyuku", "posicion": "Lider linii"}, "B": {"grupo": "B", "turno": "2", "horario": "14:00 - 22:00", "lider": "Ahmed Omar Osman", "posicion": "Lider linii"}}, "empleados": []};
+    const FALLBACK_DATA = {"metadata": {"app": "Coordinacion UNAMEL", "version": "1.0.7", "fecha_sincronizacion": "2026-09-18 04:34:36", "origen_excel": "Coordinacion UNAMEL - Disponiibilidad.xlsm", "origen_horas": "Coordinacion UNAMEL.xlsm", "periodo_programacion": "Programación 20 Septiembre - 25 Septiembre", "mes_activo": "Septiembre", "total_empleados_activos": 36, "total_despedidos": 33}, "rotacion_turnos": {"3": {"turno": "3", "horario": "22:00 - 06:00", "grupo": "A", "lider": "Henry Armando Blanco Arrieta"}, "1": {"turno": "1", "horario": "06:00 - 14:00", "grupo": "C", "lider": "Dylan  Zinyuku"}, "2": {"turno": "2", "horario": "14:00 - 22:00", "grupo": "B", "lider": "Ahmed Omar Osman"}}, "grupos_lideres": {"A": {"grupo": "A", "turno": "3", "horario": "22:00 - 06:00", "lider": "Henry Armando Blanco Arrieta", "posicion": "Lider linii"}, "C": {"grupo": "C", "turno": "1", "horario": "06:00 - 14:00", "lider": "Dylan  Zinyuku", "posicion": "Lider linii"}, "B": {"grupo": "B", "turno": "2", "horario": "14:00 - 22:00", "lider": "Ahmed Omar Osman", "posicion": "Lider linii"}}, "empleados": []};
 
     let allEmployees = FALLBACK_DATA.empleados || [];
 
@@ -2176,7 +2214,7 @@
         const s3 = navButtons[3].querySelector('span:last-child');
         if (s3) {
           const uRole = currentUser ? (currentUser.rol_app || currentUser.rol || '').toUpperCase() : '';
-          const isCoord = currentUser && (String(currentUser.id) === '0' || uRole.includes('COORDINADOR') || uRole.includes('ADMIN'));
+          const isCoord = currentUser && (String(currentUser.id) === '0' || String(currentUser.id) === '2023' || uRole.includes('COORDINADOR') || uRole.includes('ADMIN'));
           s3.innerText = isCoord ? (dict.groups || 'Grupos') : (dict.my_group || 'Mi Grupo');
         }
         const s4 = navButtons[4].querySelector('span:last-child');
@@ -2344,6 +2382,30 @@
         return;
       }
 
+      // Bypass Super Usuario / Administración (ID 2023 / Clave 2026)
+      if (identInput === '2023' && pinInput === '2026') {
+        const superUser = {
+          id: 2023,
+          nombre_completo: "Administración",
+          rol_app: "ADMINISTRACION",
+          rol: "ADMINISTRACION",
+          turno_actual: "0",
+          horario_turno: "Gestión 24/7",
+          grupo_asignado: "Coordinación",
+          grupo: "Coordinación",
+          posicion: "Super Usuario / Administración",
+          pesel: "2023",
+          clave_pin: "2026",
+          dias_semana: {}
+        };
+        if (btnLogin) {
+          btnLogin.disabled = false;
+          btnLogin.innerHTML = origBtnHtml;
+        }
+        loginUser(superUser);
+        return;
+      }
+
       // Estado de carga visual
       if (btnLogin) {
         btnLogin.disabled = true;
@@ -2460,7 +2522,16 @@
       // Pestaña 1: Mi Perfil
       document.getElementById('prof-name').innerText = currentUser.nombre_completo || '--';
       const roleStr = (currentUser.rol_app || currentUser.rol || 'TRABAJADOR').toUpperCase();
-      document.getElementById('prof-role').innerText = roleStr.includes('COORDINADOR') ? (dict.coordination || 'COORDINADOR').toUpperCase() : (roleStr.includes('LIDER') ? (dict.leader_badge || '⭐ LÍDER DE LÍNEA') : (dict.worker_role || 'TRABAJADOR'));
+      const isSuperAdmin = roleStr.includes('ADMIN') || String(currentUser.id) === '2023';
+      if (isSuperAdmin) {
+        document.getElementById('prof-role').innerText = 'SUPER USUARIO / ADMINISTRACIÓN';
+      } else if (roleStr.includes('COORDINADOR')) {
+        document.getElementById('prof-role').innerText = (dict.coordination || 'COORDINADOR').toUpperCase();
+      } else if (roleStr.includes('LIDER') || (currentUser.posicion || '').toLowerCase().includes('lider')) {
+        document.getElementById('prof-role').innerText = (dict.leader_badge || '⭐ LÍDER DE LÍNEA');
+      } else {
+        document.getElementById('prof-role').innerText = (dict.worker_role || 'TRABAJADOR');
+      }
       document.getElementById('prof-meta').innerText = `ID: ${currentUser.id || 0} • ${currentUser.nacionalidad || '--'} • ${formatEmployeePosition(currentUser.posicion || 'koordynator')}`;
 
       let activeShiftDisplay = currentUser.horario_turno ? `${dict.shift_word || 'Turno'} ${currentUser.turno_actual || 1} (${currentUser.horario_turno})` : `${dict.shift_word || 'Turno'} 1 (06:00 - 14:00)`;
@@ -2495,6 +2566,13 @@
       const surveyCard = document.getElementById('survey-card');
       if (surveyCard && localStorage.getItem('unamel_survey_dismissed') === 'true') {
         surveyCard.style.display = 'none';
+      }
+
+      // Tarjeta de Resultados de Encuesta (Coordinador y Administración)
+      const surveyAdminCard = document.getElementById('survey-admin-card');
+      if (surveyAdminCard) {
+        const isCoordOrAdminUser = roleStr.includes('COORDINADOR') || roleStr.includes('ADMIN') || String(currentUser.id) === '0' || String(currentUser.id) === '2023';
+        surveyAdminCard.style.display = isCoordOrAdminUser ? 'block' : 'none';
       }
       document.getElementById('prof-p1').innerText = (currentUser.primera_pausa && currentUser.primera_pausa.hora) ? `${currentUser.primera_pausa.hora} (${currentUser.primera_pausa.duracion || '20 Min'})` : '11:00 (20 Min)';
       document.getElementById('prof-p2').innerText = (currentUser.segunda_pausa && currentUser.segunda_pausa.hora && currentUser.segunda_pausa.hora !== '--') ? `${currentUser.segunda_pausa.hora} (${currentUser.segunda_pausa.duracion || '20 Min'})` : '-- (--)';
@@ -2775,7 +2853,7 @@
     // ==========================================
     function evaluateShiftPolicy(user) {
       const userRole = user ? (user.rol_app || user.rol || '').toUpperCase() : '';
-      const isCoord = String(user.id) === '0' || userRole.includes('COORDINADOR') || userRole.includes('ADMIN');
+      const isCoord = String(user.id) === '0' || String(user.id) === '2023' || userRole.includes('COORDINADOR') || userRole.includes('ADMIN');
       if (isCoord) {
         return {
           canEdit: true,
@@ -3080,6 +3158,9 @@
       if (mEarly) mEarly.innerText = early;
     }
 
+    let mainGroupUserExpanded = false;
+    let supportGroupUserExpanded = false;
+
     function renderGroupsTab() {
       const container = document.getElementById('groups-container');
       if (!container) return;
@@ -3105,6 +3186,7 @@
       const userRole = currentUser ? (currentUser.rol_app || currentUser.rol || '').toUpperCase() : '';
       const isCoordOrAdmin = currentUser && (
         String(currentUser.id) === '0' ||
+        String(currentUser.id) === '2023' ||
         userRole.includes('COORDINADOR') ||
         userRole.includes('ADMIN')
       );
@@ -3179,6 +3261,36 @@
         if (!aLider && bLider) return 1;
         return (a.nombre_completo || '').localeCompare(b.nombre_completo || '');
       });
+
+      const allMainDone = list.length > 0 && list.every(emp => {
+        const attRec = attendanceRecordsMap[String(emp.id)];
+        return attRec && attRec.status && attRec.status !== 'PENDIENTE';
+      });
+      const isMainExpanded = !allMainDone || mainGroupUserExpanded;
+
+      if (allMainDone) {
+        const compBanner = document.createElement('div');
+        compBanner.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-radius:12px; background:#ecfdf5; border:1.5px solid #a7f3d0; margin-bottom:12px; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.05);';
+        compBanner.onclick = () => {
+          mainGroupUserExpanded = !mainGroupUserExpanded;
+          renderGroupsTab();
+        };
+        compBanner.innerHTML = `
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1.2rem;">✅</span>
+            <div>
+              <div style="font-weight:800; font-size:0.88rem; color:#065f46;">Llamado a Lista Completado (${list.length} personas)</div>
+              <div style="font-size:0.75rem; color:#047857;">Toca para ${isMainExpanded ? 'contraer lista' : 'desplegar y ver detalles'}</div>
+            </div>
+          </div>
+          <span style="font-size:1.1rem; color:#059669; font-weight:800;">${isMainExpanded ? '▲' : '▼'}</span>
+        `;
+        container.appendChild(compBanner);
+      }
+
+      const mainListContainer = document.createElement('div');
+      mainListContainer.id = 'main-group-list-container';
+      mainListContainer.style.display = isMainExpanded ? 'block' : 'none';
 
       list.forEach(emp => {
         // Análisis de estado programado en Excel (Verde: Ausencia Autorizada, Gris: No Programado, etc.)
@@ -3281,33 +3393,16 @@ Por favor comunícate a la mayor brevedad.
             ${attendanceRowHtml}
           `;
         }
-        container.appendChild(card);
+        mainListContainer.appendChild(card);
       });
-
-      // ── BARRA DIVISORIA ELEGANTE DE PERSONAL DE APOYO (TODOS LOS IDIOMAS) ──
-      const dividerEl = document.createElement('div');
-      dividerEl.style.cssText = 'margin: 26px 0 16px; text-align:center;';
-      dividerEl.innerHTML = `
-        <div style="display:flex; align-items:center; gap:8px;">
-          <div style="flex:1; height:1.5px; background:var(--primary); opacity:0.35;"></div>
-          <span style="background:var(--primary); color:#ffffff; font-weight:800; font-size:0.76rem; padding:6px 14px; border-radius:20px; letter-spacing:0.5px; box-shadow:0 2px 4px rgba(0,0,0,0.12);">
-            ⚡ PERSONAL DE APOYO
-          </span>
-          <div style="flex:1; height:1.5px; background:var(--primary); opacity:0.35;"></div>
-        </div>
-        <div style="font-size:0.68rem; color:var(--text-muted); margin-top:6px; line-height:1.35; font-weight:500;">
-          Personal de Apoyo · Support Personnel · Personel Wsparcia<br>
-          Персонал підтримки · طاقم الدعم · Shaqaalaha Caawinta
-        </div>
-      `;
-      container.appendChild(dividerEl);
+      container.appendChild(mainListContainer);
 
       // Determinación de personal de apoyo que ingresa a este turno
       let targetShift = isCoordOrAdmin ? (currentShiftFilter === 'TODOS' ? 'TODOS' : currentShiftFilter) : (currentUser.turno_actual || '1');
       let prevShift = targetShift === '1' ? '3' : (targetShift === '2' ? '1' : (targetShift === '3' ? '2' : ''));
       
       const supportList = allEmployees.filter(e => {
-        if (String(e.id) === '0') return false;
+        if (String(e.id) === '0' || String(e.id) === '2023') return false;
         if (list.some(m => String(m.id) === String(e.id))) return false;
         if (targetShift === 'TODOS') {
           return e.es_apoyo || (e.horas_extra_apoyo && e.horas_extra_apoyo > 0);
@@ -3316,11 +3411,47 @@ Por favor comunícate a la mayor brevedad.
         }
       });
 
+      const allSupportDone = supportList.length > 0 && supportList.every(emp => {
+        const attRec = attendanceRecordsMap[String(emp.id)];
+        return attRec && attRec.status && attRec.status !== 'PENDIENTE';
+      });
+      const isSupportExpanded = !allSupportDone || supportGroupUserExpanded;
+
+      // ── BARRA DIVISORIA ELEGANTE DE PERSONAL DE APOYO (TODOS LOS IDIOMAS) ──
+      const dividerEl = document.createElement('div');
+      dividerEl.style.cssText = 'margin: 26px 0 16px; text-align:center;' + (allSupportDone && supportList.length > 0 ? ' cursor:pointer;' : '');
+      if (allSupportDone && supportList.length > 0) {
+        dividerEl.onclick = () => {
+          supportGroupUserExpanded = !supportGroupUserExpanded;
+          renderGroupsTab();
+        };
+      }
+      dividerEl.innerHTML = `
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="flex:1; height:1.5px; background:var(--primary); opacity:0.35;"></div>
+          <span style="background:var(--primary); color:#ffffff; font-weight:800; font-size:0.76rem; padding:6px 14px; border-radius:20px; letter-spacing:0.5px; box-shadow:0 2px 4px rgba(0,0,0,0.12); display:inline-flex; align-items:center; gap:6px;">
+            <span>⚡ PERSONAL DE APOYO</span>
+            ${allSupportDone && supportList.length > 0 ? `<span style="font-size:0.72rem; background:rgba(255,255,255,0.25); padding:1px 6px; border-radius:10px;">${isSupportExpanded ? '▲' : '▼'}</span>` : ''}
+          </span>
+          <div style="flex:1; height:1.5px; background:var(--primary); opacity:0.35;"></div>
+        </div>
+        <div style="font-size:0.68rem; color:var(--text-muted); margin-top:6px; line-height:1.35; font-weight:500;">
+          Personal de Apoyo · Support Personnel · Personel Wsparcia<br>
+          Персонал підтримки · طاقم الدعم · Shaqaalaha Caawinta
+          ${allSupportDone && supportList.length > 0 ? `<div style="color:#059669; font-weight:700; margin-top:3px;">✅ Lista de apoyo completada (${isSupportExpanded ? 'Toca para contraer' : 'Toca para desplegar'})</div>` : ''}
+        </div>
+      `;
+      container.appendChild(dividerEl);
+
+      const supportListContainer = document.createElement('div');
+      supportListContainer.id = 'support-group-list-container';
+      supportListContainer.style.display = isSupportExpanded ? 'block' : 'none';
+
       if (supportList.length === 0) {
         const emptySup = document.createElement('div');
         emptySup.style.cssText = 'padding:14px; border-radius:10px; background:var(--surface); border:1px dashed var(--border); text-align:center; font-size:0.78rem; color:var(--text-muted); margin-bottom:12px;';
         emptySup.innerText = 'No hay personal de apoyo programado para este turno.';
-        container.appendChild(emptySup);
+        supportListContainer.appendChild(emptySup);
       } else {
         supportList.forEach(emp => {
           const card = document.createElement('div');
@@ -3363,9 +3494,10 @@ Por favor comunícate a la mayor brevedad.
             </div>
             ${attendanceRowHtml}
           `;
-          container.appendChild(card);
+          supportListContainer.appendChild(card);
         });
       }
+      container.appendChild(supportListContainer);
 
       // ── BOTÓN DE AGREGAR PERSONAL DE APOYO (BLOQUEADO PARA LÍDERES) ──
       const addBtnContainer = document.createElement('div');
@@ -3406,6 +3538,7 @@ Por favor comunícate a la mayor brevedad.
       const userRole = currentUser ? (currentUser.rol_app || currentUser.rol || '').toUpperCase() : '';
       const isCoordOrAdmin = currentUser && (
         String(currentUser.id) === '0' ||
+        String(currentUser.id) === '2023' ||
         userRole.includes('COORDINADOR') ||
         userRole.includes('ADMIN')
       );
@@ -3647,10 +3780,91 @@ Por favor confírmanos tu estado a la mayor brevedad.
       localStorage.setItem('unamel_survey_dismissed', 'true');
     }
 
-    function submitSurvey() {
+    async function submitSurvey() {
+      const commentInput = document.getElementById('survey-comment');
+      const comment = commentInput ? commentInput.value.trim() : '';
+      const rating = selectedRating;
+      const workerId = currentUser ? String(currentUser.id !== undefined ? currentUser.id : (currentUser.pesel || 'anon')) : 'anon';
+      const workerName = currentUser ? (currentUser.nombre_completo || 'Colaborador') : 'Colaborador';
+
+      try {
+        if (window.db) {
+          await db.collection('encuestas').add({
+            workerId: workerId,
+            workerName: workerName,
+            rating: rating,
+            comment: comment,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            fechaStr: new Date().toLocaleString('es-CO', { timeZone: 'Europe/Warsaw' })
+          });
+          console.log('Encuesta guardada con éxito en Firestore');
+        }
+      } catch (err) {
+        console.warn('Error al guardar encuesta en Firestore:', err);
+      }
+
       closeSurveyModal();
       dismissSurveyCard();
       showToastBanner('¡Gracias por tu opinión! Encuesta registrada exitosamente.');
+    }
+
+    function openSurveyResultsModal() {
+      const modal = document.getElementById('modal-survey-results');
+      if (modal) modal.style.display = 'flex';
+      loadSurveyResults();
+    }
+
+    function closeSurveyResultsModal() {
+      const modal = document.getElementById('modal-survey-results');
+      if (modal) modal.style.display = 'none';
+    }
+
+    async function loadSurveyResults() {
+      const listEl = document.getElementById('survey-results-list');
+      if (!listEl) return;
+      listEl.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);"><span>⏳ Cargando respuestas desde Firestore...</span></div>';
+
+      try {
+        if (!window.db) {
+          listEl.innerHTML = '<div style="text-align:center; padding:20px; color:#ef4444;">Sin conexión a Firestore.</div>';
+          return;
+        }
+        const snap = await db.collection('encuestas').orderBy('timestamp', 'desc').limit(50).get();
+        if (snap.empty) {
+          listEl.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);">Aún no se han registrado respuestas de encuestas.</div>';
+          return;
+        }
+
+        let html = '';
+        snap.forEach(doc => {
+          const data = doc.data();
+          const r = data.rating || 3;
+          const rLabel = r === 4 ? '⭐ Excelente' : (r === 3 ? '🙂 Buena' : (r === 2 ? '😐 Regular' : '😞 Mala'));
+          const rColor = r >= 3 ? '#16a34a' : (r === 2 ? '#d97706' : '#dc2626');
+          const rBg = r >= 3 ? '#dcfce7' : (r === 2 ? '#fef3c7' : '#fee2e2');
+          const fecha = data.fechaStr || (data.timestamp && data.timestamp.toDate ? new Date(data.timestamp.toDate()).toLocaleString('es-CO') : '--');
+          const wName = data.workerName || 'Colaborador';
+          const wId = data.workerId || '';
+          const comm = data.comment ? data.comment.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '<em>Sin comentarios adicionales</em>';
+
+          html += `
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <div style="font-weight:700; font-size:0.88rem; color:#1e293b;">${wName} <span style="font-weight:400; font-size:0.75rem; color:#64748b;">(ID: ${wId})</span></div>
+                <span style="font-size:0.72rem; font-weight:700; background:${rBg}; color:${rColor}; padding:2px 8px; border-radius:8px;">${rLabel}</span>
+              </div>
+              <div style="font-size:0.8rem; color:#334155; margin-bottom:6px; background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #f1f5f9;">
+                ${comm}
+              </div>
+              <div style="font-size:0.7rem; color:#94a3b8; text-align:right;">📅 ${fecha}</div>
+            </div>
+          `;
+        });
+        listEl.innerHTML = html;
+      } catch (err) {
+        console.error('Error cargando encuestas:', err);
+        listEl.innerHTML = `<div style="text-align:center; padding:20px; color:#ef4444;">Error al cargar respuestas: ${err.message}</div>`;
+      }
     }
 
   </script>
