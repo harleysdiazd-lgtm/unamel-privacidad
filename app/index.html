@@ -38,9 +38,203 @@
 
   <!-- Firebase SDK Oficial v10 Compat (Cero CORS, Soporte Offline y Tiempo Real) -->
 
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js">
+    // ==========================================
+    // RESTAURACIÓN INMEDIATA DE SESIÓN (SAFARI / PWA PERSISTENCE)
+    // ==========================================
+    (function initSessionAndSync() {
+      try {
+        const savedSession = localStorage.getItem('unamel_user_session');
+        if (savedSession) {
+          const cachedUser = JSON.parse(savedSession);
+          if (cachedUser && (cachedUser.id !== undefined || cachedUser.pesel)) {
+            console.log('[Session] Restaurando sesión activa de forma instantánea:', cachedUser.nombre_completo);
+            loginUser(cachedUser);
+          }
+        }
+      } catch (err) {
+        console.warn('Error al restaurar sesión en caché:', err);
+      }
 
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+      // Sincronización en segundo plano con Cloud Firestore
+      fetchLiveEmployees().then(emps => {
+        if (currentUser && emps && emps.length > 0) {
+          const fresh = emps.find(e => String(e.id) === String(currentUser.id) || (e.pesel && e.pesel === currentUser.pesel));
+          if (fresh) {
+            currentUser = Object.assign(currentUser, fresh);
+            localStorage.setItem('unamel_user_session', JSON.stringify(currentUser));
+            renderDashboard();
+          }
+        }
+      });
+
+      // Escuchar actualizaciones de sync_control
+      listenToSyncControl();
+    })();
+
+    function listenToSyncControl() {
+      if (!db) return;
+      try {
+        db.collection('configuracion').doc('sync_control').onSnapshot(doc => {
+          if (!doc || !doc.exists) return;
+          const data = doc.data();
+          const ver = data.version_datos;
+          const lastVer = parseInt(localStorage.getItem('unamel_last_sync_version') || '0', 10);
+          if (ver && ver > lastVer && lastVer > 0) {
+            showToastBanner(data.mensaje_notificacion || '🔔 Horas y programación actualizadas por Coordinación.');
+            localStorage.setItem('unamel_last_sync_version', String(ver));
+            fetchLiveEmployees().then(() => { if (currentUser) renderDashboard(); });
+          } else if (ver) {
+            localStorage.setItem('unamel_last_sync_version', String(ver));
+          }
+        });
+      } catch (e) {
+        console.warn('Error listening to sync_control:', e);
+      }
+    }
+
+    function showToastBanner(msg) {
+      const banner = document.createElement('div');
+      banner.style.cssText = 'position:fixed; top:16px; left:50%; transform:translateX(-50%); background:#1e40af; color:white; padding:10px 18px; border-radius:24px; font-size:0.82rem; font-weight:700; z-index:99999; box-shadow:0 8px 24px rgba(0,0,0,0.25); text-align:center; max-width:90%; transition:all 0.3s;';
+      banner.innerText = msg;
+      document.body.appendChild(banner);
+      setTimeout(() => { banner.style.opacity = '0'; setTimeout(() => banner.remove(), 400); }, 5000);
+    }
+
+    // Funciones de Encuesta
+    let selectedRating = 3;
+    function selectSurveyRating(btn, r) {
+      selectedRating = r;
+      document.querySelectorAll('.survey-opt').forEach(b => {
+        b.style.background = 'var(--surface-variant)';
+        b.style.color = 'var(--text)';
+        b.style.borderColor = 'var(--border)';
+      });
+      btn.style.background = '#dbeafe';
+      btn.style.color = '#1e40af';
+      btn.style.borderColor = '#93c5fd';
+    }
+
+    function openSurveyModal() {
+      document.getElementById('modal-survey').style.display = 'flex';
+    }
+
+    function closeSurveyModal() {
+      document.getElementById('modal-survey').style.display = 'none';
+    }
+
+    function dismissSurveyCard() {
+      const card = document.getElementById('survey-card');
+      if (card) card.style.display = 'none';
+      localStorage.setItem('unamel_survey_dismissed', 'true');
+    }
+
+    function submitSurvey() {
+      closeSurveyModal();
+      dismissSurveyCard();
+      showToastBanner('¡Gracias por tu opinión! Encuesta registrada exitosamente.');
+    }
+
+  </script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js">
+    // ==========================================
+    // RESTAURACIÓN INMEDIATA DE SESIÓN (SAFARI / PWA PERSISTENCE)
+    // ==========================================
+    (function initSessionAndSync() {
+      try {
+        const savedSession = localStorage.getItem('unamel_user_session');
+        if (savedSession) {
+          const cachedUser = JSON.parse(savedSession);
+          if (cachedUser && (cachedUser.id !== undefined || cachedUser.pesel)) {
+            console.log('[Session] Restaurando sesión activa de forma instantánea:', cachedUser.nombre_completo);
+            loginUser(cachedUser);
+          }
+        }
+      } catch (err) {
+        console.warn('Error al restaurar sesión en caché:', err);
+      }
+
+      // Sincronización en segundo plano con Cloud Firestore
+      fetchLiveEmployees().then(emps => {
+        if (currentUser && emps && emps.length > 0) {
+          const fresh = emps.find(e => String(e.id) === String(currentUser.id) || (e.pesel && e.pesel === currentUser.pesel));
+          if (fresh) {
+            currentUser = Object.assign(currentUser, fresh);
+            localStorage.setItem('unamel_user_session', JSON.stringify(currentUser));
+            renderDashboard();
+          }
+        }
+      });
+
+      // Escuchar actualizaciones de sync_control
+      listenToSyncControl();
+    })();
+
+    function listenToSyncControl() {
+      if (!db) return;
+      try {
+        db.collection('configuracion').doc('sync_control').onSnapshot(doc => {
+          if (!doc || !doc.exists) return;
+          const data = doc.data();
+          const ver = data.version_datos;
+          const lastVer = parseInt(localStorage.getItem('unamel_last_sync_version') || '0', 10);
+          if (ver && ver > lastVer && lastVer > 0) {
+            showToastBanner(data.mensaje_notificacion || '🔔 Horas y programación actualizadas por Coordinación.');
+            localStorage.setItem('unamel_last_sync_version', String(ver));
+            fetchLiveEmployees().then(() => { if (currentUser) renderDashboard(); });
+          } else if (ver) {
+            localStorage.setItem('unamel_last_sync_version', String(ver));
+          }
+        });
+      } catch (e) {
+        console.warn('Error listening to sync_control:', e);
+      }
+    }
+
+    function showToastBanner(msg) {
+      const banner = document.createElement('div');
+      banner.style.cssText = 'position:fixed; top:16px; left:50%; transform:translateX(-50%); background:#1e40af; color:white; padding:10px 18px; border-radius:24px; font-size:0.82rem; font-weight:700; z-index:99999; box-shadow:0 8px 24px rgba(0,0,0,0.25); text-align:center; max-width:90%; transition:all 0.3s;';
+      banner.innerText = msg;
+      document.body.appendChild(banner);
+      setTimeout(() => { banner.style.opacity = '0'; setTimeout(() => banner.remove(), 400); }, 5000);
+    }
+
+    // Funciones de Encuesta
+    let selectedRating = 3;
+    function selectSurveyRating(btn, r) {
+      selectedRating = r;
+      document.querySelectorAll('.survey-opt').forEach(b => {
+        b.style.background = 'var(--surface-variant)';
+        b.style.color = 'var(--text)';
+        b.style.borderColor = 'var(--border)';
+      });
+      btn.style.background = '#dbeafe';
+      btn.style.color = '#1e40af';
+      btn.style.borderColor = '#93c5fd';
+    }
+
+    function openSurveyModal() {
+      document.getElementById('modal-survey').style.display = 'flex';
+    }
+
+    function closeSurveyModal() {
+      document.getElementById('modal-survey').style.display = 'none';
+    }
+
+    function dismissSurveyCard() {
+      const card = document.getElementById('survey-card');
+      if (card) card.style.display = 'none';
+      localStorage.setItem('unamel_survey_dismissed', 'true');
+    }
+
+    function submitSurvey() {
+      closeSurveyModal();
+      dismissSurveyCard();
+      showToastBanner('¡Gracias por tu opinión! Encuesta registrada exitosamente.');
+    }
+
+  </script>
 
 
 
@@ -1468,6 +1662,60 @@
 
 
 
+        <!-- Alerta Dinámica de Inasistencia Reportada por Líder -->
+
+        <div id="worker-absence-alert" style="display:none; margin-top:12px; padding:12px 14px; border-radius:12px; background:#fef2f2; border:1.5px solid #ef4444; color:#991b1b;">
+
+          <div style="font-weight:800; font-size:0.9rem; display:flex; align-items:center; gap:6px;">
+
+            <span>⚠️</span> <span>Aviso de Asistencia: Reportado Ausente</span>
+
+          </div>
+
+          <div style="font-size:0.8rem; margin-top:4px; color:#b91c1c;">
+
+            Has sido marcado como no asistente en el turno de hoy. Si se trata de un error o cuentas con soporte médico, contacta de inmediato a tu líder o a Coordinación.
+
+          </div>
+
+        </div>
+
+
+
+        <!-- Tarjeta Dinámica de Encuesta Disponible (Aparece y Desaparece) -->
+
+        <div id="survey-card" class="card" style="margin-top:12px; border:1.5px solid #93c5fd; background:linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);">
+
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+
+            <div style="display:flex; align-items:center; gap:8px;">
+
+              <span style="font-size:1.2rem;">📋</span>
+
+              <span style="font-weight:800; font-size:0.95rem; color:#1e40af;" id="lbl-survey-title">Encuesta disponible</span>
+
+            </div>
+
+            <button type="button" onclick="dismissSurveyCard()" style="background:none; border:none; color:#64748b; font-size:1.1rem; cursor:pointer; padding:0 4px;" title="Cerrar">✕</button>
+
+          </div>
+
+          <div style="font-size:0.8rem; color:#334155; margin-bottom:12px;" id="lbl-survey-desc">
+
+            Tu opinión es clave para mejorar el clima laboral, transportes y operaciones en la fábrica.
+
+          </div>
+
+          <button class="btn-drawer" style="background:#2563eb; color:white; border:none;" onclick="openSurveyModal()">
+
+            <span id="lbl-survey-btn">Participar en encuesta →</span>
+
+          </button>
+
+        </div>
+
+
+
         <div class="card">
 
           <div class="section-title">🕒 Turno y Horario Base</div>
@@ -1599,6 +1847,16 @@
         <div class="card">
 
           <div class="section-title">📅 Detalle Diario de Jornadas</div>
+
+          <!-- Leyenda de Colores de Incidencias y Estados -->
+          <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:8px; margin-bottom:10px;">
+            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#e8f5e9; color:#2e7d32; border:1px solid #a5d6a7; white-space:nowrap;">🟢 Verde: Ausencia Autorizada</span>
+            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#eeeeee; color:#757575; border:1px solid #bdbdbd; white-space:nowrap;">⚪ Gris: No Programado</span>
+            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#e3f2fd; color:#1976d2; border:1px solid #90caf9; white-space:nowrap;">🔵 Azul: Incapacidad</span>
+            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#fffde7; color:#f57f17; border:1px solid #fff59d; white-space:nowrap;">🟡 Amarillo: No Autorizado</span>
+            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#fff3e0; color:#e65100; border:1px solid #ffcc80; white-space:nowrap;">🟠 Naranja: Por Confirmar</span>
+            <span style="font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:12px; background:#ffebee; color:#d32f2f; border:1px solid #ef9a9a; white-space:nowrap;">🔴 Rojo: Penalización</span>
+          </div>
 
           <div id="hours-list">
 
@@ -1886,6 +2144,38 @@
 
     <!-- MODAL INFORMACIÓN PERSONAL -->
 
+  
+  <!-- MODAL ENCUESTA -->
+  <div id="modal-survey" class="modal-overlay" onclick="if(event.target===this) closeSurveyModal()">
+    <div class="modal-content" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 style="font-size:1.15rem; font-weight:800; color:var(--primary); display:flex; align-items:center; gap:8px;">
+          <span>📋</span> <span>Encuesta de Clima Laboral</span>
+        </h3>
+        <button class="btn-close-modal" onclick="closeSurveyModal()">✕</button>
+      </div>
+      <div style="padding:10px 0;">
+        <div style="font-size:0.85rem; font-weight:700; color:var(--text); margin-bottom:8px;">
+          1. ¿Cómo califica el ambiente laboral y la coordinación en su línea de trabajo?
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-bottom:14px;">
+          <button type="button" class="btn-action survey-opt" onclick="selectSurveyRating(this, 1)" style="font-size:0.75rem; padding:8px 4px; text-align:center;">😞 Mala</button>
+          <button type="button" class="btn-action survey-opt" onclick="selectSurveyRating(this, 2)" style="font-size:0.75rem; padding:8px 4px; text-align:center;">😐 Regular</button>
+          <button type="button" class="btn-action survey-opt" onclick="selectSurveyRating(this, 3)" style="font-size:0.75rem; padding:8px 4px; text-align:center; background:#dbeafe; color:#1e40af; border-color:#93c5fd;">🙂 Buena</button>
+          <button type="button" class="btn-action survey-opt" onclick="selectSurveyRating(this, 4)" style="font-size:0.75rem; padding:8px 4px; text-align:center;">⭐ Excelente</button>
+        </div>
+        <div style="font-size:0.85rem; font-weight:700; color:var(--text); margin-bottom:6px;">
+          2. Comentarios o sugerencias para mejorar la convivencia y operaciones (Opcional):
+        </div>
+        <textarea id="survey-comment" style="width:100%; border:1px solid var(--border); border-radius:8px; padding:8px; font-family:inherit; font-size:0.82rem; min-height:60px; box-sizing:border-box;" placeholder="Escriba aquí sus sugerencias..."></textarea>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button type="button" onclick="submitSurvey()" class="btn-primary" style="flex:1;">Enviar Encuesta</button>
+        <button type="button" onclick="closeSurveyModal()" class="btn-action" style="flex:1;">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modal-drawer" class="modal-overlay" onclick="if(event.target===this) closeDrawer()">
 
     <div class="modal-content">
@@ -2005,7 +2295,7 @@
 
     // Datos maestros locales de respaldo (Fallback Offline)
 
-    const FALLBACK_DATA = {"metadata": {"app": "Coordinacion UNAMEL", "version": "1.0.7", "fecha_sincronizacion": "2026-09-18 03:18:32", "origen_excel": "Coordinacion UNAMEL - Disponiibilidad.xlsm", "origen_horas": "Coordinacion UNAMEL.xlsm", "periodo_programacion": "Programación 20 Septiembre - 25 Septiembre", "mes_activo": "Septiembre", "total_empleados_activos": 35, "total_despedidos": 33}, "rotacion_turnos": {"2": {"turno": "2", "horario": "14:00 - 22:00", "grupo": "A", "lider": "Henry Armando Blanco Arrieta"}, "3": {"turno": "3", "horario": "22:00 - 06:00", "grupo": "C", "lider": "Dylan  Zinyuku"}, "1": {"turno": "1", "horario": "06:00 - 14:00", "grupo": "B", "lider": "Ahmed Omar Osman"}}, "grupos_lideres": {"A": {"grupo": "A", "turno": "2", "horario": "14:00 - 22:00", "lider": "Henry Armando Blanco Arrieta", "posicion": "Lider linii"}, "C": {"grupo": "C", "turno": "3", "horario": "22:00 - 06:00", "lider": "Dylan  Zinyuku", "posicion": "Lider linii"}, "B": {"grupo": "B", "turno": "1", "horario": "06:00 - 14:00", "lider": "Ahmed Omar Osman", "posicion": "Lider linii"}}, "empleados": []};
+    const FALLBACK_DATA = {"metadata": {"app": "Coordinacion UNAMEL", "version": "1.0.7", "fecha_sincronizacion": "2026-09-18 03:50:58", "origen_excel": "Coordinacion UNAMEL - Disponiibilidad.xlsm", "origen_horas": "Coordinacion UNAMEL.xlsm", "periodo_programacion": "Programación 20 Septiembre - 25 Septiembre", "mes_activo": "Septiembre", "total_empleados_activos": 35, "total_despedidos": 33}, "rotacion_turnos": {"3": {"turno": "3", "horario": "22:00 - 06:00", "grupo": "A", "lider": "Henry Armando Blanco Arrieta"}, "1": {"turno": "1", "horario": "06:00 - 14:00", "grupo": "C", "lider": "Dylan  Zinyuku"}, "2": {"turno": "2", "horario": "14:00 - 22:00", "grupo": "B", "lider": "Ahmed Omar Osman"}}, "grupos_lideres": {"A": {"grupo": "A", "turno": "3", "horario": "22:00 - 06:00", "lider": "Henry Armando Blanco Arrieta", "posicion": "Lider linii"}, "C": {"grupo": "C", "turno": "1", "horario": "06:00 - 14:00", "lider": "Dylan  Zinyuku", "posicion": "Lider linii"}, "B": {"grupo": "B", "turno": "2", "horario": "14:00 - 22:00", "lider": "Ahmed Omar Osman", "posicion": "Lider linii"}}, "empleados": []};
 
     let allEmployees = FALLBACK_DATA.empleados || [];
 
@@ -2321,6 +2611,7 @@
 
     function loginUser(user) {
       currentUser = user;
+      localStorage.setItem('unamel_user_session', JSON.stringify(user));
       localStorage.setItem('unamel_user_id', String(user.id || user.pesel));
 
       document.getElementById('view-login').style.display = 'none';
@@ -2348,6 +2639,7 @@
 
     function logout() {
       currentUser = null;
+      localStorage.removeItem('unamel_user_session');
       localStorage.removeItem('unamel_user_id');
       document.getElementById('view-dashboard').style.display = 'none';
       document.getElementById('bottom-nav').style.display = 'none';
@@ -2366,7 +2658,39 @@
       document.getElementById('prof-role').innerText = roleStr.includes('COORDINADOR') ? (dict.coordination || 'COORDINADOR').toUpperCase() : (roleStr.includes('LIDER') ? (dict.leader_badge || '⭐ LÍDER DE LÍNEA') : (dict.worker_role || 'TRABAJADOR'));
       document.getElementById('prof-meta').innerText = `ID: ${currentUser.id || 0} • ${currentUser.nacionalidad || '--'} • ${formatEmployeePosition(currentUser.posicion || 'koordynator')}`;
 
-      document.getElementById('prof-shift').innerText = currentUser.horario_turno ? `${dict.shift_word || 'Turno'} ${currentUser.turno_actual || 1} (${currentUser.horario_turno})` : `${dict.shift_word || 'Turno'} 1 (07:00 - 14:00)`;
+      let activeShiftDisplay = currentUser.horario_turno ? `${dict.shift_word || 'Turno'} ${currentUser.turno_actual || 1} (${currentUser.horario_turno})` : `${dict.shift_word || 'Turno'} 1 (06:00 - 14:00)`;
+      // Transición automática cuando la semana inicia
+      if (currentUser.programacion_semana_siguiente && currentUser.programacion_semana_siguiente.periodo) {
+        const prog = currentUser.programacion_semana_siguiente;
+        const m = (prog.periodo || '').match(/(\d+)\s+([A-Za-zñáéíóú]+)/i);
+        if (m) {
+          const sDay = parseInt(m[1], 10);
+          const now = new Date();
+          const isStarted = (now.getDate() > sDay) || (now.getDate() === sDay && now.getHours() >= 22);
+          if (isStarted && prog.turno_programado && prog.turno_programado !== '0') {
+            activeShiftDisplay = `${dict.shift_word || 'Turno'} ${prog.turno_programado} (${prog.horario_previsto || '06:00 - 14:00'}) · ${dict.group_word || 'Grupo'} ${prog.grupo || ''}`;
+          }
+        }
+      }
+      document.getElementById('prof-shift').innerText = activeShiftDisplay;
+
+      // Alerta de Inasistencia
+      const todayStr = getTodayDateStr();
+      const myRecord = attendanceRecordsMap[`${currentUser.id}_${todayStr}`];
+      const absenceAlert = document.getElementById('worker-absence-alert');
+      if (absenceAlert) {
+        if (myRecord && myRecord.status === 'NO_ASISTIO') {
+          absenceAlert.style.display = 'block';
+        } else {
+          absenceAlert.style.display = 'none';
+        }
+      }
+
+      // Estado de Tarjeta Encuesta
+      const surveyCard = document.getElementById('survey-card');
+      if (surveyCard && localStorage.getItem('unamel_survey_dismissed') === 'true') {
+        surveyCard.style.display = 'none';
+      }
       document.getElementById('prof-p1').innerText = (currentUser.primera_pausa && currentUser.primera_pausa.hora) ? `${currentUser.primera_pausa.hora} (${currentUser.primera_pausa.duracion || '20 Min'})` : '11:00 (20 Min)';
       document.getElementById('prof-p2').innerText = (currentUser.segunda_pausa && currentUser.segunda_pausa.hora && currentUser.segunda_pausa.hora !== '--') ? `${currentUser.segunda_pausa.hora} (${currentUser.segunda_pausa.duracion || '20 Min'})` : '-- (--)';
 
@@ -2411,7 +2735,19 @@
           let badgeBorder = '#bbf7d0';
           let iconPrefix = '✅ ';
           
-          if (estado === 'INCAPACIDAD_MEDICA') {
+          if (estado === 'AUSENCIA_AUTORIZADA') {
+            badgeColor = '#2e7d32';
+            badgeBg = '#e8f5e9';
+            badgeBorder = '#a5d6a7';
+            iconPrefix = '🟢 ';
+            if (!isHourOnly) { cardBg = '#f1f8f1'; cardBorder = '#81c784'; }
+          } else if (estado === 'NO_PROGRAMADO') {
+            badgeColor = '#757575';
+            badgeBg = '#eeeeee';
+            badgeBorder = '#bdbdbd';
+            iconPrefix = '⚪ ';
+            if (!isHourOnly) { cardBg = '#fafafa'; cardBorder = '#e0e0e0'; }
+          } else if (estado === 'INCAPACIDAD_MEDICA') {
             badgeColor = '#1976d2';
             badgeBg = '#e3f2fd';
             badgeBorder = '#90caf9';
@@ -3039,6 +3375,26 @@
       });
 
       list.forEach(emp => {
+        // Análisis de estado programado en Excel (Verde: Ausencia Autorizada, Gris: No Programado, etc.)
+        const curDayNum = parseInt((selectedAttendanceDate || '').split('-')[2] || '18', 10);
+        const daySched = (emp.dias_trabajados_detalle || []).find(d => d.dia === curDayNum);
+        let schedBadgeHtml = '';
+        if (daySched && daySched.estado_dia && daySched.estado_dia !== 'NORMAL') {
+          let sBg = '#e8f5e9', sBorder = '#a5d6a7', sColor = '#2e7d32', sLabel = '🟢 Ausencia Autorizada (Permiso)';
+          if (daySched.estado_dia === 'NO_PROGRAMADO') {
+            sBg = '#eeeeee'; sBorder = '#bdbdbd'; sColor = '#616161'; sLabel = '⚪ No Programado (Día Libre)';
+          } else if (daySched.estado_dia === 'INCAPACIDAD_MEDICA') {
+            sBg = '#e3f2fd'; sBorder = '#90caf9'; sColor = '#1976d2'; sLabel = '🔵 Incapacidad Médica';
+          } else if (daySched.estado_dia === 'NO_AUTORIZADO') {
+            sBg = '#fffde7'; sBorder = '#fff59d'; sColor = '#f57f17'; sLabel = '🟡 Ausencia No Autorizada';
+          } else if (daySched.estado_dia === 'POR_CONFIRMAR') {
+            sBg = '#fff3e0'; sBorder = '#ffcc80'; sColor = '#e65100'; sLabel = '🟠 Por Confirmar';
+          } else if (daySched.estado_dia === 'PENALIZACION') {
+            sBg = '#ffebee'; sBorder = '#ef9a9a'; sColor = '#d32f2f'; sLabel = '🔴 Penalización';
+          }
+          const commentNote = daySched.comentario ? `: ${daySched.comentario}` : '';
+          schedBadgeHtml = `<div style="margin-top:6px;"><span style="display:inline-block; font-size:0.7rem; font-weight:800; padding:2px 8px; border-radius:6px; background:${sBg}; border:1px solid ${sBorder}; color:${sColor};">${sLabel}${commentNote}</span></div>`;
+        }
         const isLider = (emp.posicion || '').toLowerCase().includes('lider') || (emp.rol_app || '').includes('LIDER');
         const card = document.createElement('div');
         
@@ -3115,6 +3471,7 @@ Por favor comunícate a la mayor brevedad.
                 <span style="font-size:0.78rem; font-weight:600; color:var(--text-muted);">${posLabel}</span>
               </div>
             </div>
+            ${schedBadgeHtml}
             ${attendanceRowHtml}
           `;
         }
@@ -3391,6 +3748,103 @@ Por favor confírmanos tu estado a la mayor brevedad.
 
       window.print();
 
+    }
+
+  
+    // ==========================================
+    // RESTAURACIÓN INMEDIATA DE SESIÓN (SAFARI / PWA PERSISTENCE)
+    // ==========================================
+    (function initSessionAndSync() {
+      try {
+        const savedSession = localStorage.getItem('unamel_user_session');
+        if (savedSession) {
+          const cachedUser = JSON.parse(savedSession);
+          if (cachedUser && (cachedUser.id !== undefined || cachedUser.pesel)) {
+            console.log('[Session] Restaurando sesión activa de forma instantánea:', cachedUser.nombre_completo);
+            loginUser(cachedUser);
+          }
+        }
+      } catch (err) {
+        console.warn('Error al restaurar sesión en caché:', err);
+      }
+
+      // Sincronización en segundo plano con Cloud Firestore
+      fetchLiveEmployees().then(emps => {
+        if (currentUser && emps && emps.length > 0) {
+          const fresh = emps.find(e => String(e.id) === String(currentUser.id) || (e.pesel && e.pesel === currentUser.pesel));
+          if (fresh) {
+            currentUser = Object.assign(currentUser, fresh);
+            localStorage.setItem('unamel_user_session', JSON.stringify(currentUser));
+            renderDashboard();
+          }
+        }
+      });
+
+      // Escuchar actualizaciones de sync_control
+      listenToSyncControl();
+    })();
+
+    function listenToSyncControl() {
+      if (!db) return;
+      try {
+        db.collection('configuracion').doc('sync_control').onSnapshot(doc => {
+          if (!doc || !doc.exists) return;
+          const data = doc.data();
+          const ver = data.version_datos;
+          const lastVer = parseInt(localStorage.getItem('unamel_last_sync_version') || '0', 10);
+          if (ver && ver > lastVer && lastVer > 0) {
+            showToastBanner(data.mensaje_notificacion || '🔔 Horas y programación actualizadas por Coordinación.');
+            localStorage.setItem('unamel_last_sync_version', String(ver));
+            fetchLiveEmployees().then(() => { if (currentUser) renderDashboard(); });
+          } else if (ver) {
+            localStorage.setItem('unamel_last_sync_version', String(ver));
+          }
+        });
+      } catch (e) {
+        console.warn('Error listening to sync_control:', e);
+      }
+    }
+
+    function showToastBanner(msg) {
+      const banner = document.createElement('div');
+      banner.style.cssText = 'position:fixed; top:16px; left:50%; transform:translateX(-50%); background:#1e40af; color:white; padding:10px 18px; border-radius:24px; font-size:0.82rem; font-weight:700; z-index:99999; box-shadow:0 8px 24px rgba(0,0,0,0.25); text-align:center; max-width:90%; transition:all 0.3s;';
+      banner.innerText = msg;
+      document.body.appendChild(banner);
+      setTimeout(() => { banner.style.opacity = '0'; setTimeout(() => banner.remove(), 400); }, 5000);
+    }
+
+    // Funciones de Encuesta
+    let selectedRating = 3;
+    function selectSurveyRating(btn, r) {
+      selectedRating = r;
+      document.querySelectorAll('.survey-opt').forEach(b => {
+        b.style.background = 'var(--surface-variant)';
+        b.style.color = 'var(--text)';
+        b.style.borderColor = 'var(--border)';
+      });
+      btn.style.background = '#dbeafe';
+      btn.style.color = '#1e40af';
+      btn.style.borderColor = '#93c5fd';
+    }
+
+    function openSurveyModal() {
+      document.getElementById('modal-survey').style.display = 'flex';
+    }
+
+    function closeSurveyModal() {
+      document.getElementById('modal-survey').style.display = 'none';
+    }
+
+    function dismissSurveyCard() {
+      const card = document.getElementById('survey-card');
+      if (card) card.style.display = 'none';
+      localStorage.setItem('unamel_survey_dismissed', 'true');
+    }
+
+    function submitSurvey() {
+      closeSurveyModal();
+      dismissSurveyCard();
+      showToastBanner('¡Gracias por tu opinión! Encuesta registrada exitosamente.');
     }
 
   </script>
