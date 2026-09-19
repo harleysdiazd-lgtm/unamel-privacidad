@@ -2576,6 +2576,7 @@
       localStorage.setItem('unamel_user_id', String(user.id || user.pesel));
 
       document.getElementById('view-login').style.display = 'none';
+        logWebActivity('Inicio de sesion en Web App');
       document.getElementById('view-dashboard').style.display = 'block';
       document.getElementById('btn-logout').style.display = 'inline-flex';
       document.getElementById('bottom-nav').style.display = 'flex';
@@ -3783,6 +3784,23 @@ Por favor confírmanos tu estado a la mayor brevedad.
       });
     }
 
+    
+    function logWebActivity(actionDesc) {
+      if (typeof db === 'undefined' || !db) return;
+      try {
+        var userRef = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : {};
+        db.collection('activity_logs').add({
+          pesel: userRef.pesel || userRef.id || 'WebUser',
+          nombre: userRef.nombre_completo || 'Usuario Web',
+          fecha_hora: firebase.firestore.FieldValue.serverTimestamp(),
+          plataforma: 'Portal Web App',
+          accion: actionDesc
+        }).catch(e => console.warn('Log error', e));
+      } catch (err) {
+        console.warn('Error en logWebActivity', err);
+      }
+    }
+
     function switchTab(tabId, btn) {
 
       document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
@@ -3797,7 +3815,9 @@ Por favor confírmanos tu estado a la mayor brevedad.
 
       if (btn) btn.classList.add('active');
 
-      if (tabId === 'groups') {
+      if (tabId === 'hours') {
+          logWebActivity('Consulta de horas en Web App');
+        } else if (tabId === 'groups') {
         renderGroupsTab();
       } else if (tabId === 'coordination') {
         renderCoordinationTab();
