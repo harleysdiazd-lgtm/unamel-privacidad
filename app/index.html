@@ -2138,7 +2138,7 @@
 
     // Datos maestros locales de respaldo (Fallback Offline)
 
-    const FALLBACK_DATA = {"metadata": {"app": "Coordinacion UNAMEL", "version": "1.0.7", "fecha_sincronizacion": "2026-09-20 17:47:28", "origen_excel": "Coordinacion UNAMEL - Disponiibilidad.xlsm", "origen_horas": "Coordinacion UNAMEL.xlsm", "periodo_programacion": "Programación 20 Septiembre - 25 Septiembre", "mes_activo": "Septiembre", "total_empleados_activos": 36, "total_despedidos": 33}, "rotacion_turnos": {"3": {"turno": "3", "horario": "22:00 - 06:00", "grupo": "A", "lider": "Henry Armando Blanco Arrieta"}, "1": {"turno": "1", "horario": "06:00 - 14:00", "grupo": "C", "lider": "Dylan  Zinyuku"}, "2": {"turno": "2", "horario": "14:00 - 22:00", "grupo": "B", "lider": "Ahmed Omar Osman"}}, "grupos_lideres": {"A": {"grupo": "A", "turno": "3", "horario": "22:00 - 06:00", "lider": "Henry Armando Blanco Arrieta", "posicion": "Lider linii"}, "C": {"grupo": "C", "turno": "1", "horario": "06:00 - 14:00", "lider": "Dylan  Zinyuku", "posicion": "Lider linii"}, "B": {"grupo": "B", "turno": "2", "horario": "14:00 - 22:00", "lider": "Ahmed Omar Osman", "posicion": "Lider linii"}}, "empleados": []};
+    const FALLBACK_DATA = {"metadata": {"app": "Coordinacion UNAMEL", "version": "1.0.7", "fecha_sincronizacion": "2026-09-20 17:51:53", "origen_excel": "Coordinacion UNAMEL - Disponiibilidad.xlsm", "origen_horas": "Coordinacion UNAMEL.xlsm", "periodo_programacion": "Programación 20 Septiembre - 25 Septiembre", "mes_activo": "Septiembre", "total_empleados_activos": 36, "total_despedidos": 33}, "rotacion_turnos": {"3": {"turno": "3", "horario": "22:00 - 06:00", "grupo": "A", "lider": "Henry Armando Blanco Arrieta"}, "1": {"turno": "1", "horario": "06:00 - 14:00", "grupo": "C", "lider": "Dylan  Zinyuku"}, "2": {"turno": "2", "horario": "14:00 - 22:00", "grupo": "B", "lider": "Ahmed Omar Osman"}}, "grupos_lideres": {"A": {"grupo": "A", "turno": "3", "horario": "22:00 - 06:00", "lider": "Henry Armando Blanco Arrieta", "posicion": "Lider linii"}, "C": {"grupo": "C", "turno": "1", "horario": "06:00 - 14:00", "lider": "Dylan  Zinyuku", "posicion": "Lider linii"}, "B": {"grupo": "B", "turno": "2", "horario": "14:00 - 22:00", "lider": "Ahmed Omar Osman", "posicion": "Lider linii"}}, "empleados": []};
 
     let allEmployees = FALLBACK_DATA.empleados || [];
 
@@ -3539,7 +3539,7 @@ Por favor comunícate a la mayor brevedad.
 
       // Determinación de personal de apoyo que ingresa a este turno
       let targetShift = isCoordOrAdmin ? (currentShiftFilter === 'TODOS' ? 'TODOS' : currentShiftFilter) : (currentUser.turno_actual || '1');
-      let prevShift = targetShift === '1' ? '3' : (targetShift === '2' ? '1' : (targetShift === '3' ? '2' : ''));
+      let nextShift = targetShift === '1' ? '2' : (targetShift === '2' ? '3' : (targetShift === '3' ? '1' : ''));
       
       const supportList = allEmployees.filter(e => {
         if (String(e.id) === '0' || String(e.id) === '2023') return false;
@@ -3547,7 +3547,7 @@ Por favor comunícate a la mayor brevedad.
         if (targetShift === 'TODOS') {
           return e.es_apoyo || (e.horas_extra_apoyo && e.horas_extra_apoyo > 0);
         } else {
-          return (String(e.turno_actual) === prevShift && e.horas_extra_apoyo > 0) || (e.es_apoyo && String(e.turno_actual) === targetShift);
+          return (String(e.turno_actual) === nextShift && e.horas_extra_apoyo > 0) || (e.es_apoyo && String(e.turno_actual) === targetShift);
         }
       });
 
