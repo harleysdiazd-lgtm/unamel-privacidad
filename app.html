@@ -2138,7 +2138,7 @@
 
     // Datos maestros locales de respaldo (Fallback Offline)
 
-    const FALLBACK_DATA = {"metadata": {"app": "Coordinacion UNAMEL", "version": "1.0.7", "fecha_sincronizacion": "2026-09-20 17:51:53", "origen_excel": "Coordinacion UNAMEL - Disponiibilidad.xlsm", "origen_horas": "Coordinacion UNAMEL.xlsm", "periodo_programacion": "Programación 20 Septiembre - 25 Septiembre", "mes_activo": "Septiembre", "total_empleados_activos": 36, "total_despedidos": 33}, "rotacion_turnos": {"3": {"turno": "3", "horario": "22:00 - 06:00", "grupo": "A", "lider": "Henry Armando Blanco Arrieta"}, "1": {"turno": "1", "horario": "06:00 - 14:00", "grupo": "C", "lider": "Dylan  Zinyuku"}, "2": {"turno": "2", "horario": "14:00 - 22:00", "grupo": "B", "lider": "Ahmed Omar Osman"}}, "grupos_lideres": {"A": {"grupo": "A", "turno": "3", "horario": "22:00 - 06:00", "lider": "Henry Armando Blanco Arrieta", "posicion": "Lider linii"}, "C": {"grupo": "C", "turno": "1", "horario": "06:00 - 14:00", "lider": "Dylan  Zinyuku", "posicion": "Lider linii"}, "B": {"grupo": "B", "turno": "2", "horario": "14:00 - 22:00", "lider": "Ahmed Omar Osman", "posicion": "Lider linii"}}, "empleados": []};
+    const FALLBACK_DATA = {"metadata": {"app": "Coordinacion UNAMEL", "version": "1.0.7", "fecha_sincronizacion": "2026-09-22 16:17:40", "origen_excel": "Coordinacion UNAMEL - Disponiibilidad.xlsm", "origen_horas": "Coordinacion UNAMEL.xlsm", "periodo_programacion": "Programación 20 Septiembre - 25 Septiembre", "mes_activo": "Septiembre", "total_empleados_activos": 36, "total_despedidos": 33}, "rotacion_turnos": {"2": {"turno": "2", "horario": "14:00 - 22:00", "grupo": "A", "lider": "Henry Armando Blanco Arrieta"}, "3": {"turno": "3", "horario": "22:00 - 06:00", "grupo": "C", "lider": "Dylan  Zinyuku"}, "1": {"turno": "1", "horario": "06:00 - 14:00", "grupo": "B", "lider": "Ahmed Omar Osman"}}, "grupos_lideres": {"A": {"grupo": "A", "turno": "2", "horario": "14:00 - 22:00", "lider": "Henry Armando Blanco Arrieta", "posicion": "Lider linii"}, "C": {"grupo": "C", "turno": "3", "horario": "22:00 - 06:00", "lider": "Dylan  Zinyuku", "posicion": "Lider linii"}, "B": {"grupo": "B", "turno": "1", "horario": "06:00 - 14:00", "lider": "Ahmed Omar Osman", "posicion": "Lider linii"}}, "empleados": []};
 
     let allEmployees = FALLBACK_DATA.empleados || [];
 
@@ -2388,6 +2388,26 @@
       }
     });
 
+    function deduplicateEmployees(list) {
+      if (!list || !Array.isArray(list)) return [];
+      const seenKeys = new Set();
+      const seenNames = new Set();
+      const unique = [];
+      for (const emp of list) {
+        const rawPesel = String(emp.pesel || '').replace(/[^0-9]/g, '').replace(/^0+/, '');
+        const rawName = String(emp.nombre_completo || emp.nombre || '').trim().toLowerCase();
+        const peselKey = rawPesel || String(emp.id || '').trim();
+
+        if (peselKey && seenKeys.has(peselKey)) continue;
+        if (rawName && seenNames.has(rawName)) continue;
+
+        if (peselKey) seenKeys.add(peselKey);
+        if (rawName) seenNames.add(rawName);
+        unique.push(emp);
+      }
+      return unique;
+    }
+
     async function fetchLiveEmployees() {
       // 1. Intentar primero con Firebase JS SDK oficial
       if (db) {
@@ -2402,8 +2422,8 @@
               liveList.push(data);
             });
             if (liveList.length > 0) {
-              allEmployees = liveList;
-              console.log(`[Firestore SDK] ${liveList.length} empleados sincronizados en vivo.`);
+              allEmployees = deduplicateEmployees(liveList);
+              console.log(`[Firestore SDK] ${allEmployees.length} empleados sincronizados en vivo.`);
               return allEmployees;
             }
           }
@@ -2451,8 +2471,8 @@
             restList.push(emp);
           });
           if (restList.length > 0) {
-            allEmployees = restList;
-            console.log(`[Firestore REST] ${restList.length} empleados sincronizados en vivo.`);
+            allEmployees = deduplicateEmployees(restList);
+            console.log(`[Firestore REST] ${allEmployees.length} empleados sincronizados en vivo.`);
             return allEmployees;
           }
         }
@@ -2903,12 +2923,70 @@
       } catch (e) {}
     }
 
+    // ==========================================
+    // PERSISTENCIA OFFLINE Y COLA DE SINCRONIZACIÓN AUTOMÁTICA (MULTI-DÍA/SEMANAL)
+    // ==========================================
+    function getOfflineQueue() {
+      try {
+        const raw = localStorage.getItem('unamel_offline_attendance_queue');
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveOfflineQueue(queue) {
+      try {
+        localStorage.setItem('unamel_offline_attendance_queue', JSON.stringify(queue));
+      } catch (e) {}
+    }
+
+    function enqueueOfflineAttendance(record) {
+      const queue = getOfflineQueue();
+      const idx = queue.findIndex(item => String(item.employeeId) === String(record.employeeId) && item.fecha === record.fecha);
+      if (idx !== -1) {
+        queue[idx] = record;
+      } else {
+        queue.push(record);
+      }
+      saveOfflineQueue(queue);
+    }
+
+    async function flushOfflineAttendanceQueue() {
+      if (!db || !navigator.onLine) return;
+      const queue = getOfflineQueue();
+      if (queue.length === 0) return;
+
+      console.log(`📡 Sincronizando ${queue.length} registros de asistencia pendientes...`);
+      const remainingQueue = [];
+
+      for (const record of queue) {
+        try {
+          const docId = record.shiftType === 'EXTRA' ? `${record.employeeId}_EXTRA` : String(record.employeeId);
+          await db.collection('asistencia_diaria')
+            .doc(record.fecha)
+            .collection('registros')
+            .doc(docId)
+            .set(record, { merge: true });
+          console.log(`✅ Registro sincronizado en Firestore: ${record.employeeName} (${record.fecha})`);
+        } catch (e) {
+          console.warn(`⏳ Registro de ${record.employeeName} devuelto a cola local:`, e);
+          remainingQueue.push(record);
+        }
+      }
+
+      saveOfflineQueue(remainingQueue);
+    }
+
+    window.addEventListener('online', flushOfflineAttendanceQueue);
+
     function listenFirestoreAttendance(dateStr) {
       if (attendanceListenerUnsub) {
         attendanceListenerUnsub();
         attendanceListenerUnsub = null;
       }
       loadLocalAttendance();
+      flushOfflineAttendanceQueue();
 
       if (!db) {
         renderAttendanceStats();
@@ -2923,9 +3001,14 @@
             if (snapshot && !snapshot.empty) {
               snapshot.forEach(doc => {
                 const data = doc.data();
-                const empId = String(data.employeeId || doc.id);
-                attendanceRecordsMap[empId] = {
-                  employeeId: empId,
+                const shiftType = data.shiftType || (doc.id.endsWith('_EXTRA') ? 'EXTRA' : 'MAIN');
+                const rawEmpId = String(data.employeeId || doc.id);
+                const cleanEmpId = rawEmpId.endsWith('_EXTRA') ? rawEmpId.replace('_EXTRA', '') : rawEmpId;
+                const mapKey = shiftType === 'EXTRA' ? `${cleanEmpId}_EXTRA` : cleanEmpId;
+
+                attendanceRecordsMap[mapKey] = {
+                  employeeId: cleanEmpId,
+                  shiftType: shiftType,
                   employeeName: data.employeeName || '',
                   grupo: data.grupo || '',
                   turno: data.turno || '1',
@@ -2977,12 +3060,14 @@
       if (!user) return { canEdit: false, status: 'INACTIVO', title: 'Sin Sesión', sub: '', color: '#666', bg: '#f5f5f5', border: '#ddd' };
       const userRole = (user.rol_app || user.rol || '').toUpperCase();
       const isCoord = String(user.id) === '0' || String(user.id) === '2023' || userRole.includes('COORDINADOR') || userRole.includes('ADMIN');
-      if (isCoord) {
+      const isLineLeader = userRole.includes('LIDER') || (user.posicion || '').toLowerCase().includes('lider');
+
+      if (isCoord || isLineLeader) {
         return {
           canEdit: true,
           status: 'ACTIVO',
-          title: 'Modo Coordinación Activo',
-          sub: 'Supervisión total y edición habilitada 24/7',
+          title: isCoord ? 'Modo Coordinación Activo' : '🟢 Modo Líder de Línea Activo',
+          sub: isCoord ? 'Supervisión total y edición habilitada 24/7' : 'Llamado de lista y control de grupo habilitado',
           color: '#16a34a',
           bg: '#f0fdf4',
           border: '#bbf7d0'
@@ -3001,7 +3086,7 @@
       let myShift = String(user.turno_actual || '1');
       if (!myShift || myShift === '0') {
         const grp = (user.grupo || '').toUpperCase();
-        myShift = grp === 'C' ? '1' : (grp === 'B' ? '2' : (grp === 'A' ? '3' : '1'));
+        myShift = grp === 'B' ? '1' : (grp === 'A' ? '2' : (grp === 'C' ? '3' : '1'));
       }
 
       // 1. SÁBADO
@@ -3226,25 +3311,18 @@
       // Guardar en memoria y localStorage de inmediato
       attendanceRecordsMap[String(emp.id)] = record;
       saveLocalAttendance();
+      
+      // Encolar para asegurar la persistencia local de largo plazo (multi-día / semanal)
+      enqueueOfflineAttendance(record);
+
       closeAttendanceModal();
 
       // Renderizar UI al instante
       renderGroupsTab();
       renderCoordinationTab();
 
-      // Sincronizar en segundo plano con Cloud Firestore
-      if (db) {
-        try {
-          await db.collection('asistencia_diaria')
-            .doc(selectedAttendanceDate)
-            .collection('registros')
-            .doc(String(emp.id))
-            .set(record, { merge: true });
-          console.log('Asistencia guardada en vivo en Firestore para:', emp.nombre_completo);
-        } catch (e) {
-          console.warn('Guardado en caché local, pendiente de sincronización Firestore:', e);
-        }
-      }
+      // Sincronizar cola desatendida en segundo plano si hay red disponible
+      flushOfflineAttendanceQueue();
     }
 
     function renderAttendanceStats() {
@@ -3356,7 +3434,7 @@
             else if (n.includes('omar') || n.includes('osman') || n.includes('ahmed')) lGrp = 'B';
             else if (n.includes('dylan') || n.includes('zinyuku')) lGrp = 'C';
           }
-          const lTurno = currentUser.turno_actual || (lGrp === 'A' ? '1' : (lGrp === 'B' ? '3' : '2'));
+          const lTurno = currentUser.turno_actual || (lGrp === 'B' ? '1' : (lGrp === 'A' ? '2' : (lGrp === 'C' ? '3' : '1')));
           if (bTitle) bTitle.innerText = `👥 ${dict.my_group || 'Mi Grupo'}: ${dict.group_word || 'Grupo'} ${lGrp || 'B'}`;
           if (bSub) bSub.innerText = `${dict.shift_word || 'Turno'} ${lTurno} · ${dict.under_direct_supervision || 'Personal bajo supervisión directa'}`;
           const bBadge = document.getElementById('leader-banner-badge');
@@ -3537,17 +3615,20 @@ Por favor comunícate a la mayor brevedad.
       });
       container.appendChild(mainListContainer);
 
-      // Determinación de personal de apoyo que ingresa a este turno
+      // Determinación de personal de apoyo que ingresa a este turno (proveniente del turno anterior con extras o asignado como apoyo)
       let targetShift = isCoordOrAdmin ? (currentShiftFilter === 'TODOS' ? 'TODOS' : currentShiftFilter) : (currentUser.turno_actual || '1');
-      let nextShift = targetShift === '1' ? '2' : (targetShift === '2' ? '3' : (targetShift === '3' ? '1' : ''));
+      let prevShift = targetShift === '1' ? '3' : (targetShift === '2' ? '1' : (targetShift === '3' ? '2' : ''));
       
       const supportList = allEmployees.filter(e => {
         if (String(e.id) === '0' || String(e.id) === '2023') return false;
         if (list.some(m => String(m.id) === String(e.id))) return false;
+        const hasGroup = (e.grupo || '').trim() !== '';
+        if (!hasGroup) return false;
+
         if (targetShift === 'TODOS') {
           return e.es_apoyo || (e.horas_extra_apoyo && e.horas_extra_apoyo > 0);
         } else {
-          return (String(e.turno_actual) === nextShift && e.horas_extra_apoyo > 0) || (e.es_apoyo && String(e.turno_actual) === targetShift);
+          return (String(e.turno_actual) === prevShift && e.horas_extra_apoyo > 0) || (e.es_apoyo && String(e.turno_actual) === targetShift);
         }
       });
 
@@ -3796,6 +3877,15 @@ Por favor confírmanos tu estado a la mayor brevedad.
           plataforma: 'Portal Web App',
           accion: actionDesc
         }).catch(e => console.warn('Log error', e));
+
+        const empKey = userRef.docId || userRef.id || userRef.pesel;
+        if (empKey) {
+          db.collection('empleados').doc(String(empKey)).set({
+            ultimo_acceso_fecha: firebase.firestore.FieldValue.serverTimestamp(),
+            ultimo_acceso_accion: actionDesc,
+            ultimo_acceso_plataforma: 'Portal Web App'
+          }, { merge: true }).catch(e => console.warn('Error en ultimo_acceso empleados', e));
+        }
       } catch (err) {
         console.warn('Error en logWebActivity', err);
       }
