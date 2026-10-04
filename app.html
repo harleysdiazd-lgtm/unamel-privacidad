@@ -1856,15 +1856,15 @@
       if (titleEl) titleEl.innerText = 'Control de Planta y Asistencia: ' + todayStr;
 
       const attUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + todayStr + '/registros?key=' + FIRESTORE_API_KEY + '&pageSize=300';
-      const logUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/activity_logs?key=' + FIRESTORE_API_KEY + '&pageSize=60';
+      const dispUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles?key=' + FIRESTORE_API_KEY + '&pageSize=100';
 
       Promise.all([
         fetch(attUrl).then(r => r.ok ? r.json() : { documents: [] }).catch(() => ({ documents: [] })),
-        fetch(logUrl).then(r => r.ok ? r.json() : { documents: [] }).catch(() => ({ documents: [] }))
-      ]).then(([attRes, logRes]) => {
+        fetch(dispUrl).then(r => r.ok ? r.json() : { documents: [] }).catch(() => ({ documents: [] }))
+      ]).then(([attRes, dispRes]) => {
         rawCoordAttDocs = attRes.documents || [];
         renderCoordAttendance(rawCoordAttDocs);
-        renderCoordAuditLogs(logRes.documents || []);
+        renderCoordAuditLogs(dispRes.documents || []);
       });
     }
 
@@ -1973,24 +1973,20 @@
 
       container.innerHTML = '';
       if (logDocs.length === 0) {
-        container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:12px;">Sin registros de accesos en este período.</div>';
+        container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:12px;">Sin registros de accesos disponibles.</div>';
         return;
       }
 
       logDocs.forEach(d => {
         const fields = d.fields || {};
-        const nombre = fields.nombre ? fields.nombre.stringValue : 'Usuario';
-        const accion = fields.accion ? fields.accion.stringValue : 'Acceso';
-        const plat = fields.plataforma ? fields.plataforma.stringValue : 'Web App';
-        const tsRaw = fields.fecha_hora ? (fields.fecha_hora.timestampValue || fields.fecha_hora.stringValue) : '';
+        const idDoc = d.name.split('/').pop();
+        if (idDoc === '0' || idDoc === '2023') return;
 
-        let timeStr = '--:--';
-        if (tsRaw) {
-          try {
-            const dt = new Date(tsRaw);
-            timeStr = (dt.getMonth() + 1) + '/' + dt.getDate() + ' ' + String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
-          } catch (e) {}
-        }
+        const nombre = fields.nombre_completo ? fields.nombre_completo.stringValue : (fields.nombre ? fields.nombre.stringValue : idDoc);
+        const accion = fields.ultima_conexion_accion ? fields.ultima_conexion_accion.stringValue : 'Consulta';
+        const plat = fields.ultima_conexion_plataforma ? fields.ultima_conexion_plataforma.stringValue : 'Android/Web';
+        const ultCon = fields.ultima_conexion ? fields.ultima_conexion.stringValue : '';
+        const timeStr = ultCon || 'Sin conexión aún';
 
         const isAndroid = plat.toLowerCase().includes('android');
         const platIcon = isAndroid ? '📱 Android' : '🌐 Web App';
@@ -2018,18 +2014,20 @@
 
     function logWebAppAccess(emp) {
       try {
-        const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/activity_logs?key=' + FIRESTORE_API_KEY;
+        const peselKey = (emp.pesel || emp.id || '').trim();
+        if (!peselKey) return;
+        const now = new Date();
+        const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles/' + encodeURIComponent(peselKey) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=ultima_conexion&updateMask.fieldPaths=ultima_conexion_timestamp&updateMask.fieldPaths=ultima_conexion_accion&updateMask.fieldPaths=ultima_conexion_plataforma';
         const payload = {
           fields: {
-            pesel: { stringValue: emp.pesel || emp.id },
-            nombre: { stringValue: emp.nombre_completo },
-            accion: { stringValue: 'Inicio de sesión en Web App' },
-            plataforma: { stringValue: 'Portal Web App' },
-            fecha_hora: { timestampValue: new Date().toISOString() }
+            ultima_conexion: { stringValue: now.toISOString().replace('T', ' ').slice(0, 19) },
+            ultima_conexion_timestamp: { integerValue: String(now.getTime()) },
+            ultima_conexion_accion: { stringValue: 'Inicio de sesión en Web App' },
+            ultima_conexion_plataforma: { stringValue: 'Web App' }
           }
         };
         fetch(url, {
-          method: 'POST',
+          method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         }).catch(() => {});
