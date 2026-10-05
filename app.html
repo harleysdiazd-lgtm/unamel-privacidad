@@ -934,14 +934,7 @@
     }
 
     // Datos maestros locales de respaldo (Fallback Offline)
-    const FALLBACK_DATA = {
-      metadata: {
-        app: "Coordinacion UNAMEL",
-        version: "1.0.7",
-        seguridad: "RODO_GDPR_COMPLIANT_ZERO_LOCAL_PII"
-      },
-      empleados: []
-    };
+    const FALLBACK_DATA = {"metadata": {"app": "Coordinacion UNAMEL", "version": "1.1.0", "fecha_sincronizacion": "2026-10-05 10:16:08", "origen_excel": "Coordinacion UNAMEL - Disponiibilidad.xlsm", "origen_horas": "Coordinacion UNAMEL.xlsm", "periodo_programacion": "Programación 5 October - 9 October", "mes_activo": "Septiembre", "total_empleados_activos": 32, "total_despedidos": 39}, "rotacion_turnos": {"1": {"turno": "1", "horario": "06:00 - 14:00", "grupo": "C", "lider": "Francisco Rafael Orozco Cueto"}, "0": {"turno": "0", "horario": "Flexible", "grupo": "A", "lider": "Qaid Mohamned Qaid Yahya Al Senani"}, "2": {"turno": "2", "horario": "14:00 - 22:00", "grupo": "B", "lider": "Zakarie Hussein Ibrahim"}, "3": {"turno": "3", "horario": "22:00 - 06:00", "grupo": "C", "lider": "Francisco Rafael Orozco Cueto"}}, "grupos_lideres": {"B": {"grupo": "B", "turno": "1", "horario": "06:00 - 14:00", "lider": "Zakarie Hussein Ibrahim", "posicion": "Lider linii"}, "C": {"grupo": "C", "turno": "1", "horario": "06:00 - 14:00", "lider": "Francisco Rafael Orozco Cueto", "posicion": "Lider linii"}, "A": {"grupo": "A", "turno": "0", "horario": "Flexible", "lider": "Qaid Mohamned Qaid Yahya Al Senani", "posicion": "Lider linii"}}, "empleados": []};
 
     let allEmployees = FALLBACK_DATA.empleados || [];
     let currentUser = null;
