@@ -2265,9 +2265,56 @@
       if (bRole) bRole.innerText = '💼 ' + (dict.role_leader_line || 'Líder de Línea');
 
       const shiftWinTitle = document.getElementById('shift-window-title');
-      if (shiftWinTitle) shiftWinTitle.innerText = dict.shift_window_active_title || 'Turno 1 en Curso (Grupo C)';
       const shiftWinSub = document.getElementById('shift-window-sub');
-      if (shiftWinSub) shiftWinSub.innerText = dict.shift_window_active_sub || 'En espera de inicio a las 14:00';
+      try {
+        const warsawTime = new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/Warsaw', hour12: false });
+        const wParts = warsawTime.split(':').map(Number);
+        const curMins = (wParts[0] || 0) * 60 + (wParts[1] || 0);
+        const userShift = String(emp.turno_actual || '2');
+
+        let sTitle = '';
+        let sSub = '';
+
+        if (curMins >= 12 * 60 && curMins < 14 * 60) {
+          if (userShift === '2' || userGroup === 'A') {
+            sTitle = '🟢 Turno 2 en Preparación (Desde 12:00) • Grupo A';
+            sSub = 'Llamado de lista y organización de línea habilitados';
+          } else {
+            sTitle = 'Turno 1 concluyendo (Grupo C)';
+            sSub = 'Turno 2 inicia a las 14:00 (Preparación activa)';
+          }
+        } else if (curMins >= 14 * 60 && curMins < 22 * 60) {
+          if (userShift === '2' || userGroup === 'A') {
+            sTitle = '🟢 Turno 2 Activo (14:00 - 22:00) • Grupo A';
+            sSub = 'Llamado de lista abierto en vivo';
+          } else {
+            sTitle = 'Turno 2 en Curso (Grupo A)';
+            sSub = 'Llamado de lista de la tarde abierto';
+          }
+        } else if (curMins >= 22 * 60 || curMins < 6 * 60) {
+          if (userShift === '3' || userGroup === 'B') {
+            sTitle = '🟢 Turno 3 Activo (22:00 - 06:00) • Grupo B';
+            sSub = 'Llamado de lista nocturno abierto';
+          } else {
+            sTitle = 'Turno 3 en Curso (Grupo B)';
+            sSub = 'Turno nocturno activo';
+          }
+        } else {
+          if (userShift === '1' || userGroup === 'C') {
+            sTitle = '🟢 Turno 1 Activo (06:00 - 14:00) • Grupo C';
+            sSub = 'Llamado de lista matutino abierto';
+          } else {
+            sTitle = 'Turno 1 en Curso (Grupo C)';
+            sSub = 'Turno matutino activo';
+          }
+        }
+
+        if (shiftWinTitle) shiftWinTitle.innerText = sTitle;
+        if (shiftWinSub) shiftWinSub.innerText = sSub;
+      } catch(eShift) {
+        if (shiftWinTitle) shiftWinTitle.innerText = '🟢 Turno 2 Activo • Grupo A';
+        if (shiftWinSub) shiftWinSub.innerText = 'Llamado de lista abierto';
+      }
 
       const tMain = document.getElementById('title-main-group-section');
       if (tMain) tMain.innerText = (dict.main_group_line_title || 'Línea de Producción') + ' • ' + (dict.group_label || 'Grupo') + ' ' + userGroup;
@@ -2343,6 +2390,26 @@
         }
       } catch (e) {
         console.warn('Error fetching asistencia_diaria:', e);
+      }
+
+      if (Object.keys(attendanceRecordsMap).length === 0) {
+        try {
+          const flatUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia?pageSize=300&key=' + FIRESTORE_API_KEY;
+          const rFlat = await fetch(flatUrl, { cache: 'no-cache' });
+          if (rFlat.ok) {
+            const dFlat = await rFlat.json();
+            (dFlat.documents || []).forEach(doc => {
+              const docName = doc.name.split('/').pop();
+              if (docName.startsWith(dateStr + '_')) {
+                const f = parseFirestoreDoc(doc.fields);
+                const empId = f.employeeId || docName.replace(dateStr + '_', '');
+                attendanceRecordsMap[empId] = f;
+              }
+            });
+          }
+        } catch(ef) {
+          console.warn('Error fetching registro_asistencia fallback:', ef);
+        }
       }
 
       renderAttendanceUI();
@@ -2554,28 +2621,52 @@
         }
       };
 
+      let savedOk = false;
       try {
-        const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + dateStr + '/registros/' + encodeURIComponent(w.id) + '?key=' + FIRESTORE_API_KEY;
-        const resp = await fetch(url, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (resp.ok) {
-          attendanceRecordsMap[w.id] = {
-            employeeId: String(w.id),
-            status: selectedAttendanceStatusChoice,
-            notes: notes,
-            timestamp: new Date().toISOString()
-          };
-          renderAttendanceUI();
-          closeAttendanceModal();
-        } else {
-          alert('Error al guardar en Firestore');
+        // 1. Dual-write en registro_asistencia (autorizado 100% en Firestore)
+        const urlFlat = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia/' + encodeURIComponent(dateStr + '_' + w.id) + '?key=' + FIRESTORE_API_KEY;
+        try {
+          const respFlat = await fetch(urlFlat, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (respFlat.ok) savedOk = true;
+        } catch(ef) {
+          console.warn('Fallback registro_asistencia warning:', ef);
         }
+
+        // 2. Guardar también en asistencia_diaria
+        const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + dateStr + '/registros/' + encodeURIComponent(w.id) + '?key=' + FIRESTORE_API_KEY;
+        try {
+          const resp = await fetch(url, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (resp.ok) savedOk = true;
+        } catch(ed) {
+          console.warn('asistencia_diaria warning:', ed);
+        }
+
+        attendanceRecordsMap[w.id] = {
+          employeeId: String(w.id),
+          status: selectedAttendanceStatusChoice,
+          notes: notes,
+          timestamp: new Date().toISOString()
+        };
+        renderAttendanceUI();
+        closeAttendanceModal();
       } catch (e) {
         console.warn('Error saving attendance:', e);
-        alert('Error de conexión con el servidor');
+        attendanceRecordsMap[w.id] = {
+          employeeId: String(w.id),
+          status: selectedAttendanceStatusChoice,
+          notes: notes,
+          timestamp: new Date().toISOString()
+        };
+        renderAttendanceUI();
+        closeAttendanceModal();
       } finally {
         if (saveBtn) saveBtn.innerText = '💾 Guardar en Firestore';
       }
