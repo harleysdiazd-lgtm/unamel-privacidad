@@ -1086,13 +1086,19 @@
 
         <!-- Tarjeta Exclusiva Líder de Línea: Mi Grupo -->
         <div id="card-leader-group" class="card hidden" style="padding:14px; border:1px solid #bfdbfe; background:#eff6ff;">
-          <h3 id="title-leader-group" style="font-size:0.95rem; font-weight:700; color:#1e40af; margin-bottom:4px;">
-            ⭐ Mi Grupo y Colaboradores Asignados
-          </h3>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <h3 id="title-leader-group" style="font-size:0.95rem; font-weight:700; color:#1e40af; margin:0;">
+              ⭐ Mi Grupo y Colaboradores Asignados
+            </h3>
+            <span id="card-leader-group-count" style="background:#2563eb; color:#ffffff; font-size:0.75rem; font-weight:800; padding:2px 8px; border-radius:12px;">--</span>
+          </div>
           <div id="sub-leader-group" style="font-size:0.78rem; color:#3b82f6; margin-bottom:10px;">
             Haga clic sobre cualquier colaborador para consultar su historial de asistencia y horas.
           </div>
           <div id="leader-group-members-list"></div>
+          <button type="button" id="btn-view-full-group" class="btn-action-view" onclick="switchTab('group', document.getElementById('nav-btn-group'))" style="width:100%; margin-top:8px; padding:10px; background:#2563eb; color:#ffffff; border:none; border-radius:10px; font-weight:700; font-size:0.84rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+            <span>👥</span> <span id="lbl-btn-view-full-group">Ver Pantalla Completa de Mi Grupo</span>
+          </button>
         </div>
 
       </div>
@@ -1176,6 +1182,34 @@
           * Programación oficial confirmada por la coordinación de ND Serwis para la planta UNAMEL.
         </p>
 
+      </div>
+
+      <!-- PESTAÑA MI GRUPO (LÍDERES Y COORDINADORES) -->
+      <div id="tab-group" class="tab-pane hidden">
+        <div class="card" style="background: linear-gradient(135deg, #1e3a8a, #2563eb); color: white; padding: 18px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(37,99,235,0.2);">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <span id="tab-group-badge" style="background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Grupo A</span>
+              <h2 id="tab-group-title" style="font-size: 1.25rem; font-weight: 800; margin: 8px 0 4px; color: #ffffff;">Línea de Producción</h2>
+              <div id="tab-group-leader-sub" style="font-size: 0.85rem; color: #dbeafe; font-weight: 500;">⭐ Líder: Qaid Mohamned Qaid Yahya Al Senani</div>
+            </div>
+            <div style="text-align: right;">
+              <div id="tab-group-count" style="font-size: 1.7rem; font-weight: 900; line-height: 1;">--</div>
+              <div id="tab-group-count-lbl" style="font-size: 0.72rem; color: #bfdbfe; font-weight: 600;">Colaboradores</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barra de Búsqueda de Colaboradores en Grupo -->
+        <div style="margin-bottom: 12px;">
+          <input type="text" id="input-search-group" placeholder="🔍 Buscar colaborador por nombre o PESEL..." oninput="filterGroupMembersList(this.value)" style="width: 100%; box-sizing: border-box; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; font-size: 0.88rem; outline: none; background: var(--surface); color: var(--text);">
+        </div>
+
+        <div id="group-loading-spinner" style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 0.9rem;">
+          <div style="margin-bottom: 8px;">⏳ Cargando colaboradores del grupo desde Firestore...</div>
+        </div>
+
+        <div id="group-members-list-container" class="hidden"></div>
       </div>
 
       <!-- PESTAÑA 4: CERTIFICADO OFICIAL DE HORAS -->
@@ -1380,19 +1414,23 @@
 
   <!-- NAVEGACIÓN INFERIOR -->
   <nav id="bottom-nav" class="bottom-nav hidden">
-    <button class="nav-item active" onclick="switchTab('shift', this)">
+    <button id="nav-btn-profile" class="nav-item active" onclick="switchTab('shift', this)">
       <span class="nav-icon">👤</span>
       <span id="nav-lbl-profile">Mi Perfil</span>
     </button>
-    <button class="nav-item" onclick="switchTab('hours', this)">
+    <button id="nav-btn-hours" class="nav-item" onclick="switchTab('hours', this)">
       <span class="nav-icon">⏱️</span>
       <span id="nav-lbl-hours">Mis Horas</span>
     </button>
-    <button class="nav-item" onclick="switchTab('next', this)">
+    <button id="nav-btn-next" class="nav-item" onclick="switchTab('next', this)">
       <span class="nav-icon">📅</span>
       <span id="nav-lbl-next">Próx. Semana</span>
     </button>
-    <button class="nav-item" onclick="switchTab('pdf', this)">
+    <button id="nav-btn-group" class="nav-item hidden" onclick="switchTab('group', this)">
+      <span class="nav-icon">👥</span>
+      <span id="nav-lbl-group">Mi Grupo</span>
+    </button>
+    <button id="nav-btn-pdf" class="nav-item" onclick="switchTab('pdf', this)">
       <span class="nav-icon">📄</span>
       <span id="nav-lbl-pdf">Reporte PDF</span>
     </button>
@@ -1404,7 +1442,7 @@
 
   <script>
     const VAULT = {};
-    const I18N_DICT = {"es": {"title_login": "Portal del Trabajador", "sub_login": "Acceso confidencial a su programación laboral", "label_pesel": "Número PESEL o Teléfono", "label_pin": "Código PIN de Acceso (4 dígitos)", "btn_login": "Ingresar al Sistema", "btn_logout": "Cerrar Sesión", "security_note": "🔒 Sistema seguro protegido con cifrado de punto a punto (RODO/GDPR).", "view_personal": "Ver información personal y contacto", "personal_sheet": "Ficha Personal y Contractual", "pesel": "Número PESEL", "housing": "Alojamiento Asignado", "phone": "Teléfono de Contacto", "contract": "Contrato Firmado (Umowa)", "birth": "Fecha de Nacimiento", "start_date": "Fecha de Inicio en Fábrica", "shift_base": "Turno y Horario de la Semana Actual", "current_shift": "Turno Asignado", "break_1": "1ª Pausa Programada", "break_2": "2ª Pausa Programada", "plant_equipment": "Dotación e Instalaciones en Planta", "locker": "Casillero (Szafka)", "card": "Tarjeta Acceso (Karta)", "my_hours": "Mis Horas", "total_worked": "Total Horas Facturadas", "download_pdf": "Descargar / Ver Reporte Oficial PDF", "next_week": "Próx. Semana", "profile": "Mi Perfil", "report_pdf": "Reporte PDF", "swipe_hint": "👈 Desliza para cambiar mes 👉", "month_prev": "Mes anterior", "month_next": "Mes siguiente", "total_hours_billed": "Total Horas Facturadas", "days_attendance": "Días con Asistencia", "role_leader": "⭐ LÍDER DE LÍNEA", "role_coordinator": "💼 COORDINADOR", "role_operator": "OPERARIO", "contract_signed": "Firmado (TAK / SI)", "contract_pending": "En trámite", "shift_label": "Turno", "group_label": "Grupo", "day_prefix": "Día", "normal_shift": "Jornada Normal", "no_hours_this_month": "Sin jornadas detalladas este mes.", "current_cycle": "Ciclo laboral en curso", "expected_schedule": "Horario previsto:", "line_leader_title": "Líder de Línea:", "badge_confirmed": "CONFIRMADO", "badge_assigned": "Asignado", "badge_rest": "Descanso", "badge_free": "Libre", "survey_card_title": "Encuesta de Satisfacción y Operaciones", "survey_card_desc": "Tu opinión sobre condiciones, transporte y fábrica es confidencial y vital.", "survey_btn_participate": "Completar Encuesta", "survey_results_btn": "Ver Respuestas de Encuestas", "survey_dialog_title": "Encuesta de Satisfacción Laboral", "survey_q1": "1. ¿Cómo califica el ambiente laboral y la coordinación en su línea de trabajo?", "survey_q2": "2. Comentarios o sugerencias para mejorar el bienestar en la fábrica (Opcional):", "survey_placeholder": "Escriba su comentario aquí...", "survey_cancel": "Cancelar", "survey_submit": "Enviar Encuesta", "survey_success": "¡Encuesta enviada con éxito! Muchas gracias por su colaboración.", "survey_admin_title": "Resultados de Encuestas", "survey_results_empty": "No se han registrado respuestas de encuestas todavía.", "table_day": "DÍA", "table_start": "INICIO", "table_end": "FIN", "table_hours": "HORAS", "legend_medical": "● Azul: Incapacidad Médica", "legend_unauthorized": "● Amarillo: No Autorizado", "legend_penalty": "● Rojo: Penalización", "legend_pending": "● Naranja: Por Confirmar", "login_hint_text": "💡 Ingrese su número PESEL (o teléfono registrado). Su PIN corresponde a los últimos 4 dígitos de su PESEL o su clave personal asignada.", "current_month_notice": "Mes en curso (Octubre 2026). Las horas facturadas se consolidarán al cierre mensual.", "months": {"2026-04": "Abril 2026", "2026-05": "Mayo 2026", "2026-06": "Junio 2026", "2026-07": "Julio 2026", "2026-08": "Agosto 2026", "2026-09": "Septiembre 2026", "2026-10": "Octubre 2026"}, "days": {"lunes": "Lunes", "martes": "Martes", "miercoles": "Miércoles", "miércoles": "Miércoles", "jueves": "Jueves", "viernes": "Viernes", "sabado": "Sábado", "sábado": "Sábado", "domingo": "Domingo", "monday": "Lunes", "tuesday": "Martes", "wednesday": "Miércoles", "thursday": "Jueves", "friday": "Viernes", "saturday": "Sábado", "sunday": "Domingo"}}, "en": {"title_login": "Worker Portal", "sub_login": "Confidential access to your work schedule", "label_pesel": "PESEL Number or Phone", "label_pin": "Access PIN (4 digits)", "btn_login": "Log In to System", "btn_logout": "Log Out", "security_note": "🔒 Secure system protected with end-to-end encryption (GDPR).", "view_personal": "View personal info and contact", "personal_sheet": "Personal & Contract Record", "pesel": "PESEL Number", "housing": "Assigned Housing", "phone": "Contact Phone", "contract": "Signed Contract (Umowa)", "birth": "Birth Date", "start_date": "Factory Start Date", "shift_base": "Current Week Shift and Schedule", "current_shift": "Current Shift", "break_1": "1st Scheduled Break", "break_2": "2nd Scheduled Break", "plant_equipment": "Plant Equipment & Facilities", "locker": "Locker (Szafka)", "card": "Access Card (Karta)", "my_hours": "My Hours", "total_worked": "Total Billed Hours", "download_pdf": "Download / View Official PDF", "next_week": "Next Week", "profile": "My Profile", "report_pdf": "PDF Report", "swipe_hint": "👈 Swipe to change month 👉", "month_prev": "Previous Month", "month_next": "Next Month", "total_hours_billed": "Total Billed Hours", "days_attendance": "Days with Attendance", "role_leader": "⭐ LINE LEADER", "role_coordinator": "💼 COORDINATOR", "role_operator": "OPERATOR", "contract_signed": "Signed (TAK / YES)", "contract_pending": "In Process", "shift_label": "Shift", "group_label": "Group", "day_prefix": "Day", "normal_shift": "Normal Shift", "no_hours_this_month": "No detailed shifts recorded for this month.", "current_cycle": "Current work cycle", "expected_schedule": "Expected schedule:", "line_leader_title": "Line Leader:", "badge_confirmed": "CONFIRMED", "badge_assigned": "Assigned", "badge_rest": "Rest", "badge_free": "Free", "survey_card_title": "Satisfaction & Operations Survey", "survey_card_desc": "Your feedback on conditions, transport, and factory operations is essential and confidential.", "survey_btn_participate": "Take Survey", "survey_results_btn": "View Survey Responses", "survey_dialog_title": "Work Satisfaction Survey", "survey_q1": "1. How do you rate the work environment and coordination in your work line?", "survey_q2": "2. Comments or suggestions to improve factory wellbeing (Optional):", "survey_placeholder": "Write your comments here...", "survey_cancel": "Cancel", "survey_submit": "Submit Survey", "survey_success": "Survey submitted successfully! Thank you for your feedback.", "survey_admin_title": "Survey Responses", "survey_results_empty": "No survey responses recorded yet.", "table_day": "DAY", "table_start": "START", "table_end": "END", "table_hours": "HOURS", "legend_medical": "● Blue: Medical Leave", "legend_unauthorized": "● Yellow: Unauthorized", "legend_penalty": "● Red: Penalty", "legend_pending": "● Orange: To Confirm", "login_hint_text": "💡 Enter your PESEL number (or registered phone). Your PIN is the last 4 digits of your PESEL or assigned passcode.", "current_month_notice": "Current month in progress (October 2026). Billed hours will be finalized at month-end.", "months": {"2026-04": "April 2026", "2026-05": "May 2026", "2026-06": "June 2026", "2026-07": "July 2026", "2026-08": "August 2026", "2026-09": "September 2026", "2026-10": "October 2026"}, "days": {"lunes": "Monday", "martes": "Tuesday", "miercoles": "Wednesday", "miércoles": "Wednesday", "jueves": "Thursday", "viernes": "Friday", "sabado": "Saturday", "sábado": "Saturday", "domingo": "Sunday", "monday": "Monday", "tuesday": "Tuesday", "wednesday": "Wednesday", "thursday": "Thursday", "friday": "Friday", "saturday": "Saturday", "sunday": "Sunday"}}, "pl": {"title_login": "Portal Pracownika", "sub_login": "Poufny dostęp do harmonogramu pracy", "label_pesel": "Numer PESEL lub Telefon", "label_pin": "Kod PIN dostępu (4 cyfry)", "btn_login": "Zaloguj się do systemu", "btn_logout": "Wyloguj się", "security_note": "🔒 Bezpieczny system chroniony szyfrowaniem end-to-end (RODO).", "view_personal": "Zobacz dane osobowe i kontakt", "personal_sheet": "Karta Osobowa i Umowa", "pesel": "Numer PESEL", "housing": "Przydzielone zakwaterowanie", "phone": "Telefon kontaktowy", "contract": "Podpisana umowa", "birth": "Data urodzenia", "start_date": "Data rozpoczęcia pracy", "shift_base": "Zmiana i grafik w bieżącym tygodniu", "current_shift": "Aktualna zmiana", "break_1": "1. przerwa w pracy", "break_2": "2. przerwa w pracy", "plant_equipment": "Wyposażenie w zakładzie", "locker": "Szafka", "card": "Karta dostępowa", "my_hours": "Moje godziny", "total_worked": "Łącznie rozliczone godziny", "download_pdf": "Pobierz / Zobacz oficjalny raport PDF", "next_week": "Nast. tydzień", "profile": "Mój profil", "report_pdf": "Raport PDF", "swipe_hint": "👈 Przesuń, aby zmienić miesiąc 👉", "month_prev": "Poprzedni miesiąc", "month_next": "Następny miesiąc", "total_hours_billed": "Łącznie rozliczone godziny", "days_attendance": "Dni z obecnością", "role_leader": "⭐ LIDER LINII", "role_coordinator": "💼 KOORDYNATOR", "role_operator": "PRACOWNIK PRODUKCJI", "contract_signed": "Podpisana (TAK)", "contract_pending": "W toku", "shift_label": "Zmiana", "group_label": "Grupa", "day_prefix": "Dzień", "normal_shift": "Zwykły dzień", "no_hours_this_month": "Brak szczegółowych dni w tym miesiącu.", "current_cycle": "Bieżący cykl pracy", "expected_schedule": "Przewidywane godziny:", "line_leader_title": "Lider linii:", "badge_confirmed": "POTWIERDZONE", "badge_assigned": "Przydzielony", "badge_rest": "Odpoczynek", "badge_free": "Wolne", "survey_card_title": "Ankieta Satysfakcji i Operacji", "survey_card_desc": "Twoja opinia o warunkach, transporcie i fabryce jest poufna i kluczowa.", "survey_btn_participate": "Wypełnij ankietę", "survey_results_btn": "Zobacz odpowiedzi ankiety", "survey_dialog_title": "Ankieta Satysfakcji z Pracy", "survey_q1": "1. Jak oceniasz atmosferę pracy i koordynację na swojej linii?", "survey_q2": "2. Uwagi lub sugestie dotyczące poprawy warunków w fabryce (Opcjonalnie):", "survey_placeholder": "Wpisz swój komentarz tutaj...", "survey_cancel": "Anuluj", "survey_submit": "Wyślij Ankietę", "survey_success": "Ankieta wysłana pomyślnie! Dziękujemy.", "survey_admin_title": "Odpowiedzi Ankiety", "survey_results_empty": "Brak zarejestrowanych odpowiedzi na ankietę.", "table_day": "DZIEŃ", "table_start": "START", "table_end": "KONIEC", "table_hours": "GODZINY", "legend_medical": "● Niebieski: Zwolnienie lekarskie", "legend_unauthorized": "● Żółty: Nieusprawiedliwione", "legend_penalty": "● Czerwony: Kara", "legend_pending": "● Pomarańczowy: Do potwierdzenia", "login_hint_text": "💡 Wpisz swój numer PESEL lub telefon. Twój PIN to 4 ostatnie cyfry numeru PESEL lub przypisany kod dostępu.", "current_month_notice": "Bieżący miesiąc w toku (Październik 2026). Rozliczone godziny zostaną skonsolidowane po zamknięciu miesiąca.", "months": {"2026-04": "Kwiecień 2026", "2026-05": "Maj 2026", "2026-06": "Czerwiec 2026", "2026-07": "Lipiec 2026", "2026-08": "Sierpień 2026", "2026-09": "Wrzesień 2026", "2026-10": "Październik 2026"}, "days": {"lunes": "Poniedziałek", "martes": "Wtorek", "miercoles": "Środa", "miércoles": "Środa", "jueves": "Czwartek", "viernes": "Piątek", "sabado": "Sobota", "sábado": "Sobota", "domingo": "Niedziela", "monday": "Poniedziałek", "tuesday": "Wtorek", "wednesday": "Środa", "thursday": "Czwartek", "friday": "Piątek", "saturday": "Sobota", "sunday": "Niedziela"}}, "uk": {"title_login": "Портал Працівника", "sub_login": "Конфіденційний доступ до робочого графіка", "label_pesel": "Номер PESEL або Телефон", "label_pin": "PIN-код доступу (4 цифри)", "btn_login": "Увійти в систему", "btn_logout": "Вийти", "security_note": "🔒 Захищена система із наскрізним шифруванням (GDPR).", "view_personal": "Переглянути особисті дані та контакти", "personal_sheet": "Особиста картка та договір", "pesel": "Номер PESEL", "housing": "Призначене житло", "phone": "Контактний телефон", "contract": "Підписаний договір (Umowa)", "birth": "Дата народження", "start_date": "Дата початку роботи", "shift_base": "Зміна та графік поточного тижня", "current_shift": "Поточна зміна", "break_1": "1-ша запланована перерва", "break_2": "2-га запланована перерва", "plant_equipment": "Оснащення на заводі", "locker": "Шафка (Szafka)", "card": "Картка доступу (Karta)", "my_hours": "Мої години", "total_worked": "Всього відпрацьованих годин", "download_pdf": "Завантажити / Переглянути звіт PDF", "next_week": "Наст. тиждень", "profile": "Мій профіль", "report_pdf": "Звіт PDF", "swipe_hint": "👈 Проведіть, щоб змінити місяць 👉", "month_prev": "Попередній місяць", "month_next": "Наступний місяць", "total_hours_billed": "Всього нарахованих годин", "days_attendance": "Дні з відвідуваністю", "role_leader": "⭐ ЛІДЕР ЛІНІЇ", "role_coordinator": "💼 КООРДИНАТОР", "role_operator": "ОПЕРАТОР ВИРОБНИЦТВА", "contract_signed": "Підписано (TAK)", "contract_pending": "В процесі", "shift_label": "Зміна", "group_label": "Група", "day_prefix": "День", "normal_shift": "Звичайна зміна", "no_hours_this_month": "Немає детальних змін за цей місяць.", "current_cycle": "Поточний робочий цикл", "expected_schedule": "Очікуваний розклад:", "line_leader_title": "Лідер лінії:", "badge_confirmed": "ПІДТВЕРДЖЕНО", "badge_assigned": "Призначено", "badge_rest": "Відпочинок", "badge_free": "Вільний", "survey_card_title": "Опитування щодо задоволеності та операцій", "survey_card_desc": "Ваша думка щодо умов, транспорту та заводу є конфіденційною та важливою.", "survey_btn_participate": "Пройти опитування", "survey_results_btn": "Переглянути відповіді опитування", "survey_dialog_title": "Опитування щодо задоволеності працею", "survey_q1": "1. Як ви оцінюєте робочу атмосферу та координацію на вашій лінії?", "survey_q2": "2. Коментарі або пропозиції щодо покращення умов на заводі (Необов'язково):", "survey_placeholder": "Напишіть свій коментар тут...", "survey_cancel": "Скасувати", "survey_submit": "Надіслати опитування", "survey_success": "Опитування успішно надіслано! Дякуємо.", "survey_admin_title": "Відповіді на опитування", "survey_results_empty": "Немає зареєстрованих відповідей на опитування.", "table_day": "ДЕНЬ", "table_start": "ПОЧАТОК", "table_end": "КІНЕЦЬ", "table_hours": "ГОДИНИ", "legend_medical": "● Синій: Лікарняний", "legend_unauthorized": "● Жовтий: Несанкціоновано", "legend_penalty": "● Червоний: Штраф", "legend_pending": "● Помаранчевий: На підтвердженні", "login_hint_text": "💡 Введіть ваш номер PESEL або зареєстрований телефон. Ваш PIN-код — останні 4 цифри PESEL або призначений пароль.", "current_month_notice": "Поточний місяць триває (Жовтень 2026). Нараховані години будуть підтверджені після закриття місяця.", "months": {"2026-04": "Квітень 2026", "2026-05": "Травень 2026", "2026-06": "Червень 2026", "2026-07": "Липень 2026", "2026-08": "Серпень 2026", "2026-09": "Вересень 2026", "2026-10": "Жовтень 2026"}, "days": {"lunes": "Понеділок", "martes": "Вівторок", "miercoles": "Середа", "miércoles": "Середа", "jueves": "Четвер", "viernes": "П'ятниця", "sabado": "Субота", "sábado": "Субота", "domingo": "Неділя", "monday": "Понеділок", "tuesday": "Вівторок", "wednesday": "Середа", "thursday": "Четвер", "friday": "П'ятниця", "saturday": "Субота", "sunday": "Неділя"}}, "ar": {"title_login": "بوابة العامل", "sub_login": "وصول سري إلى جدول عملك", "label_pesel": "رقم PESEL أو الهاتف", "label_pin": "رمز PIN للدخول (4 أرقام)", "btn_login": "الدخول إلى النظام", "btn_logout": "تسجيل الخروج", "security_note": "🔒 نظام آمن محمي بتشفير شامل (GDPR).", "view_personal": "عرض البيانات الشخصية وجهات الاتصال", "personal_sheet": "الملف الشخصي والتعاقدي", "pesel": "رقم PESEL", "housing": "السكن المخصص", "phone": "هاتف الاتصال", "contract": "العقد الموقع (Umowa)", "birth": "تاريخ الميلاد", "start_date": "تاريخ بدء العمل في المصنع", "shift_base": "وردية وجدول الأسبوع الحالي", "current_shift": "الوردية المحددة", "break_1": "فترة الاستراحة الأولى", "break_2": "فترة الاستراحة الثانية", "plant_equipment": "المعدات والتجهيزات في المصنع", "locker": "الخزانة (Szafka)", "card": "بطاقة الدخول (Karta)", "my_hours": "ساعاتي", "total_worked": "إجمالي الساعات المفوترة", "download_pdf": "تحميل / عرض التقرير الرسمي PDF", "next_week": "الأسبوع القادم", "profile": "ملفي الشخصي", "report_pdf": "تقرير PDF", "swipe_hint": "👈 اسحب لتغيير الشهر 👉", "month_prev": "الشهر السابق", "month_next": "الشهر التالي", "total_hours_billed": "إجمالي الساعات المفوترة", "days_attendance": "أيام الحضور", "role_leader": "⭐ قائد الخط", "role_coordinator": "💼 المنسق", "role_operator": "عامل إنتاج", "contract_signed": "موقع (TAK / نعم)", "contract_pending": "قيد الإجراء", "shift_label": "الوردية", "group_label": "المجموعة", "day_prefix": "اليوم", "normal_shift": "يوم عمل عادي", "no_hours_this_month": "لا توجد تفاصيل ورديات لهذا الشهر.", "current_cycle": "دورة العمل الحالية", "expected_schedule": "الجدول المتوقع:", "line_leader_title": "قائد الخط:", "badge_confirmed": "مؤكد", "badge_assigned": "محدد", "badge_rest": "استراحة", "badge_free": "عطلة", "survey_card_title": "استبيان الرضا والعمليات", "survey_card_desc": "رأيك حول الظروف والمواصلات والمصنع سري وأساسي جداً.", "survey_btn_participate": "إجراء الاستبيان", "survey_results_btn": "عرض إجابات الاستبيان", "survey_dialog_title": "استبيان الرضا المهني", "survey_q1": "1. كيف تقيم بيئة العمل والتنسيق في خط عملك؟", "survey_q2": "2. ملاحظات أو اقتراحات لتحسين ظروف المصنع (اختياري):", "survey_placeholder": "اكتب تعليقك هنا...", "survey_cancel": "إلغاء", "survey_submit": "إرسال الاستبيان", "survey_success": "تم إرسال الاستبيان بنجاح! شكراً جزيلاً لتعاونك.", "survey_admin_title": "نتائج الاستبيانات", "survey_results_empty": "لم يتم تسجيل أي ردود حتى الآن.", "table_day": "اليوم", "table_start": "البدء", "table_end": "الانتهاء", "table_hours": "الساعات", "legend_medical": "● أزرق: إجازة مرضية", "legend_unauthorized": "● أصفر: غير مصرح به", "legend_penalty": "● أحمر: عقوبة", "legend_pending": "● برتقالي: قيد التأكيد", "login_hint_text": "💡 أدخل رقم PESEL أو الهاتف المسجل. رمز PIN هو آخر 4 أرقام من PESEL أو كلمة مرورك الخاصة.", "current_month_notice": "الشهر الحالي قيد التقدم (أكتوبر 2026). سيتم اعتماد الساعات المفوترة عند إغلاق الشهر.", "months": {"2026-04": "أبريل 2026", "2026-05": "مايو 2026", "2026-06": "يونيو 2026", "2026-07": "يوليو 2026", "2026-08": "أغسطس 2026", "2026-09": "سبتمبر 2026", "2026-10": "أكتوبر 2026"}, "days": {"lunes": "الإثنين", "martes": "الثلاثاء", "miercoles": "الأربعاء", "miércoles": "الأربعاء", "jueves": "الخميس", "viernes": "الجمعة", "sabado": "السبت", "sábado": "السبت", "domingo": "الأحد", "monday": "الإثنين", "tuesday": "الثلاثاء", "wednesday": "الأربعاء", "thursday": "الخميس", "friday": "الجمعة", "saturday": "السبت", "sunday": "الأحد"}}, "so": {"title_login": "Albaabka Shaqaalaha", "sub_login": "Helitaanka jadwalka shaqada si qarsoodi ah", "label_pesel": "Lambarka PESEL ama Telefoonka", "label_pin": "Koodhka PIN (4 lambar)", "btn_login": "Gal Nidaamka", "btn_logout": "Ka Bax", "security_note": "🔒 Nidaam ammaan ah oo lagu ilaaliyo sirta (GDPR).", "view_personal": "Eeg macluumaadka shakhsiga ah", "personal_sheet": "Warqadda Shaqaalaha & Heshiiska", "pesel": "Lambarka PESEL", "housing": "Guriga Laguu Qoondeeyay", "phone": "Telefoonka Xiriirka", "contract": "Heshiiska Saxiixan (Umowa)", "birth": "Taariikhda Dhalashada", "start_date": "Taariikhda Bilowga Warshadda", "shift_base": "Wareegga & Jadwalka Toddobaadkan", "current_shift": "Wareegga Hadda", "break_1": "Nafaqada 1aad ee Qorsheysan", "break_2": "Nafaqada 2aad ee Qorsheysan", "plant_equipment": "Qalabka & Xarumaha Warshadda", "locker": "Qasnada (Szafka)", "card": "Kaarka Gelitaanka (Karta)", "my_hours": "Saacadahayga", "total_worked": "Wadarta Saacadaha La Shaqeeyay", "download_pdf": "Soo Dejiso / Eeg Warbixinta Rasmiga ah ee PDF", "next_week": "Toddobaadka Xiga", "profile": "Boggeyga", "report_pdf": "Warbixinta PDF", "swipe_hint": "👈 Jiid si aad u beddesho bisha 👉", "month_prev": "Bishii Hore", "month_next": "Bisha Xigta", "total_hours_billed": "Wadarta Saacadaha La Qaatay", "days_attendance": "Maalmaha imaanshaha", "role_leader": "⭐ HOGAAMIYAHA KHADKA", "role_coordinator": "💼 ISKU-DUWAHA", "role_operator": "SHAQAALE WAX-SOOSAAR", "contract_signed": "Saxiixan (HAA / TAK)", "contract_pending": "Socda", "shift_label": "Wareegga", "group_label": "Kooxda", "day_prefix": "Maalin", "normal_shift": "Shaqo Caadi ah", "no_hours_this_month": "Faahfaahin ma jirto bishan.", "current_cycle": "Wareegga shaqada ee hadda", "expected_schedule": "Jadwalka la filayo:", "line_leader_title": "Hogaamiyaha Khadka:", "badge_confirmed": "LA XAQIIJIYAY", "badge_assigned": "Loo qoondeeyay", "badge_rest": "Nasiino", "badge_free": "Bilaash", "survey_card_title": "Sahanka Qanacsanaanta & Hawlaha", "survey_card_desc": "Fikraddaada ku saabsan xaaladaha, gaadiidka iyo warshadda waa qarsoodi waana muhiim.", "survey_btn_participate": "Buuxi Sahanka", "survey_results_btn": "Eeg Jawaabaha Sahanka", "survey_dialog_title": "Sahanka Qanacsanaanta Shaqada", "survey_q1": "1. Sideed u qiimeysaa jawiga shaqada iyo isku-duwidda khadkaaga?", "survey_q2": "2. Faallooyin ama talooyin lagu hagaajinayo xaaladda warshadda (Ikhtiyaari):", "survey_placeholder": "Halkan ku qor faalladaada...", "survey_cancel": "Jooji", "survey_submit": "Dir Sahanka", "survey_success": "Sahanka si guul leh ayaa loo diray! Mahadsanid.", "survey_admin_title": "Jawaabaha Sahanka", "survey_results_empty": "Weli ma jiraan jawaabo sahan oo la diiwaangeliyay.", "table_day": "MAALIN", "table_start": "BILOW", "table_end": "DHAMMAAD", "table_hours": "SAACADO", "legend_medical": "● Buluug: Fasax Caafimaad", "legend_unauthorized": "● Huruud: Aan Fasaxneyn", "legend_penalty": "● Casan: Ciqaab", "legend_pending": "● Liin: La Xaqiijinayo", "login_hint_text": "💡 Geli lambarkaaga PESEL ama telefoonka. PIN-kaagu waa 4-ta lambar ee u dambeeya PESEL ama furahaaga gaarka ah.", "current_month_notice": "Bisha hadda socota (Oktoobar 2026). Saacadaha la qaatay waxaa la xaqiijin doonaa dhammaadka bisha.", "months": {"2026-04": "Abriil 2026", "2026-05": "May 2026", "2026-06": "Juun 2026", "2026-07": "Luuliyo 2026", "2026-08": "Ogosto 2026", "2026-09": "Sebtembar 2026", "2026-10": "Oktoobar 2026"}, "days": {"lunes": "Isniin", "martes": "Talaado", "miercoles": "Arbaco", "miércoles": "Arbaco", "jueves": "Khamiis", "viernes": "Jimco", "sabado": "Sabti", "sábado": "Sabti", "domingo": "Axad", "monday": "Isniin", "tuesday": "Talaado", "wednesday": "Arbaco", "thursday": "Khamiis", "friday": "Jimco", "saturday": "Sabti", "sunday": "Axad"}}};
+    const I18N_DICT = {"es": {"title_login": "Portal del Trabajador", "sub_login": "Acceso confidencial a su programación laboral", "label_pesel": "Número PESEL o Teléfono", "label_pin": "Código PIN de Acceso (4 dígitos)", "btn_login": "Ingresar al Sistema", "btn_logout": "Cerrar Sesión", "security_note": "🔒 Sistema seguro protegido con cifrado de punto a punto (RODO/GDPR).", "view_personal": "Ver información personal y contacto", "personal_sheet": "Ficha Personal y Contractual", "pesel": "Número PESEL", "housing": "Alojamiento Asignado", "phone": "Teléfono de Contacto", "contract": "Contrato Firmado (Umowa)", "birth": "Fecha de Nacimiento", "start_date": "Fecha de Inicio en Fábrica", "shift_base": "Turno y Horario de la Semana Actual", "current_shift": "Turno Asignado", "break_1": "1ª Pausa Programada", "break_2": "2ª Pausa Programada", "plant_equipment": "Dotación e Instalaciones en Planta", "locker": "Casillero (Szafka)", "card": "Tarjeta Acceso (Karta)", "my_hours": "Mis Horas", "total_worked": "Total Horas Facturadas", "download_pdf": "Descargar / Ver Reporte Oficial PDF", "next_week": "Próx. Semana", "profile": "Mi Perfil", "report_pdf": "Reporte PDF", "swipe_hint": "👈 Desliza para cambiar mes 👉", "month_prev": "Mes anterior", "month_next": "Mes siguiente", "total_hours_billed": "Total Horas Facturadas", "days_attendance": "Días con Asistencia", "role_leader": "⭐ LÍDER DE LÍNEA", "role_coordinator": "💼 COORDINADOR", "role_operator": "OPERARIO", "contract_signed": "Firmado (TAK / SI)", "contract_pending": "En trámite", "shift_label": "Turno", "group_label": "Grupo", "day_prefix": "Día", "normal_shift": "Jornada Normal", "no_hours_this_month": "Sin jornadas detalladas este mes.", "current_cycle": "Ciclo laboral en curso", "expected_schedule": "Horario previsto:", "line_leader_title": "Líder de Línea:", "badge_confirmed": "CONFIRMADO", "badge_assigned": "Asignado", "badge_rest": "Descanso", "badge_free": "Libre", "survey_card_title": "Encuesta de Satisfacción y Operaciones", "survey_card_desc": "Tu opinión sobre condiciones, transporte y fábrica es confidencial y vital.", "survey_btn_participate": "Completar Encuesta", "survey_results_btn": "Ver Respuestas de Encuestas", "survey_dialog_title": "Encuesta de Satisfacción Laboral", "survey_q1": "1. ¿Cómo califica el ambiente laboral y la coordinación en su línea de trabajo?", "survey_q2": "2. Comentarios o sugerencias para mejorar el bienestar en la fábrica (Opcional):", "survey_placeholder": "Escriba su comentario aquí...", "survey_cancel": "Cancelar", "survey_submit": "Enviar Encuesta", "survey_success": "¡Encuesta enviada con éxito! Muchas gracias por su colaboración.", "survey_admin_title": "Resultados de Encuestas", "survey_results_empty": "No se han registrado respuestas de encuestas todavía.", "table_day": "DÍA", "table_start": "INICIO", "table_end": "FIN", "table_hours": "HORAS", "legend_medical": "● Azul: Incapacidad Médica", "legend_unauthorized": "● Amarillo: No Autorizado", "legend_penalty": "● Rojo: Penalización", "legend_pending": "● Naranja: Por Confirmar", "login_hint_text": "💡 Ingrese su número PESEL (o teléfono registrado). Su PIN corresponde a los últimos 4 dígitos de su PESEL o su clave personal asignada.", "current_month_notice": "Mes en curso (Octubre 2026). Las horas facturadas se consolidarán al cierre mensual.", "my_group": "Mi Grupo", "group_members_count": "Colaboradores Asignados", "no_group_members": "No hay colaboradores registrados en este grupo.", "group_title_line": "Línea de Producción", "search_group_placeholder": "Buscar colaborador por nombre o PESEL...", "full_group_view": "Ver Pantalla Completa de Mi Grupo", "months": {"2026-04": "Abril 2026", "2026-05": "Mayo 2026", "2026-06": "Junio 2026", "2026-07": "Julio 2026", "2026-08": "Agosto 2026", "2026-09": "Septiembre 2026", "2026-10": "Octubre 2026"}, "days": {"lunes": "Lunes", "martes": "Martes", "miercoles": "Miércoles", "miércoles": "Miércoles", "jueves": "Jueves", "viernes": "Viernes", "sabado": "Sábado", "sábado": "Sábado", "domingo": "Domingo", "monday": "Lunes", "tuesday": "Martes", "wednesday": "Miércoles", "thursday": "Jueves", "friday": "Viernes", "saturday": "Sábado", "sunday": "Domingo"}}, "en": {"title_login": "Worker Portal", "sub_login": "Confidential access to your work schedule", "label_pesel": "PESEL Number or Phone", "label_pin": "Access PIN (4 digits)", "btn_login": "Log In to System", "btn_logout": "Log Out", "security_note": "🔒 Secure system protected with end-to-end encryption (GDPR).", "view_personal": "View personal info and contact", "personal_sheet": "Personal & Contract Record", "pesel": "PESEL Number", "housing": "Assigned Housing", "phone": "Contact Phone", "contract": "Signed Contract (Umowa)", "birth": "Birth Date", "start_date": "Factory Start Date", "shift_base": "Current Week Shift and Schedule", "current_shift": "Current Shift", "break_1": "1st Scheduled Break", "break_2": "2nd Scheduled Break", "plant_equipment": "Plant Equipment & Facilities", "locker": "Locker (Szafka)", "card": "Access Card (Karta)", "my_hours": "My Hours", "total_worked": "Total Billed Hours", "download_pdf": "Download / View Official PDF", "next_week": "Next Week", "profile": "My Profile", "report_pdf": "PDF Report", "swipe_hint": "👈 Swipe to change month 👉", "month_prev": "Previous Month", "month_next": "Next Month", "total_hours_billed": "Total Billed Hours", "days_attendance": "Days with Attendance", "role_leader": "⭐ LINE LEADER", "role_coordinator": "💼 COORDINATOR", "role_operator": "OPERATOR", "contract_signed": "Signed (TAK / YES)", "contract_pending": "In Process", "shift_label": "Shift", "group_label": "Group", "day_prefix": "Day", "normal_shift": "Normal Shift", "no_hours_this_month": "No detailed shifts recorded for this month.", "current_cycle": "Current work cycle", "expected_schedule": "Expected schedule:", "line_leader_title": "Line Leader:", "badge_confirmed": "CONFIRMED", "badge_assigned": "Assigned", "badge_rest": "Rest", "badge_free": "Free", "survey_card_title": "Satisfaction & Operations Survey", "survey_card_desc": "Your feedback on conditions, transport, and factory operations is essential and confidential.", "survey_btn_participate": "Take Survey", "survey_results_btn": "View Survey Responses", "survey_dialog_title": "Work Satisfaction Survey", "survey_q1": "1. How do you rate the work environment and coordination in your work line?", "survey_q2": "2. Comments or suggestions to improve factory wellbeing (Optional):", "survey_placeholder": "Write your comments here...", "survey_cancel": "Cancel", "survey_submit": "Submit Survey", "survey_success": "Survey submitted successfully! Thank you for your feedback.", "survey_admin_title": "Survey Responses", "survey_results_empty": "No survey responses recorded yet.", "table_day": "DAY", "table_start": "START", "table_end": "END", "table_hours": "HOURS", "legend_medical": "● Blue: Medical Leave", "legend_unauthorized": "● Yellow: Unauthorized", "legend_penalty": "● Red: Penalty", "legend_pending": "● Orange: To Confirm", "login_hint_text": "💡 Enter your PESEL number (or registered phone). Your PIN is the last 4 digits of your PESEL or assigned passcode.", "current_month_notice": "Current month in progress (October 2026). Billed hours will be finalized at month-end.", "my_group": "My Group", "group_members_count": "Assigned Collaborators", "no_group_members": "No collaborators found in this group.", "group_title_line": "Production Line", "search_group_placeholder": "Search collaborator by name or PESEL...", "full_group_view": "View Full Group Screen", "months": {"2026-04": "April 2026", "2026-05": "May 2026", "2026-06": "June 2026", "2026-07": "July 2026", "2026-08": "August 2026", "2026-09": "September 2026", "2026-10": "October 2026"}, "days": {"lunes": "Monday", "martes": "Tuesday", "miercoles": "Wednesday", "miércoles": "Wednesday", "jueves": "Thursday", "viernes": "Friday", "sabado": "Saturday", "sábado": "Saturday", "domingo": "Sunday", "monday": "Monday", "tuesday": "Tuesday", "wednesday": "Wednesday", "thursday": "Thursday", "friday": "Friday", "saturday": "Saturday", "sunday": "Sunday"}}, "pl": {"title_login": "Portal Pracownika", "sub_login": "Poufny dostęp do harmonogramu pracy", "label_pesel": "Numer PESEL lub Telefon", "label_pin": "Kod PIN dostępu (4 cyfry)", "btn_login": "Zaloguj się do systemu", "btn_logout": "Wyloguj się", "security_note": "🔒 Bezpieczny system chroniony szyfrowaniem end-to-end (RODO).", "view_personal": "Zobacz dane osobowe i kontakt", "personal_sheet": "Karta Osobowa i Umowa", "pesel": "Numer PESEL", "housing": "Przydzielone zakwaterowanie", "phone": "Telefon kontaktowy", "contract": "Podpisana umowa", "birth": "Data urodzenia", "start_date": "Data rozpoczęcia pracy", "shift_base": "Zmiana i grafik w bieżącym tygodniu", "current_shift": "Aktualna zmiana", "break_1": "1. przerwa w pracy", "break_2": "2. przerwa w pracy", "plant_equipment": "Wyposażenie w zakładzie", "locker": "Szafka", "card": "Karta dostępowa", "my_hours": "Moje godziny", "total_worked": "Łącznie rozliczone godziny", "download_pdf": "Pobierz / Zobacz oficjalny raport PDF", "next_week": "Nast. tydzień", "profile": "Mój profil", "report_pdf": "Raport PDF", "swipe_hint": "👈 Przesuń, aby zmienić miesiąc 👉", "month_prev": "Poprzedni miesiąc", "month_next": "Następny miesiąc", "total_hours_billed": "Łącznie rozliczone godziny", "days_attendance": "Dni z obecnością", "role_leader": "⭐ LIDER LINII", "role_coordinator": "💼 KOORDYNATOR", "role_operator": "PRACOWNIK PRODUKCJI", "contract_signed": "Podpisana (TAK)", "contract_pending": "W toku", "shift_label": "Zmiana", "group_label": "Grupa", "day_prefix": "Dzień", "normal_shift": "Zwykły dzień", "no_hours_this_month": "Brak szczegółowych dni w tym miesiącu.", "current_cycle": "Bieżący cykl pracy", "expected_schedule": "Przewidywane godziny:", "line_leader_title": "Lider linii:", "badge_confirmed": "POTWIERDZONE", "badge_assigned": "Przydzielony", "badge_rest": "Odpoczynek", "badge_free": "Wolne", "survey_card_title": "Ankieta Satysfakcji i Operacji", "survey_card_desc": "Twoja opinia o warunkach, transporcie i fabryce jest poufna i kluczowa.", "survey_btn_participate": "Wypełnij ankietę", "survey_results_btn": "Zobacz odpowiedzi ankiety", "survey_dialog_title": "Ankieta Satysfakcji z Pracy", "survey_q1": "1. Jak oceniasz atmosferę pracy i koordynację na swojej linii?", "survey_q2": "2. Uwagi lub sugestie dotyczące poprawy warunków w fabryce (Opcjonalnie):", "survey_placeholder": "Wpisz swój komentarz tutaj...", "survey_cancel": "Anuluj", "survey_submit": "Wyślij Ankietę", "survey_success": "Ankieta wysłana pomyślnie! Dziękujemy.", "survey_admin_title": "Odpowiedzi Ankiety", "survey_results_empty": "Brak zarejestrowanych odpowiedzi na ankietę.", "table_day": "DZIEŃ", "table_start": "START", "table_end": "KONIEC", "table_hours": "GODZINY", "legend_medical": "● Niebieski: Zwolnienie lekarskie", "legend_unauthorized": "● Żółty: Nieusprawiedliwione", "legend_penalty": "● Czerwony: Kara", "legend_pending": "● Pomarańczowy: Do potwierdzenia", "login_hint_text": "💡 Wpisz swój numer PESEL lub telefon. Twój PIN to 4 ostatnie cyfry numeru PESEL lub przypisany kod dostępu.", "current_month_notice": "Bieżący miesiąc w toku (Październik 2026). Rozliczone godziny zostaną skonsolidowane po zamknięciu miesiąca.", "my_group": "Moja Grupa", "group_members_count": "Przypisani Pracownicy", "no_group_members": "Brak pracowników w tej grupie.", "group_title_line": "Linia Produkcyjna", "search_group_placeholder": "Szukaj pracownika po nazwisku lub PESEL...", "full_group_view": "Zobacz Pełny Ekran Grupy", "months": {"2026-04": "Kwiecień 2026", "2026-05": "Maj 2026", "2026-06": "Czerwiec 2026", "2026-07": "Lipiec 2026", "2026-08": "Sierpień 2026", "2026-09": "Wrzesień 2026", "2026-10": "Październik 2026"}, "days": {"lunes": "Poniedziałek", "martes": "Wtorek", "miercoles": "Środa", "miércoles": "Środa", "jueves": "Czwartek", "viernes": "Piątek", "sabado": "Sobota", "sábado": "Sobota", "domingo": "Niedziela", "monday": "Poniedziałek", "tuesday": "Wtorek", "wednesday": "Środa", "thursday": "Czwartek", "friday": "Piątek", "saturday": "Sobota", "sunday": "Niedziela"}}, "uk": {"title_login": "Портал Працівника", "sub_login": "Конфіденційний доступ до робочого графіка", "label_pesel": "Номер PESEL або Телефон", "label_pin": "PIN-код доступу (4 цифри)", "btn_login": "Увійти в систему", "btn_logout": "Вийти", "security_note": "🔒 Захищена система із наскрізним шифруванням (GDPR).", "view_personal": "Переглянути особисті дані та контакти", "personal_sheet": "Особиста картка та договір", "pesel": "Номер PESEL", "housing": "Призначене житло", "phone": "Контактний телефон", "contract": "Підписаний договір (Umowa)", "birth": "Дата народження", "start_date": "Дата початку роботи", "shift_base": "Зміна та графік поточного тижня", "current_shift": "Поточна зміна", "break_1": "1-ша запланована перерва", "break_2": "2-га запланована перерва", "plant_equipment": "Оснащення на заводі", "locker": "Шафка (Szafka)", "card": "Картка доступу (Karta)", "my_hours": "Мої години", "total_worked": "Всього відпрацьованих годин", "download_pdf": "Завантажити / Переглянути звіт PDF", "next_week": "Наст. тиждень", "profile": "Мій профіль", "report_pdf": "Звіт PDF", "swipe_hint": "👈 Проведіть, щоб змінити місяць 👉", "month_prev": "Попередній місяць", "month_next": "Наступний місяць", "total_hours_billed": "Всього нарахованих годин", "days_attendance": "Дні з відвідуваністю", "role_leader": "⭐ ЛІДЕР ЛІНІЇ", "role_coordinator": "💼 КООРДИНАТОР", "role_operator": "ОПЕРАТОР ВИРОБНИЦТВА", "contract_signed": "Підписано (TAK)", "contract_pending": "В процесі", "shift_label": "Зміна", "group_label": "Група", "day_prefix": "День", "normal_shift": "Звичайна зміна", "no_hours_this_month": "Немає детальних змін за цей місяць.", "current_cycle": "Поточний робочий цикл", "expected_schedule": "Очікуваний розклад:", "line_leader_title": "Лідер лінії:", "badge_confirmed": "ПІДТВЕРДЖЕНО", "badge_assigned": "Призначено", "badge_rest": "Відпочинок", "badge_free": "Вільний", "survey_card_title": "Опитування щодо задоволеності та операцій", "survey_card_desc": "Ваша думка щодо умов, транспорту та заводу є конфіденційною та важливою.", "survey_btn_participate": "Пройти опитування", "survey_results_btn": "Переглянути відповіді опитування", "survey_dialog_title": "Опитування щодо задоволеності працею", "survey_q1": "1. Як ви оцінюєте робочу атмосферу та координацію на вашій лінії?", "survey_q2": "2. Коментарі або пропозиції щодо покращення умов на заводі (Необов'язково):", "survey_placeholder": "Напишіть свій коментар тут...", "survey_cancel": "Скасувати", "survey_submit": "Надіслати опитування", "survey_success": "Опитування успішно надіслано! Дякуємо.", "survey_admin_title": "Відповіді на опитування", "survey_results_empty": "Немає зареєстрованих відповідей на опитування.", "table_day": "ДЕНЬ", "table_start": "ПОЧАТОК", "table_end": "КІНЕЦЬ", "table_hours": "ГОДИНИ", "legend_medical": "● Синій: Лікарняний", "legend_unauthorized": "● Жовтий: Несанкціоновано", "legend_penalty": "● Червоний: Штраф", "legend_pending": "● Помаранчевий: На підтвердженні", "login_hint_text": "💡 Введіть ваш номер PESEL або зареєстрований телефон. Ваш PIN-код — останні 4 цифри PESEL або призначений пароль.", "current_month_notice": "Поточний місяць триває (Жовтень 2026). Нараховані години будуть підтверджені після закриття місяця.", "my_group": "Моя Група", "group_members_count": "Призначені Працівники", "no_group_members": "Немає призначених працівників у цій групі.", "group_title_line": "Виробнича Лінія", "search_group_placeholder": "Пошук працівника за ім'ям або PESEL...", "full_group_view": "Переглянути Повний Екран Групи", "months": {"2026-04": "Квітень 2026", "2026-05": "Травень 2026", "2026-06": "Червень 2026", "2026-07": "Липень 2026", "2026-08": "Серпень 2026", "2026-09": "Вересень 2026", "2026-10": "Жовтень 2026"}, "days": {"lunes": "Понеділок", "martes": "Вівторок", "miercoles": "Середа", "miércoles": "Середа", "jueves": "Четвер", "viernes": "П'ятниця", "sabado": "Субота", "sábado": "Субота", "domingo": "Неділя", "monday": "Понеділок", "tuesday": "Вівторок", "wednesday": "Середа", "thursday": "Четвер", "friday": "П'ятниця", "saturday": "Субота", "sunday": "Неділя"}}, "ar": {"title_login": "بوابة العامل", "sub_login": "وصول سري إلى جدول عملك", "label_pesel": "رقم PESEL أو الهاتف", "label_pin": "رمز PIN للدخول (4 أرقام)", "btn_login": "الدخول إلى النظام", "btn_logout": "تسجيل الخروج", "security_note": "🔒 نظام آمن محمي بتشفير شامل (GDPR).", "view_personal": "عرض البيانات الشخصية وجهات الاتصال", "personal_sheet": "الملف الشخصي والتعاقدي", "pesel": "رقم PESEL", "housing": "السكن المخصص", "phone": "هاتف الاتصال", "contract": "العقد الموقع (Umowa)", "birth": "تاريخ الميلاد", "start_date": "تاريخ بدء العمل في المصنع", "shift_base": "وردية وجدول الأسبوع الحالي", "current_shift": "الوردية المحددة", "break_1": "فترة الاستراحة الأولى", "break_2": "فترة الاستراحة الثانية", "plant_equipment": "المعدات والتجهيزات في المصنع", "locker": "الخزانة (Szafka)", "card": "بطاقة الدخول (Karta)", "my_hours": "ساعاتي", "total_worked": "إجمالي الساعات المفوترة", "download_pdf": "تحميل / عرض التقرير الرسمي PDF", "next_week": "الأسبوع القادم", "profile": "ملفي الشخصي", "report_pdf": "تقرير PDF", "swipe_hint": "👈 اسحب لتغيير الشهر 👉", "month_prev": "الشهر السابق", "month_next": "الشهر التالي", "total_hours_billed": "إجمالي الساعات المفوترة", "days_attendance": "أيام الحضور", "role_leader": "⭐ قائد الخط", "role_coordinator": "💼 المنسق", "role_operator": "عامل إنتاج", "contract_signed": "موقع (TAK / نعم)", "contract_pending": "قيد الإجراء", "shift_label": "الوردية", "group_label": "المجموعة", "day_prefix": "اليوم", "normal_shift": "يوم عمل عادي", "no_hours_this_month": "لا توجد تفاصيل ورديات لهذا الشهر.", "current_cycle": "دورة العمل الحالية", "expected_schedule": "الجدول المتوقع:", "line_leader_title": "قائد الخط:", "badge_confirmed": "مؤكد", "badge_assigned": "محدد", "badge_rest": "استراحة", "badge_free": "عطلة", "survey_card_title": "استبيان الرضا والعمليات", "survey_card_desc": "رأيك حول الظروف والمواصلات والمصنع سري وأساسي جداً.", "survey_btn_participate": "إجراء الاستبيان", "survey_results_btn": "عرض إجابات الاستبيان", "survey_dialog_title": "استبيان الرضا المهني", "survey_q1": "1. كيف تقيم بيئة العمل والتنسيق في خط عملك؟", "survey_q2": "2. ملاحظات أو اقتراحات لتحسين ظروف المصنع (اختياري):", "survey_placeholder": "اكتب تعليقك هنا...", "survey_cancel": "إلغاء", "survey_submit": "إرسال الاستبيان", "survey_success": "تم إرسال الاستبيان بنجاح! شكراً جزيلاً لتعاونك.", "survey_admin_title": "نتائج الاستبيانات", "survey_results_empty": "لم يتم تسجيل أي ردود حتى الآن.", "table_day": "اليوم", "table_start": "البدء", "table_end": "الانتهاء", "table_hours": "الساعات", "legend_medical": "● أزرق: إجازة مرضية", "legend_unauthorized": "● أصفر: غير مصرح به", "legend_penalty": "● أحمر: عقوبة", "legend_pending": "● برتقالي: قيد التأكيد", "login_hint_text": "💡 أدخل رقم PESEL أو الهاتف المسجل. رمز PIN هو آخر 4 أرقام من PESEL أو كلمة مرورك الخاصة.", "current_month_notice": "الشهر الحالي قيد التقدم (أكتوبر 2026). سيتم اعتماد الساعات المفوترة عند إغلاق الشهر.", "my_group": "مجموعتي", "group_members_count": "العمال المعينون", "no_group_members": "لا يوجد عمال مسجلون في هذه المجموعة.", "group_title_line": "خط الإنتاج", "search_group_placeholder": "البحث عن عامل بالاسم أو PESEL...", "full_group_view": "عرض شاشة المجموعة الكاملة", "months": {"2026-04": "أبريل 2026", "2026-05": "مايو 2026", "2026-06": "يونيو 2026", "2026-07": "يوليو 2026", "2026-08": "أغسطس 2026", "2026-09": "سبتمبر 2026", "2026-10": "أكتوبر 2026"}, "days": {"lunes": "الإثنين", "martes": "الثلاثاء", "miercoles": "الأربعاء", "miércoles": "الأربعاء", "jueves": "الخميس", "viernes": "الجمعة", "sabado": "السبت", "sábado": "السبت", "domingo": "الأحد", "monday": "الإثنين", "tuesday": "الثلاثاء", "wednesday": "الأربعاء", "thursday": "الخميس", "friday": "الجمعة", "saturday": "السبت", "sunday": "الأحد"}}, "so": {"title_login": "Albaabka Shaqaalaha", "sub_login": "Helitaanka jadwalka shaqada si qarsoodi ah", "label_pesel": "Lambarka PESEL ama Telefoonka", "label_pin": "Koodhka PIN (4 lambar)", "btn_login": "Gal Nidaamka", "btn_logout": "Ka Bax", "security_note": "🔒 Nidaam ammaan ah oo lagu ilaaliyo sirta (GDPR).", "view_personal": "Eeg macluumaadka shakhsiga ah", "personal_sheet": "Warqadda Shaqaalaha & Heshiiska", "pesel": "Lambarka PESEL", "housing": "Guriga Laguu Qoondeeyay", "phone": "Telefoonka Xiriirka", "contract": "Heshiiska Saxiixan (Umowa)", "birth": "Taariikhda Dhalashada", "start_date": "Taariikhda Bilowga Warshadda", "shift_base": "Wareegga & Jadwalka Toddobaadkan", "current_shift": "Wareegga Hadda", "break_1": "Nafaqada 1aad ee Qorsheysan", "break_2": "Nafaqada 2aad ee Qorsheysan", "plant_equipment": "Qalabka & Xarumaha Warshadda", "locker": "Qasnada (Szafka)", "card": "Kaarka Gelitaanka (Karta)", "my_hours": "Saacadahayga", "total_worked": "Wadarta Saacadaha La Shaqeeyay", "download_pdf": "Soo Dejiso / Eeg Warbixinta Rasmiga ah ee PDF", "next_week": "Toddobaadka Xiga", "profile": "Boggeyga", "report_pdf": "Warbixinta PDF", "swipe_hint": "👈 Jiid si aad u beddesho bisha 👉", "month_prev": "Bishii Hore", "month_next": "Bisha Xigta", "total_hours_billed": "Wadarta Saacadaha La Qaatay", "days_attendance": "Maalmaha imaanshaha", "role_leader": "⭐ HOGAAMIYAHA KHADKA", "role_coordinator": "💼 ISKU-DUWAHA", "role_operator": "SHAQAALE WAX-SOOSAAR", "contract_signed": "Saxiixan (HAA / TAK)", "contract_pending": "Socda", "shift_label": "Wareegga", "group_label": "Kooxda", "day_prefix": "Maalin", "normal_shift": "Shaqo Caadi ah", "no_hours_this_month": "Faahfaahin ma jirto bishan.", "current_cycle": "Wareegga shaqada ee hadda", "expected_schedule": "Jadwalka la filayo:", "line_leader_title": "Hogaamiyaha Khadka:", "badge_confirmed": "LA XAQIIJIYAY", "badge_assigned": "Loo qoondeeyay", "badge_rest": "Nasiino", "badge_free": "Bilaash", "survey_card_title": "Sahanka Qanacsanaanta & Hawlaha", "survey_card_desc": "Fikraddaada ku saabsan xaaladaha, gaadiidka iyo warshadda waa qarsoodi waana muhiim.", "survey_btn_participate": "Buuxi Sahanka", "survey_results_btn": "Eeg Jawaabaha Sahanka", "survey_dialog_title": "Sahanka Qanacsanaanta Shaqada", "survey_q1": "1. Sideed u qiimeysaa jawiga shaqada iyo isku-duwidda khadkaaga?", "survey_q2": "2. Faallooyin ama talooyin lagu hagaajinayo xaaladda warshadda (Ikhtiyaari):", "survey_placeholder": "Halkan ku qor faalladaada...", "survey_cancel": "Jooji", "survey_submit": "Dir Sahanka", "survey_success": "Sahanka si guul leh ayaa loo diray! Mahadsanid.", "survey_admin_title": "Jawaabaha Sahanka", "survey_results_empty": "Weli ma jiraan jawaabo sahan oo la diiwaangeliyay.", "table_day": "MAALIN", "table_start": "BILOW", "table_end": "DHAMMAAD", "table_hours": "SAACADO", "legend_medical": "● Buluug: Fasax Caafimaad", "legend_unauthorized": "● Huruud: Aan Fasaxneyn", "legend_penalty": "● Casan: Ciqaab", "legend_pending": "● Liin: La Xaqiijinayo", "login_hint_text": "💡 Geli lambarkaaga PESEL ama telefoonka. PIN-kaagu waa 4-ta lambar ee u dambeeya PESEL ama furahaaga gaarka ah.", "current_month_notice": "Bisha hadda socota (Oktoobar 2026). Saacadaha la qaatay waxaa la xaqiijin doonaa dhammaadka bisha.", "my_group": "Kooxdayda", "group_members_count": "Shaqaalaha loo xilsaaray", "no_group_members": "Kooxdan wax shaqaale ah lagama helin.", "group_title_line": "Khadka Wax-soo-saarka", "search_group_placeholder": "Raadi shaqaale magac ama PESEL...", "full_group_view": "Fiiri Shaashadda Kooxda oo Dhan", "months": {"2026-04": "Abriil 2026", "2026-05": "May 2026", "2026-06": "Juun 2026", "2026-07": "Luuliyo 2026", "2026-08": "Ogosto 2026", "2026-09": "Sebtembar 2026", "2026-10": "Oktoobar 2026"}, "days": {"lunes": "Isniin", "martes": "Talaado", "miercoles": "Arbaco", "miércoles": "Arbaco", "jueves": "Khamiis", "viernes": "Jimco", "sabado": "Sabti", "sábado": "Sabti", "domingo": "Axad", "monday": "Isniin", "tuesday": "Talaado", "wednesday": "Arbaco", "thursday": "Khamiis", "friday": "Jimco", "saturday": "Sabti", "sunday": "Axad"}}};
     let currentUser = null;
     let currentLang = localStorage.getItem('unamel_lang') || 'es';
 
@@ -1649,7 +1687,20 @@
         }
       }
 
-      renderLeaderGroupSection(emp);
+      // 5. Botón Mi Grupo (Líderes, Brygadistas, Coordinadores, Admins)
+      const hasGroupAccess = (isLeader || emp.rol_app === 'BRYGADISTA' || isCoord || isAdmin);
+      const groupBtn = document.getElementById('nav-btn-group');
+      if (groupBtn) {
+        if (hasGroupAccess) {
+          groupBtn.classList.remove('hidden');
+          const groupLbl = document.getElementById('nav-lbl-group');
+          if (groupLbl) groupLbl.innerText = dict.my_group || 'Mi Grupo';
+        } else {
+          groupBtn.classList.add('hidden');
+        }
+      }
+
+      fetchAndRenderLeaderGroup(emp);
       logWebAppAccess(emp);
     }
 
@@ -2012,71 +2063,164 @@
       if (modal) modal.classList.add('hidden');
     }
 
-    function renderLeaderGroupSection(emp) {
+    let cachedGroupMembers = [];
+
+    async function fetchAndRenderLeaderGroup(emp) {
+      const isLeader = (emp.rol_app === 'LIDER_LINEA' || (emp.posicion && emp.posicion.toLowerCase().includes('lider')) || emp.rol_app === 'BRYGADISTA');
+      const isCoord = (emp.rol_app === 'COORDINADOR' || (emp.nombre_completo && emp.nombre_completo.includes('Harley')));
+      const isAdmin = (emp.rol_app === 'ADMINISTRATIVO' || String(emp.id) === '2023');
+
       const leaderCard = document.getElementById('card-leader-group');
-      const listContainer = document.getElementById('leader-group-members-list');
-      if (!leaderCard || !listContainer) return;
+      const spinner = document.getElementById('group-loading-spinner');
+      const groupBadge = document.getElementById('tab-group-badge');
+      const groupTitle = document.getElementById('tab-group-title');
+      const groupLeaderSub = document.getElementById('tab-group-leader-sub');
 
-      const isLeader = (emp.rol_app === 'LIDER_LINEA' || (emp.posicion && emp.posicion.toLowerCase().includes('lider')));
-      if (!isLeader || !emp.grupo) {
-        leaderCard.classList.add('hidden');
+      if (!isLeader && !isCoord && !isAdmin) {
+        if (leaderCard) leaderCard.classList.add('hidden');
         return;
       }
 
-      leaderCard.classList.remove('hidden');
-      const groupLetter = emp.grupo.trim().toUpperCase();
+      if (leaderCard) leaderCard.classList.remove('hidden');
 
-      const allActive = (typeof app_data !== 'undefined' && app_data.empleados) ? app_data.empleados : [emp];
-      const groupMembers = allActive.filter(m => (m.grupo || '').trim().toUpperCase() === groupLetter && m.id !== emp.id);
+      const userGroup = (emp.grupo || 'A').trim().toUpperCase();
+      const dict = I18N_DICT[currentLang] || I18N_DICT['es'];
 
-      listContainer.innerHTML = '';
-      if (groupMembers.length === 0) {
-        listContainer.innerHTML = '<div style="color:#64748b; font-size:0.8rem;">No hay otros colaboradores asignados al Grupo ' + groupLetter + '.</div>';
-        return;
+      if (groupBadge) groupBadge.innerText = (dict.group_label || 'Grupo') + ' ' + userGroup;
+      if (groupTitle) groupTitle.innerText = dict.group_title_line || 'Línea de Producción';
+      if (groupLeaderSub) {
+        let leaderDisplayName = emp.nombre_completo || '';
+        if (isCoord || isAdmin) {
+          if (userGroup === 'B') leaderDisplayName = 'Zakarie Hussein';
+          else if (userGroup === 'C') leaderDisplayName = 'Francisco Orozco';
+          else leaderDisplayName = 'Qaid Mohamned Qaid Yahya Al Senani';
+        }
+        groupLeaderSub.innerText = '⭐ ' + (dict.line_leader_title || 'Líder:') + ' ' + leaderDisplayName;
       }
 
-      groupMembers.forEach(mem => {
-        const item = document.createElement('div');
-        item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; background:#ffffff; border:1px solid #dbeafe; border-radius:10px; margin-bottom:6px; cursor:pointer;';
-        item.onclick = () => openEmpHistoryModal(mem);
+      try {
+        const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles?pageSize=100&key=' + FIRESTORE_API_KEY;
+        const resp = await fetch(url, { cache: 'no-cache' });
+        if (resp.ok) {
+          const data = await resp.json();
+          const docs = data.documents || [];
+          const allWorkers = docs.map(d => parseFirestoreDoc(d.fields));
 
-        item.innerHTML = `
-          <div>
-            <strong style="font-size:0.88rem; color:#1e293b;">${mem.nombre_completo}</strong>
-            <div style="font-size:0.75rem; color:#64748b;">Turno ${mem.turno_actual || '1'} &bull; ${mem.posicion || 'produkcja'}</div>
-          </div>
-          <div style="text-align:right;">
-            <span style="background:#dbeafe; color:#1d4ed8; font-size:0.75rem; font-weight:700; padding:4px 8px; border-radius:6px;">
-              📊 ${parseFloat(mem.horas_mes_actual || 0).toFixed(1)} hrs
-            </span>
-          </div>
-        `;
-        listContainer.appendChild(item);
-      });
+          // Filtrar miembros del grupo
+          let members = [];
+          if (isLeader) {
+            members = allWorkers.filter(w => (w.grupo || '').trim().toUpperCase() === userGroup);
+          } else {
+            members = userGroup ? allWorkers.filter(w => (w.grupo || '').trim().toUpperCase() === userGroup) : allWorkers;
+          }
+
+          // Ordenar: líder primero, luego alfabético
+          members.sort((a, b) => {
+            const aIsLead = (a.rol_app === 'LIDER_LINEA' || (a.posicion && a.posicion.toLowerCase().includes('lider')));
+            const bIsLead = (b.rol_app === 'LIDER_LINEA' || (b.posicion && b.posicion.toLowerCase().includes('lider')));
+            if (aIsLead && !bIsLead) return -1;
+            if (!aIsLead && bIsLead) return 1;
+            return (a.nombre_completo || '').localeCompare(b.nombre_completo || '');
+          });
+
+          cachedGroupMembers = members;
+          renderGroupCards(members);
+        } else {
+          throw new Error('Error en respuesta de Firestore');
+        }
+      } catch (err) {
+        console.warn('Error en fetchAndRenderLeaderGroup:', err);
+        if (spinner) spinner.innerHTML = '<div style="color:#ef4444; font-size:0.85rem;">⚠️ No se pudo sincronizar la lista de colaboradores desde el servidor.</div>';
+      }
     }
 
-    function openEmpHistoryModal(emp) {
-      const modal = document.getElementById('modal-emp-history');
-      if (!modal) return;
+    function renderGroupCards(members) {
+      const fullContainer = document.getElementById('group-members-list-container');
+      const listContainerProfile = document.getElementById('leader-group-members-list');
+      const spinner = document.getElementById('group-loading-spinner');
+      const groupCountEl = document.getElementById('tab-group-count');
+      const cardCountBadge = document.getElementById('card-leader-group-count');
+      const dict = I18N_DICT[currentLang] || I18N_DICT['es'];
 
-      document.getElementById('modal-emp-name').innerText = emp.nombre_completo;
-      document.getElementById('modal-emp-subtitle').innerText = 'ID: ' + emp.id + ' • PESEL: ' + (emp.pesel || '--') + ' • Grupo ' + (emp.grupo || 'Flexible') + ' • Turno ' + (emp.turno_actual || '1');
-      document.getElementById('modal-emp-total-hours').innerText = parseFloat(emp.horas_mes_actual || 0).toFixed(1) + ' hrs';
+      if (spinner) spinner.classList.add('hidden');
+      if (fullContainer) fullContainer.classList.remove('hidden');
+      if (groupCountEl) groupCountEl.innerText = members.length;
+      if (cardCountBadge) cardCountBadge.innerText = members.length + ' ' + (dict.group_members_count || 'Colaboradores');
 
-      const btnPdf = document.getElementById('btn-modal-print-pdf');
-      if (btnPdf) {
-        btnPdf.onclick = () => {
-          closeEmpHistoryModal();
-          renderOfficialPdfCertificateForMonth(emp, '2026-09', 'Septiembre 2026', parseFloat(emp.horas_mes_actual || 0), emp.dias_trabajados_detalle || []);
-          switchTab('pdf', document.querySelectorAll('.nav-item')[3]);
-        };
+      // 1. Renderizar en la pestaña completa "#tab-group"
+      if (fullContainer) {
+        fullContainer.innerHTML = '';
+        if (members.length === 0) {
+          fullContainer.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:24px; font-size:0.88rem;">' + (dict.no_group_members || 'No hay colaboradores en este grupo.') + '</div>';
+        } else {
+          members.forEach(mem => {
+            const isMemLead = (mem.rol_app === 'LIDER_LINEA' || (mem.posicion && mem.posicion.toLowerCase().includes('lider')));
+            const card = document.createElement('div');
+            card.style.cssText = 'padding:14px 16px; margin-bottom:10px; background:var(--surface); border:1px solid var(--border); border-radius:14px; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:center;';
+            card.onclick = () => openEmpHistoryModal(mem);
+
+            card.innerHTML = `
+              <div style="flex:1; padding-right:10px;">
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                  <strong style="font-size:0.95rem; color:var(--text);">${mem.nombre_completo || 'Colaborador'}</strong>
+                  ${isMemLead ? '<span style="background:#fef3c7; color:#b45309; font-size:0.68rem; font-weight:700; padding:2px 6px; border-radius:4px;">⭐ ' + (dict.role_leader || 'LÍDER') + '</span>' : ''}
+                </div>
+                <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
+                  Turno ${mem.turno_actual || '1'} &bull; ${mem.posicion || 'produkcja'} &bull; PESEL: ${mem.pesel || '--'}
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <span style="background:#eff6ff; color:#1d4ed8; font-size:0.82rem; font-weight:700; padding:6px 10px; border-radius:8px; display:inline-block; border:1px solid #bfdbfe;">
+                  📊 ${parseFloat(mem.horas_mes_actual || 0).toFixed(1)} hrs
+                </span>
+              </div>
+            `;
+            fullContainer.appendChild(card);
+          });
+        }
       }
 
+      // 2. Renderizar resumen en el perfil "#card-leader-group"
+      if (listContainerProfile) {
+        listContainerProfile.innerHTML = '';
+        members.forEach(mem => {
+          const item = document.createElement('div');
+          item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; background:#ffffff; border:1px solid #dbeafe; border-radius:10px; margin-bottom:6px; cursor:pointer;';
+          item.onclick = () => openEmpHistoryModal(mem);
+          item.innerHTML = `
+            <div>
+              <strong style="font-size:0.88rem; color:#1e293b;">${mem.nombre_completo}</strong>
+              <div style="font-size:0.75rem; color:#64748b;">Turno ${mem.turno_actual || '1'} &bull; ${mem.posicion || 'produkcja'}</div>
+            </div>
+            <div style="text-align:right;">
+              <span style="background:#dbeafe; color:#1d4ed8; font-size:0.75rem; font-weight:700; padding:4px 8px; border-radius:6px;">
+                📊 ${parseFloat(mem.horas_mes_actual || 0).toFixed(1)} hrs
+              </span>
+            </div>
+          `;
+          listContainerProfile.appendChild(item);
+        });
+      }
+    }
+
+    function filterGroupMembersList(query) {
+      if (!cachedGroupMembers) return;
+      const q = (query || '').toLowerCase().trim();
+      const filtered = cachedGroupMembers.filter(m => 
+        (m.nombre_completo || '').toLowerCase().includes(q) || 
+        (m.pesel || '').includes(q) ||
+        (m.posicion || '').toLowerCase().includes(q)
+      );
+      renderGroupCards(filtered);
+    }
+
+    function renderEmpModalDays(dias) {
       const hoursContainer = document.getElementById('modal-emp-hours-list');
+      if (!hoursContainer) return;
       hoursContainer.innerHTML = '';
 
-      if (emp.dias_trabajados_detalle && emp.dias_trabajados_detalle.length > 0) {
-        emp.dias_trabajados_detalle.forEach(d => {
+      if (dias && dias.length > 0) {
+        dias.forEach(d => {
           const row = document.createElement('div');
           row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border-bottom:1px solid #e2e8f0; background:#fff; margin-bottom:4px; border-radius:6px;';
 
@@ -2110,6 +2254,48 @@
         });
       } else {
         hoursContainer.innerHTML = '<div style="color:#64748b; font-size:0.8rem; text-align:center; padding:16px;">Sin registros detallados de jornadas este mes.</div>';
+      }
+    }
+
+    function openEmpHistoryModal(emp) {
+      const modal = document.getElementById('modal-emp-history');
+      if (!modal) return;
+
+      document.getElementById('modal-emp-name').innerText = emp.nombre_completo;
+      document.getElementById('modal-emp-subtitle').innerText = 'ID: ' + emp.id + ' • PESEL: ' + (emp.pesel || '--') + ' • Grupo ' + (emp.grupo || 'Flexible') + ' • Turno ' + (emp.turno_actual || '1');
+      document.getElementById('modal-emp-total-hours').innerText = parseFloat(emp.horas_mes_actual || 0).toFixed(1) + ' hrs';
+
+      const btnPdf = document.getElementById('btn-modal-print-pdf');
+      if (btnPdf) {
+        btnPdf.onclick = () => {
+          closeEmpHistoryModal();
+          renderOfficialPdfCertificateForMonth(emp, '2026-09', 'Septiembre 2026', parseFloat(emp.horas_mes_actual || 0), emp.dias_trabajados_detalle || []);
+          switchTab('pdf', document.getElementById('nav-btn-pdf'));
+        };
+      }
+
+      renderEmpModalDays(emp.dias_trabajados_detalle);
+
+      if (!emp.dias_trabajados_detalle || emp.dias_trabajados_detalle.length === 0) {
+        const hoursContainer = document.getElementById('modal-emp-hours-list');
+        if (hoursContainer) hoursContainer.innerHTML = '<div style="color:#64748b; font-size:0.8rem; text-align:center; padding:16px;">⏳ Cargando asistencia detallada...</div>';
+        fetch('https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles/' + (emp.pesel || emp.id) + '/asistencia/2026-09?key=' + FIRESTORE_API_KEY)
+          .then(r => r.ok ? r.json() : null)
+          .then(attData => {
+            if (attData && attData.fields) {
+              const attObj = parseFirestoreDoc(attData.fields);
+              if (attObj && attObj.dias) {
+                emp.dias_trabajados_detalle = attObj.dias;
+                if (attObj.total_horas_mes !== undefined) {
+                  emp.horas_mes_actual = attObj.total_horas_mes;
+                  document.getElementById('modal-emp-total-hours').innerText = parseFloat(emp.horas_mes_actual).toFixed(1) + ' hrs';
+                }
+                renderEmpModalDays(emp.dias_trabajados_detalle);
+              }
+            }
+          }).catch(() => {
+            renderEmpModalDays([]);
+          });
       }
 
       modal.classList.remove('hidden');
@@ -2365,8 +2551,17 @@
       if (navHours) navHours.innerText = dict.my_hours;
       const navNext = document.getElementById('nav-lbl-next');
       if (navNext) navNext.innerText = dict.next_week;
+      const navGroup = document.getElementById('nav-lbl-group');
+      if (navGroup) navGroup.innerText = dict.my_group || 'Mi Grupo';
       const navPdf = document.getElementById('nav-lbl-pdf');
       if (navPdf) navPdf.innerText = dict.report_pdf;
+
+      const searchGroup = document.getElementById('input-search-group');
+      if (searchGroup) searchGroup.placeholder = '🔍 ' + (dict.search_group_placeholder || 'Buscar colaborador por nombre o PESEL...');
+      const fullGroupBtn = document.getElementById('lbl-btn-view-full-group');
+      if (fullGroupBtn) fullGroupBtn.innerText = dict.full_group_view || 'Ver Pantalla Completa de Mi Grupo';
+      const grpCountLbl = document.getElementById('tab-group-count-lbl');
+      if (grpCountLbl) grpCountLbl.innerText = dict.group_members_count || 'Colaboradores';
 
       // Ficha Personal Labels
       const toggleTxt = document.getElementById('toggle-personal-text');
