@@ -912,53 +912,6 @@
         }
       }
     });
-
-    // ==========================================
-    // PULL-TO-REFRESH IN-APP (SIN PERDER SESIÓN)
-    // ==========================================
-    let touchStartY = 0;
-    let isPulling = false;
-
-    window.addEventListener('touchstart', (e) => {
-      if (window.scrollY === 0) {
-        touchStartY = e.touches[0].clientY;
-        isPulling = true;
-      } else {
-        isPulling = false;
-      }
-    }, { passive: true });
-
-    window.addEventListener('touchmove', (e) => {
-      if (!isPulling || window.scrollY > 0) return;
-      const currentY = e.touches[0].clientY;
-      const pullDist = currentY - touchStartY;
-      const ind = document.getElementById('pull-refresh-indicator');
-      if (pullDist > 40 && ind) {
-        ind.style.top = Math.min(60, pullDist - 20) + 'px';
-      }
-    }, { passive: true });
-
-    window.addEventListener('touchend', (e) => {
-      if (!isPulling) return;
-      isPulling = false;
-      const ind = document.getElementById('pull-refresh-indicator');
-      if (ind && parseInt(ind.style.top || '-60') > 20) {
-        ind.style.top = '20px';
-        if (currentUser) {
-          if (currentUser.rol_app === 'COORDINADOR') {
-            loadCoordData();
-            fetchAndRenderLeaderGroup(currentUser);
-          } else {
-            fetchAndRenderLeaderGroup(currentUser);
-          }
-        }
-        setTimeout(() => {
-          if (ind) ind.style.top = '-60px';
-        }, 900);
-      } else if (ind) {
-        ind.style.top = '-60px';
-      }
-    }, { passive: true });
   </script>
 </head>
 <body>
@@ -2151,20 +2104,20 @@
     }
 
     // Swipe gestures en pestaña de Horas
-    let touchStartX = 0;
-    let touchStartY = 0;
+    let hoursSwipeStartX = 0;
+    let hoursSwipeStartY = 0;
     const hoursTab = document.getElementById('tab-hours');
     if (hoursTab) {
       hoursTab.addEventListener('touchstart', e => {
-        touchStartX = e.changedTouches[0].screenX;
-        touchStartY = e.changedTouches[0].screenY;
+        hoursSwipeStartX = e.changedTouches[0].screenX;
+        hoursSwipeStartY = e.changedTouches[0].screenY;
       }, { passive: true });
 
       hoursTab.addEventListener('touchend', e => {
         const touchEndX = e.changedTouches[0].screenX;
         const touchEndY = e.changedTouches[0].screenY;
-        const diffX = touchEndX - touchStartX;
-        const diffY = touchEndY - touchStartY;
+        const diffX = touchEndX - hoursSwipeStartX;
+        const diffY = touchEndY - hoursSwipeStartY;
         if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY)) {
           if (diffX > 0) {
             // Deslizar a la derecha
