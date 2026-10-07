@@ -39,6 +39,8 @@
     }
 
     html, body {
+      direction: ltr;
+      text-align: left;
       overscroll-behavior-y: contain;
       overscroll-behavior-x: none;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -48,36 +50,16 @@
       padding-bottom: 90px;
     }
 
-    /* Soporte RTL Nativo para Árabe */
-    html[dir="rtl"] html, body {
-      overscroll-behavior-y: contain;
-      overscroll-behavior-x: none;
+    /* Soporte RTL Exclusivo para Árabe (Alineación a la Derecha) */
+    html[dir="rtl"], html[dir="rtl"] body {
       direction: rtl;
       text-align: right;
-    }
-    html[dir="rtl"] .info-list-row {
-      flex-direction: row-reverse;
-    }
-    html[dir="rtl"] .profile-hero-top {
-      flex-direction: row-reverse;
-    }
-    html[dir="rtl"] .header-bar {
-      flex-direction: row-reverse;
     }
     html[dir="rtl"] .hours-hero-card {
       text-align: center;
     }
-    html[dir="rtl"] .table-hours-header {
-      flex-direction: row-reverse;
-    }
-    html[dir="rtl"] .hour-item-row {
-      flex-direction: row-reverse;
-    }
-    html[dir="rtl"] .drawer-title {
-      flex-direction: row-reverse;
-    }
     html[dir="rtl"] .login-container {
-      text-align: right;
+      text-align: center;
     }
     html[dir="rtl"] .login-hint {
       text-align: right;
