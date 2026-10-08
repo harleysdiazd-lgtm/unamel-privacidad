@@ -2383,8 +2383,14 @@
           const docs = data.documents || [];
           const all = docs.map(d => parseFirestoreDoc(d.fields));
 
-          // 1. Grupo Principal (excluyendo Turno 0 y coordinadores)
-          const mainWorkers = all.filter(w => (w.grupo || '').trim().toUpperCase() === userGroup && String(w.turno_actual || '0') !== '0' && w.id !== '0' && w.id !== '2023');
+          const isTestAccount = (w) => {
+            const wid = String(w.id || '');
+            const wName = (w.nombre_completo || w.nombre || '').toLowerCase();
+            return wid.startsWith('900') || wid === '9001' || wid === '9002' || wid === '9003' || wName.includes('(ia)') || wName.includes('operarioia') || wName.includes('lideria') || wName.includes('coordinadoria') || Boolean(w.es_prueba);
+          };
+
+          // 1. Grupo Principal (excluyendo Turno 0, coordinadores y cuentas de prueba)
+          const mainWorkers = all.filter(w => !isTestAccount(w) && (w.grupo || '').trim().toUpperCase() === userGroup && String(w.turno_actual || '0') !== '0' && w.id !== '0' && w.id !== '2023');
           mainWorkers.sort((a, b) => {
             const aIsLead = (a.rol_app === 'LIDER_LINEA' || (a.posicion && a.posicion.toLowerCase().includes('lider')));
             const bIsLead = (b.rol_app === 'LIDER_LINEA' || (b.posicion && b.posicion.toLowerCase().includes('lider')));
@@ -2394,19 +2400,20 @@
           });
           activeGroupMembers = mainWorkers;
 
-          // 2. Personal de Apoyo (5 miembros que no pertenecen a Grupo A)
+          // 2. Personal de Apoyo (5 miembros que no pertenecen a Grupo A y no son cuentas de prueba)
           let support = all.filter(w => {
+            if (isTestAccount(w)) return false;
             const grp = (w.grupo || '').trim().toUpperCase();
             return grp !== userGroup && (w.es_apoyo || (w.horas_extra_apoyo && w.horas_extra_apoyo > 0) || w.turno_actual === emp.turno_actual || w.turno_actual === '0');
           });
           if (support.length > 5) support = support.slice(0, 5);
           if (support.length < 5) {
-            const others = all.filter(w => (w.grupo || '').trim().toUpperCase() !== userGroup && !support.some(s => s.id === w.id));
+            const others = all.filter(w => !isTestAccount(w) && (w.grupo || '').trim().toUpperCase() !== userGroup && !support.some(s => s.id === w.id));
             support = support.concat(others.slice(0, 5 - support.length));
           }
           activeSupportWorkers = support;
 
-          allOtherPlantWorkers = all.filter(w => !activeGroupMembers.some(m => m.id === w.id) && !activeSupportWorkers.some(s => s.id === w.id));
+          allOtherPlantWorkers = all.filter(w => !isTestAccount(w) && !activeGroupMembers.some(m => m.id === w.id) && !activeSupportWorkers.some(s => s.id === w.id));
 
           // Contadores de miembros
           const totalCount = activeGroupMembers.length + activeSupportWorkers.length;
@@ -2926,8 +2933,24 @@
       Promise.all([
         fetch(attUrl).then(r => r.ok ? r.json() : { documents: [] }).catch(() => ({ documents: [] })),
         fetch(dispUrl).then(r => r.ok ? r.json() : { documents: [] }).catch(() => ({ documents: [] }))
-      ]).then(([attRes, dispRes]) => {
-        rawCoordAttDocs = attRes.documents || [];
+      ]).then(async ([attRes, dispRes]) => {
+        let attDocs = attRes.documents || [];
+        if (attDocs.length === 0) {
+          try {
+            const flatUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia?pageSize=300&key=' + FIRESTORE_API_KEY;
+            const rFlat = await fetch(flatUrl, { cache: 'no-cache' });
+            if (rFlat.ok) {
+              const dFlat = await rFlat.json();
+              attDocs = (dFlat.documents || []).filter(doc => {
+                const docName = doc.name.split('/').pop();
+                return docName.startsWith(todayStr + '_');
+              });
+            }
+          } catch (eFlat) {
+            console.warn('Error fetching fallback registro_asistencia for coord:', eFlat);
+          }
+        }
+        rawCoordAttDocs = attDocs;
         rawCoordDispDocs = (dispRes.documents || []).map(doc => parseFirestoreDoc(doc.fields));
         renderCoordAttendance(rawCoordAttDocs, rawCoordDispDocs);
         renderCoordAuditLogs(dispRes.documents || []);
@@ -2954,22 +2977,36 @@
       const attMap = {};
       attDocs.forEach(d => {
         const fields = d.fields || {};
-        const empId = fields.employeeId ? fields.employeeId.stringValue : d.name.split('/').pop();
-        attMap[empId] = {
-          status: fields.status ? fields.status.stringValue : 'PENDIENTE',
-          name: fields.employeeName ? fields.employeeName.stringValue : '',
-          grupo: fields.grupo ? fields.grupo.stringValue : '',
-          turno: fields.turno ? fields.turno.stringValue : '1',
-          markedBy: fields.markedBy ? fields.markedBy.stringValue : '',
-          notes: fields.notes ? fields.notes.stringValue : ''
+        const docName = d.name.split('/').pop();
+        const rawId = fields.employeeId ? (fields.employeeId.stringValue || fields.employeeId) : '';
+        const idFromDoc = docName.includes('_') ? docName.split('_').slice(1).join('_').replace('_EXTRA', '') : docName;
+        const empId = String(rawId || idFromDoc);
+        const pesel = fields.pesel ? (fields.pesel.stringValue || fields.pesel) : '';
+        const st = fields.status ? (fields.status.stringValue || fields.status) : (fields.estado ? (fields.estado.stringValue || fields.estado) : 'PENDIENTE');
+        const recordData = {
+          status: st,
+          name: fields.employeeName ? (fields.employeeName.stringValue || fields.employeeName) : '',
+          grupo: fields.grupo ? (fields.grupo.stringValue || fields.grupo) : '',
+          turno: fields.turno ? (fields.turno.stringValue || fields.turno) : '1',
+          markedBy: fields.markedBy ? (fields.markedBy.stringValue || fields.markedBy) : '',
+          notes: fields.notes ? (fields.notes.stringValue || fields.notes) : ''
         };
+        attMap[empId] = recordData;
+        if (pesel) attMap[String(pesel)] = recordData;
       });
 
       let cntPresentes = 0, cntRetardos = 0, cntAusentes = 0;
       const allActive = (dispList && dispList.length > 0) ? dispList : rawCoordDispDocs;
 
+      const isTestAccount = (e) => {
+        const eid = String(e.id || '');
+        const eName = (e.nombre_completo || e.nombre || '').toLowerCase();
+        return eid.startsWith('900') || eid === '9001' || eid === '9002' || eid === '9003' || eName.includes('(ia)') || eName.includes('operarioia') || eName.includes('lideria') || eName.includes('coordinadoria') || Boolean(e.es_prueba);
+      };
+
       const filtered = allActive.filter(emp => {
-        if (emp.id === '0' || emp.id === '2023' || String(emp.turno_actual || '0') === '0' || emp.rol_app === 'COORDINADOR') return false;
+        if (isTestAccount(emp)) return false;
+        if (emp.id === '0' || emp.id === '2023' || String(emp.turno_actual || '0') === '0' || emp.rol_app === 'COORDINADOR' || emp.rol_app === 'ADMINISTRATIVO') return false;
         if (currentGroupFilter === 'GA') return emp.grupo === 'A';
         if (currentGroupFilter === 'GB') return emp.grupo === 'B';
         if (currentGroupFilter === 'GC') return emp.grupo === 'C';
@@ -2986,15 +3023,15 @@
       }
 
       filtered.forEach(emp => {
-        const rec = attMap[emp.id] || { status: 'PENDIENTE', notes: '' };
-        const st = rec.status.toUpperCase();
+        const rec = attMap[String(emp.id)] || (emp.pesel ? attMap[String(emp.pesel)] : null) || { status: 'PENDIENTE', notes: '' };
+        const st = (rec.status || 'PENDIENTE').toUpperCase();
 
         let badgeBg = '#f1f5f9';
         let badgeColor = '#64748b';
         let badgeText = 'PENDIENTE';
         let iconPrefix = '⏳ ';
 
-        if (st === 'A_TIEMPO' || st === 'PRESENTES' || st === 'NORMAL') {
+        if (st === 'ASISTIO' || st === 'A_TIEMPO' || st === 'PRESENTES' || st === 'NORMAL' || st === 'PRESENTE') {
           cntPresentes++;
           badgeBg = '#dcfce7'; badgeColor = '#15803d'; badgeText = 'A TIEMPO'; iconPrefix = '🟢 ';
         } else if (st === 'RETARDO') {
@@ -3006,6 +3043,10 @@
         } else if (st === 'SALIDA_TEMPRANA') {
           cntPresentes++;
           badgeBg = '#f3e8ff'; badgeColor = '#7e22ce'; badgeText = 'SALIDA TEMPRANA'; iconPrefix = '🚪 ';
+        } else if (st === 'INCAPACIDAD_MEDICA' || st === 'INCAPACIDAD') {
+          badgeBg = '#e0f2fe'; badgeColor = '#0369a1'; badgeText = 'INCAPACIDAD'; iconPrefix = '🏥 ';
+        } else if (st === 'JUSTIFICADO' || st === 'PERMISO' || st === 'AUSENCIA_AUTORIZADA') {
+          badgeBg = '#f5f3ff'; badgeColor = '#6d28d9'; badgeText = 'PERMISO'; iconPrefix = '📋 ';
         }
 
         const row = document.createElement('div');
