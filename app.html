@@ -3049,6 +3049,8 @@
           badgeBg = '#f5f3ff'; badgeColor = '#6d28d9'; badgeText = 'PERMISO'; iconPrefix = '📋 ';
         }
 
+        const recNotes = (rec && typeof rec.notes === 'string') ? rec.notes.trim() : ((rec && rec.notes && typeof rec.notes.stringValue === 'string') ? rec.notes.stringValue.trim() : '');
+
         const row = document.createElement('div');
         row.className = 'hour-item-row';
         row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #f1f5f9;';
@@ -3059,7 +3061,7 @@
             <div style="font-size:0.75rem; color:#64748b;">
               Turno ${emp.turno_actual || '1'} &bull; Grupo ${emp.grupo || 'Flexible'} &bull; ${emp.posicion || 'produkcja'}
             </div>
-            ${rec.notes ? '<div style="font-size:0.72rem; color:#d97706; margin-top:2px;">📝 ' + rec.notes + '</div>' : ''}
+            ${recNotes ? '<div style="font-size:0.72rem; color:#d97706; margin-top:2px;">📝 ' + recNotes + '</div>' : ''}
           </div>
           <div style="width:35%; text-align:right;">
             <span class="hour-pill" style="background:${badgeBg}; color:${badgeColor}; font-size:0.72rem; font-weight:700; padding:4px 8px; border-radius:6px;">
