@@ -1426,6 +1426,229 @@
 
       </div>
 
+      <!-- ================================================================ -->
+      <!-- PESTAÑAS EJECUTIVAS EXCLUSIVAS PARA ROL ADMINISTRATIVO (v1.1.0)  -->
+      <!-- ================================================================ -->
+
+      <!-- ADMIN TAB 1: HORAS & ASISTENCIA DIARIA -->
+      <div id="tab-admin-daily" class="tab-pane hidden">
+        <div class="card" style="background:#1e293b; color:#fff; padding:16px; margin-bottom:12px; border-radius:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:1.1rem; font-weight:800; color:#38bdf8;">⏱️ Horas & Asistencia Diaria</div>
+              <div id="admin-daily-date-title" style="font-size:0.8rem; color:#94a3b8;">Control de Jornadas y Llamado de Lista en Planta</div>
+            </div>
+            <button type="button" onclick="loadAdminDailyData()" style="background:#0284c7; color:#fff; border:none; padding:6px 12px; border-radius:8px; font-weight:700; font-size:0.78rem; cursor:pointer;">
+              🔄 Actualizar
+            </button>
+          </div>
+        </div>
+
+        <!-- Selector Diario de Fecha con Flechas -->
+        <div class="card" style="padding:10px 14px; margin-bottom:12px; border-radius:14px; border:1px solid var(--border); background:var(--surface);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <button type="button" onclick="navigateAdminDate(-1)" style="background:none; border:none; font-size:1.1rem; color:var(--primary); cursor:pointer; padding:6px 12px; font-weight:bold;">◀</button>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:1rem;">📅</span>
+              <strong id="admin-selected-date-lbl" style="font-size:0.95rem; color:var(--text);">Hoy</strong>
+            </div>
+            <button type="button" onclick="navigateAdminDate(1)" style="background:none; border:none; font-size:1.1rem; color:var(--primary); cursor:pointer; padding:6px 12px; font-weight:bold;">▶</button>
+          </div>
+        </div>
+
+        <!-- Tarjeta de Métricas del Día -->
+        <div class="card" style="padding:14px; margin-bottom:14px;">
+          <h4 style="font-size:0.9rem; font-weight:700; color:var(--primary); margin-bottom:10px;">
+            📊 Resumen de la Jornada
+          </h4>
+          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; text-align:center;">
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:8px 4px; border-radius:8px;">
+              <div id="admin-cnt-presentes" style="font-size:1.15rem; font-weight:800; color:#166534;">0</div>
+              <div style="font-size:0.68rem; color:#15803d; font-weight:700;">🟢 Presentes</div>
+            </div>
+            <div style="background:#fff7ed; border:1px solid #fed7aa; padding:8px 4px; border-radius:8px;">
+              <div id="admin-cnt-retardos" style="font-size:1.15rem; font-weight:800; color:#9a3412;">0</div>
+              <div style="font-size:0.68rem; color:#c2410c; font-weight:700;">⏱️ Retardos</div>
+            </div>
+            <div style="background:#fef2f2; border:1px solid #fecaca; padding:8px 4px; border-radius:8px;">
+              <div id="admin-cnt-ausentes" style="font-size:1.15rem; font-weight:800; color:#991b1b;">0</div>
+              <div style="font-size:0.68rem; color:#b91c1c; font-weight:700;">❌ Ausentes</div>
+            </div>
+            <div style="background:#eff6ff; border:1px solid #bfdbfe; padding:8px 4px; border-radius:8px;">
+              <div id="admin-cnt-horas-totales" style="font-size:1.15rem; font-weight:800; color:#1e40af;">0.0</div>
+              <div style="font-size:0.68rem; color:#1e3a8a; font-weight:700;">⏱️ Horas Netas</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filtros Rápidos por Turno / Novedad -->
+        <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:8px; margin-bottom:12px;">
+          <button type="button" class="admin-daily-filter-btn active" onclick="filterAdminDailyList('ALL', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--primary); color:#fff; cursor:pointer;">Todos</button>
+          <button type="button" class="admin-daily-filter-btn" onclick="filterAdminDailyList('T1', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">Turno 1</button>
+          <button type="button" class="admin-daily-filter-btn" onclick="filterAdminDailyList('T2', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">Turno 2</button>
+          <button type="button" class="admin-daily-filter-btn" onclick="filterAdminDailyList('T3', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">Turno 3</button>
+          <button type="button" class="admin-daily-filter-btn" onclick="filterAdminDailyList('ALERTS', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--surface); color:#dc2626; cursor:pointer;">⚠️ Solo Novedades</button>
+        </div>
+
+        <!-- Lista Conciliada de Personal -->
+        <div class="card" style="padding:14px; margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h4 style="font-size:0.9rem; font-weight:700; color:var(--primary); margin:0;">
+              👥 Detalle de Personal y Conciliación
+            </h4>
+            <span id="admin-daily-count-badge" style="font-size:0.75rem; background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:10px; font-weight:700;">34 activos</span>
+          </div>
+          <div id="admin-daily-attendance-list">
+            <div style="color:var(--text-muted); text-align:center; padding:16px;">Cargando datos diarios...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN TAB 2: PLANTILLA & EXPEDIENTES -->
+      <div id="tab-admin-staff" class="tab-pane hidden">
+        <div class="card" style="background:#1e293b; color:#fff; padding:16px; margin-bottom:12px; border-radius:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:1.1rem; font-weight:800; color:#38bdf8;">👥 Directorio de Plantilla</div>
+              <div style="font-size:0.8rem; color:#94a3b8;">Expedientes de Contrato, Posición y Contacto</div>
+            </div>
+            <span id="admin-staff-total-badge" style="background:#0284c7; color:#fff; font-size:0.78rem; font-weight:700; padding:4px 10px; border-radius:8px;">34 Colaboradores</span>
+          </div>
+        </div>
+
+        <!-- Barra de Búsqueda -->
+        <div class="card" style="padding:10px 14px; margin-bottom:12px; border-radius:14px;">
+          <input type="text" id="admin-staff-search" oninput="renderAdminStaffDirectory()" placeholder="🔍 Buscar por nombre, apellido o PESEL..." style="width:100%; padding:10px; border:1px solid var(--border); border-radius:10px; font-size:0.88rem; background:var(--surface); color:var(--text); box-sizing:border-box;">
+        </div>
+
+        <!-- Filtros Rápidos por Grupo -->
+        <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:8px; margin-bottom:12px;">
+          <button type="button" class="admin-staff-filter-btn active" onclick="filterAdminStaffGroup('ALL', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--primary); color:#fff; cursor:pointer;">Todos</button>
+          <button type="button" class="admin-staff-filter-btn" onclick="filterAdminStaffGroup('GA', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">Grupo A</button>
+          <button type="button" class="admin-staff-filter-btn" onclick="filterAdminStaffGroup('GB', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">Grupo B</button>
+          <button type="button" class="admin-staff-filter-btn" onclick="filterAdminStaffGroup('GC', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">Grupo C</button>
+          <button type="button" class="admin-staff-filter-btn" onclick="filterAdminStaffGroup('LEADERS', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">⭐ Líderes</button>
+        </div>
+
+        <!-- Contenedor del Directorio -->
+        <div id="admin-staff-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
+          <div style="color:var(--text-muted); text-align:center; padding:16px;">Cargando directorio...</div>
+        </div>
+      </div>
+
+      <!-- ADMIN TAB 3: HISTORIAL MULTIMENSUAL & REPORTES PDF -->
+      <div id="tab-admin-history" class="tab-pane hidden">
+        <div class="card" style="background:#1e293b; color:#fff; padding:16px; margin-bottom:12px; border-radius:14px;">
+          <div>
+            <div style="font-size:1.1rem; font-weight:800; color:#38bdf8;">📚 Historial de Trabajo & Reportes PDF</div>
+            <div style="font-size:0.8rem; color:#94a3b8;">Auditoría Multimensual (Abril a Octubre 2026) y Certificados Oficiales</div>
+          </div>
+        </div>
+
+        <!-- Selector de Empleado -->
+        <div class="card" style="padding:12px 14px; margin-bottom:12px; border-radius:14px;">
+          <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">Seleccione Colaborador:</label>
+          <select id="admin-history-emp-select" onchange="onAdminHistoryEmployeeChanged()" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:0.9rem; background:var(--surface); color:var(--text); font-weight:600;"></select>
+        </div>
+
+        <!-- Selector de Mes -->
+        <div class="card" style="padding:10px 14px; margin-bottom:12px; border-radius:14px;">
+          <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">Seleccione Mes de Consulta:</label>
+          <div id="admin-history-months-bar" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:4px;"></div>
+        </div>
+
+        <!-- Resumen del Mes del Empleado Seleccionado -->
+        <div class="card" style="background:linear-gradient(135deg, #0f172a, #1e293b); color:#fff; padding:16px; border-radius:14px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div id="admin-history-selected-month-lbl" style="font-size:0.8rem; color:#94a3b8; font-weight:700; text-transform:uppercase;">OCTUBRE 2026</div>
+              <div id="admin-history-emp-total-hrs" style="font-size:1.6rem; font-weight:800; color:#38bdf8;">0.0 hrs</div>
+              <div id="admin-history-emp-days-count" style="font-size:0.78rem; color:#cbd5e1; margin-top:2px;">0 jornadas trabajadas</div>
+            </div>
+            <button type="button" id="admin-btn-open-pdf" onclick="openAdminSelectedPdf()" style="background:#0284c7; color:#fff; border:none; padding:10px 16px; border-radius:10px; font-weight:700; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
+              <span>📄</span> Ver Reporte PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- Desglose Diario Tabular -->
+        <div class="card" style="padding:14px; margin-bottom:14px;">
+          <h4 style="font-size:0.9rem; font-weight:700; color:var(--primary); margin-bottom:10px;">
+            📅 Desglose Diario de Jornadas e Incidencias
+          </h4>
+          <div id="admin-history-days-table" style="max-height:340px; overflow-y:auto; border:1px solid var(--border); border-radius:10px; background:var(--surface);">
+            <div style="color:var(--text-muted); text-align:center; padding:16px;">Seleccione un colaborador para ver su historial.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN TAB 4: PANEL ADMIN (CONSOLA EJECUTIVA) -->
+      <div id="tab-admin-panel" class="tab-pane hidden">
+        <div class="card" style="background:#1e293b; color:#fff; padding:16px; margin-bottom:12px; border-radius:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:1.1rem; font-weight:800; color:#38bdf8;">🛡️ Consola Ejecutiva de Administración</div>
+              <div style="font-size:0.8rem; color:#94a3b8;">Supervisión General, Rotación y Auditoría</div>
+            </div>
+            <button type="button" onclick="loadCoordData()" style="background:#0284c7; color:#fff; border:none; padding:6px 12px; border-radius:8px; font-weight:700; font-size:0.78rem; cursor:pointer;">
+              🔄 Actualizar
+            </button>
+          </div>
+        </div>
+
+        <!-- Rotación Oficial de Turnos y Líderes -->
+        <div class="card" style="padding:14px; margin-bottom:12px;">
+          <h4 style="font-size:0.9rem; font-weight:700; color:var(--primary); margin-bottom:10px;">
+            🔄 Rotación Oficial de Turnos y Líderes en Planta
+          </h4>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; background:#f8fafc; border-radius:8px; border-left:4px solid #3b82f6;">
+              <div>
+                <strong style="font-size:0.85rem; color:#1e293b;">Turno 1 (06:00 – 14:00)</strong>
+                <div style="font-size:0.75rem; color:#64748b;">Líder: Henry Armando Blanco Arrieta</div>
+              </div>
+              <span style="background:#dbeafe; color:#1e40af; font-size:0.78rem; font-weight:800; padding:3px 8px; border-radius:6px;">Grupo A</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; background:#f8fafc; border-radius:8px; border-left:4px solid #10b981;">
+              <div>
+                <strong style="font-size:0.85rem; color:#1e293b;">Turno 2 (14:00 – 22:00)</strong>
+                <div style="font-size:0.75rem; color:#64748b;">Líder: Ahmed Omar Osman</div>
+              </div>
+              <span style="background:#d1fae5; color:#065f46; font-size:0.78rem; font-weight:800; padding:3px 8px; border-radius:6px;">Grupo B</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; background:#f8fafc; border-radius:8px; border-left:4px solid #f59e0b;">
+              <div>
+                <strong style="font-size:0.85rem; color:#1e293b;">Turno 3 (22:00 – 06:00)</strong>
+                <div style="font-size:0.75rem; color:#64748b;">Líder: Dylan Zinyuku</div>
+              </div>
+              <span style="background:#fef3c7; color:#92400e; font-size:0.78rem; font-weight:800; padding:3px 8px; border-radius:6px;">Grupo C</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Registro de Inicios de Sesión (Auditoría en Tiempo Real) -->
+        <div class="card" style="padding:14px; margin-bottom:12px;">
+          <h4 style="font-size:0.9rem; font-weight:700; color:var(--primary); margin-bottom:10px;">
+            📜 Auditoría de Inicios de Sesión (Android y Web)
+          </h4>
+          <div id="admin-audit-logs-container">
+            <div style="color:var(--text-muted); text-align:center; padding:12px;">Cargando registro de accesos...</div>
+          </div>
+        </div>
+
+        <!-- Estado de Sincronización y Configuración -->
+        <div class="card" style="padding:14px; margin-bottom:14px; background:#fafafa;">
+          <h4 style="font-size:0.9rem; font-weight:700; color:var(--primary); margin-bottom:6px;">
+            ⚡ Estado del Ecosistema
+          </h4>
+          <div style="font-size:0.8rem; color:#64748b; line-height:1.5;">
+            • Proyecto Firebase: <strong>ndserwis-unamel</strong><br>
+            • Colecciones sincronizadas: <strong>disponibles, asistencia_diaria</strong><br>
+            • Protección de datos: <strong>Cumplimiento RODO / GDPR Activo</strong>
+          </div>
+        </div>
+      </div>
+
       <!-- MODAL DE ENCUESTA -->
       <div id="modal-survey" class="modal-overlay hidden" onclick="if(event.target===this) closeSurveyModal()">
         <div class="modal-card">
@@ -1599,6 +1822,23 @@
       <span class="nav-icon">💼</span>
       <span id="nav-lbl-coord">Coordinación</span>
     </button>
+    <!-- Pestañas Ejecutivas para ROL ADMINISTRATIVO (v1.1.0) -->
+    <button id="nav-btn-admin-daily" class="nav-item hidden" onclick="switchTab('admin-daily', this)">
+      <span class="nav-icon">⏱️</span>
+      <span>Horas & Asist.</span>
+    </button>
+    <button id="nav-btn-admin-staff" class="nav-item hidden" onclick="switchTab('admin-staff', this)">
+      <span class="nav-icon">👥</span>
+      <span>Plantilla</span>
+    </button>
+    <button id="nav-btn-admin-history" class="nav-item hidden" onclick="switchTab('admin-history', this)">
+      <span class="nav-icon">📚</span>
+      <span>Historial</span>
+    </button>
+    <button id="nav-btn-admin-panel" class="nav-item hidden" onclick="switchTab('admin-panel', this)">
+      <span class="nav-icon">🛡️</span>
+      <span>Panel Admin</span>
+    </button>
   </nav>
 
   <script>
@@ -1635,6 +1875,576 @@
         }
       }
       return res;
+    }
+
+
+    // =========================================================================
+    // MÓDULOS EJECUTIVOS PARA EL ROL ADMINISTRATIVO (v1.1.0)
+    // =========================================================================
+    let adminAllEmployees = [];
+    let adminAttendanceMap = {};
+    let adminSelectedDate = new Date().toISOString().split('T')[0];
+    let adminDailyFilter = 'ALL';
+    let adminStaffFilter = 'ALL';
+    let adminHistoryMonthKey = '2026-10';
+    let adminSelectedHistoryEmp = null;
+    let adminRevealedPesels = {};
+
+    function initAdminModules(emp) {
+      adminSelectedDate = new Date().toISOString().split('T')[0];
+      loadAdminDailyData();
+      fetchAdminStaff();
+    }
+
+    function formatAdminDateHeader(dateStr) {
+      try {
+        const parts = dateStr.split('-');
+        const y = parts[0], m = parts[1], d = parts[2];
+        const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        const dt = new Date(dateStr + 'T12:00:00');
+        const dow = dayNames[dt.getDay()];
+        const today = new Date().toISOString().split('T')[0];
+        const isToday = (dateStr === today);
+        return (isToday ? 'Hoy (' : '') + `${dow} ${d}-${m}-${y}` + (isToday ? ')' : '');
+      } catch (e) {
+        return dateStr;
+      }
+    }
+
+    async function loadAdminDailyData() {
+      const dTitle = document.getElementById('admin-daily-date-title');
+      const dLbl = document.getElementById('admin-selected-date-lbl');
+      if (dLbl) dLbl.innerText = formatAdminDateHeader(adminSelectedDate);
+      if (dTitle) dTitle.innerText = 'Jornada en Planta: ' + adminSelectedDate;
+
+      const attUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + adminSelectedDate + '/registros?key=' + FIRESTORE_API_KEY + '&pageSize=300';
+      const dispUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles?key=' + FIRESTORE_API_KEY + '&pageSize=100';
+
+      try {
+        const [attRes, dispRes] = await Promise.all([
+          fetch(attUrl).then(r => r.ok ? r.json() : { documents: [] }).catch(() => ({ documents: [] })),
+          fetch(dispUrl).then(r => r.ok ? r.json() : { documents: [] }).catch(() => ({ documents: [] }))
+        ]);
+
+        let attDocs = attRes.documents || [];
+        if (dispRes.documents && dispRes.documents.length > 0) {
+          adminAllEmployees = dispRes.documents.map(d => parseFirestoreDoc(d.fields)).filter(e => {
+            const eid = String(e.id || '');
+            const ename = (e.nombre_completo || e.nombre || '').toLowerCase();
+            return !eid.startsWith('900') && eid !== '9001' && eid !== '9002' && eid !== '9003' && eid !== '0' && eid !== '2023' && !ename.includes('(ia)') && !ename.includes('operarioia');
+          });
+        }
+
+        adminAttendanceMap = {};
+        attDocs.forEach(d => {
+          const f = d.fields || {};
+          const docName = d.name.split('/').pop();
+          const rawId = f.employeeId ? (f.employeeId.stringValue || f.employeeId) : '';
+          const idFromDoc = docName.includes('_') ? docName.split('_').slice(1).join('_').replace('_EXTRA', '') : docName;
+          const empId = String(rawId || idFromDoc);
+          const pesel = f.pesel ? (f.pesel.stringValue || f.pesel) : '';
+          const st = f.status ? (f.status.stringValue || f.status) : (f.estado ? (f.estado.stringValue || f.estado) : 'PENDIENTE');
+          const rec = {
+            status: st,
+            name: f.employeeName ? (f.employeeName.stringValue || f.employeeName) : '',
+            notes: f.notes ? (f.notes.stringValue || f.notes) : '',
+            markedBy: f.markedBy ? (f.markedBy.stringValue || f.markedBy) : ''
+          };
+          adminAttendanceMap[empId] = rec;
+          if (pesel) adminAttendanceMap[String(pesel)] = rec;
+        });
+
+        renderAdminDailyList();
+        renderAdminStaffDirectory();
+        populateAdminHistorySelect();
+        renderAdminAuditLogsFromDocs(dispRes.documents || []);
+      } catch (err) {
+        console.error('Error cargando datos de admin:', err);
+      }
+    }
+
+    function navigateAdminDate(delta) {
+      const dt = new Date(adminSelectedDate + 'T12:00:00');
+      dt.setDate(dt.getDate() + delta);
+      adminSelectedDate = dt.toISOString().split('T')[0];
+      loadAdminDailyData();
+    }
+
+    function filterAdminDailyList(flt, btn) {
+      adminDailyFilter = flt;
+      document.querySelectorAll('.admin-daily-filter-btn').forEach(b => {
+        b.style.background = 'var(--surface)';
+        b.style.color = (b.innerText.includes('Novedades')) ? '#dc2626' : 'var(--text)';
+      });
+      if (btn) {
+        btn.style.background = 'var(--primary)';
+        btn.style.color = '#fff';
+      }
+      renderAdminDailyList();
+    }
+
+    function renderAdminDailyList() {
+      const container = document.getElementById('admin-daily-attendance-list');
+      if (!container) return;
+
+      const selectedDayNum = parseInt(adminSelectedDate.split('-')[2], 10);
+      const selectedMonthKey = adminSelectedDate.slice(0, 7); // YYYY-MM
+
+      let cntPresentes = 0, cntRetardos = 0, cntAusentes = 0, totalNetHours = 0.0;
+
+      const filteredStaff = adminAllEmployees.filter(emp => {
+        if (adminDailyFilter === 'T1') return String(emp.turno_actual || '1') === '1';
+        if (adminDailyFilter === 'T2') return String(emp.turno_actual || '1') === '2';
+        if (adminDailyFilter === 'T3') return String(emp.turno_actual || '1') === '3';
+        if (adminDailyFilter === 'ALERTS') {
+          const rec = adminAttendanceMap[String(emp.id)] || (emp.pesel ? adminAttendanceMap[String(emp.pesel)] : null);
+          const st = rec ? (rec.status || '').toUpperCase() : 'PENDIENTE';
+          return st === 'NO_ASISTIO' || st === 'RETARDO' || st === 'SALIDA_TEMPRANA' || st === 'INCAPACIDAD_MEDICA' || st === 'JUSTIFICADO';
+        }
+        return true;
+      });
+
+      container.innerHTML = '';
+      if (filteredStaff.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:16px;">No se encontraron registros para este filtro.</div>';
+        document.getElementById('admin-cnt-presentes').innerText = 0;
+        document.getElementById('admin-cnt-retardos').innerText = 0;
+        document.getElementById('admin-cnt-ausentes').innerText = 0;
+        document.getElementById('admin-cnt-horas-totales').innerText = '0.0';
+        return;
+      }
+
+      filteredStaff.forEach(emp => {
+        // 1. Extraer horas registradas en Excel para este día
+        let excelDayRecord = null;
+        if (selectedMonthKey === '2026-10' && emp.dias_trabajados_detalle) {
+          excelDayRecord = emp.dias_trabajados_detalle.find(d => parseInt(d.dia, 10) === selectedDayNum);
+        } else if (emp.historial_meses && emp.historial_meses[selectedMonthKey]) {
+          const mRec = emp.historial_meses[selectedMonthKey];
+          const dList = mRec.dias || [];
+          excelDayRecord = dList.find(d => parseInt(d.dia, 10) === selectedDayNum);
+        }
+
+        // 2. Extraer registro en vivo de llamado de lista
+        const attRec = adminAttendanceMap[String(emp.id)] || (emp.pesel ? adminAttendanceMap[String(emp.pesel)] : null);
+        const liveStatus = attRec ? (attRec.status || 'PENDIENTE').toUpperCase() : 'PENDIENTE';
+        const liveNotes = attRec ? (attRec.notes || '') : '';
+
+        // Conciliación: Horas vs Llamado de lista
+        let hasExcelHours = (excelDayRecord && excelDayRecord.horas_trabajadas > 0);
+        let dayHours = hasExcelHours ? parseFloat(excelDayRecord.horas_trabajadas) : 0.0;
+        totalNetHours += dayHours;
+
+        let badgeBg = '#f1f5f9', badgeColor = '#64748b', badgeText = 'PENDIENTE', iconPrefix = '⏳ ';
+
+        if (hasExcelHours) {
+          cntPresentes++;
+          badgeBg = '#dcfce7'; badgeColor = '#15803d';
+          badgeText = `${dayHours.toFixed(1)} hrs (${excelDayRecord.hora_inicio || '--'} - ${excelDayRecord.hora_fin || '--'})`;
+          iconPrefix = '⏱️ ';
+        } else if (liveStatus === 'ASISTIO' || liveStatus === 'A_TIEMPO' || liveStatus === 'PRESENTE') {
+          cntPresentes++;
+          badgeBg = '#dcfce7'; badgeColor = '#15803d'; badgeText = 'ASISTIÓ (Presente)'; iconPrefix = '🟢 ';
+        } else if (liveStatus === 'RETARDO') {
+          cntRetardos++;
+          badgeBg = '#ffedd5'; badgeColor = '#c2410c'; badgeText = 'RETARDO'; iconPrefix = '⏱️ ';
+        } else if (liveStatus === 'NO_ASISTIO' || liveStatus === 'AUSENTE') {
+          cntAusentes++;
+          badgeBg = '#fee2e2'; badgeColor = '#b91c1c'; badgeText = 'NO ASISTIÓ'; iconPrefix = '❌ ';
+        } else if (liveStatus === 'SALIDA_TEMPRANA') {
+          cntPresentes++;
+          badgeBg = '#f3e8ff'; badgeColor = '#7e22ce'; badgeText = 'SALIDA TEMPRANA'; iconPrefix = '🚪 ';
+        } else if (liveStatus === 'INCAPACIDAD_MEDICA') {
+          badgeBg = '#e0f2fe'; badgeColor = '#0369a1'; badgeText = 'INCAPACIDAD'; iconPrefix = '🏥 ';
+        } else if (liveStatus === 'JUSTIFICADO' || liveStatus === 'PERMISO') {
+          badgeBg = '#f5f3ff'; badgeColor = '#6d28d9'; badgeText = 'PERMISO'; iconPrefix = '📋 ';
+        }
+
+        const isAbsent = (liveStatus === 'NO_ASISTIO' || (!hasExcelHours && liveStatus === 'NO_ASISTIO'));
+        const telSanitized = (emp.telefono || '').replace(/\s+/g, '').replace(/\+/g, '');
+
+        const card = document.createElement('div');
+        card.style.cssText = 'padding:12px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; gap:8px;';
+
+        card.innerHTML = `
+          <div style="flex:1;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <strong style="font-size:0.9rem; color:#0f172a;">${emp.nombre_completo}</strong>
+              <span style="font-size:0.7rem; background:#eff6ff; color:#1e40af; padding:1px 6px; border-radius:4px; font-weight:700;">G-${emp.grupo || 'A'}</span>
+            </div>
+            <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">
+              Turno ${emp.turno_actual || '1'} (${emp.horario_turno || '06:00 - 14:00'}) &bull; ${emp.posicion || 'produkcja'}
+            </div>
+            ${liveNotes ? '<div style="font-size:0.72rem; color:#d97706; margin-top:3px;">📝 Nota: ' + liveNotes + '</div>' : ''}
+          </div>
+          <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+            <span style="background:${badgeBg}; color:${badgeColor}; font-size:0.75rem; font-weight:700; padding:4px 8px; border-radius:6px; white-space:nowrap;">
+              ${iconPrefix}${badgeText}
+            </span>
+            ${isAbsent && telSanitized ? `
+              <a href="https://wa.me/${telSanitized}?text=${encodeURIComponent('Hola ' + emp.nombre + ', le escribimos de Coordinación ND Serwis / UNAMEL para consultar el motivo de su ausencia hoy ' + adminSelectedDate + '.')}" target="_blank" style="font-size:0.72rem; background:#22c55e; color:#fff; padding:3px 8px; border-radius:4px; text-decoration:none; font-weight:700; display:inline-flex; align-items:center; gap:3px;">
+                💬 Contactar
+              </a>
+            ` : ''}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      document.getElementById('admin-cnt-presentes').innerText = cntPresentes;
+      document.getElementById('admin-cnt-retardos').innerText = cntRetardos;
+      document.getElementById('admin-cnt-ausentes').innerText = cntAusentes;
+      document.getElementById('admin-cnt-horas-totales').innerText = totalNetHours.toFixed(1);
+      const bCnt = document.getElementById('admin-daily-count-badge');
+      if (bCnt) bCnt.innerText = `${filteredStaff.length} colaboradores`;
+    }
+
+    // Directoria de Plantilla & Expedientes
+    async function fetchAdminStaff() {
+      if (adminAllEmployees.length === 0) {
+        const dispUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles?key=' + FIRESTORE_API_KEY + '&pageSize=100';
+        try {
+          const resp = await fetch(dispUrl);
+          if (resp.ok) {
+            const data = await resp.json();
+            adminAllEmployees = (data.documents || []).map(d => parseFirestoreDoc(d.fields)).filter(e => {
+              const eid = String(e.id || '');
+              const ename = (e.nombre_completo || e.nombre || '').toLowerCase();
+              return !eid.startsWith('900') && eid !== '9001' && eid !== '9002' && eid !== '9003' && eid !== '0' && eid !== '2023' && !ename.includes('(ia)');
+            });
+          }
+        } catch(e) { console.error(e); }
+      }
+      renderAdminStaffDirectory();
+      populateAdminHistorySelect();
+    }
+
+    function filterAdminStaffGroup(grp, btn) {
+      adminStaffFilter = grp;
+      document.querySelectorAll('.admin-staff-filter-btn').forEach(b => {
+        b.style.background = 'var(--surface)';
+        b.style.color = 'var(--text)';
+      });
+      if (btn) {
+        btn.style.background = 'var(--primary)';
+        btn.style.color = '#fff';
+      }
+      renderAdminStaffDirectory();
+    }
+
+    function renderAdminStaffDirectory() {
+      const container = document.getElementById('admin-staff-list');
+      if (!container) return;
+
+      const q = (document.getElementById('admin-staff-search')?.value || '').trim().toLowerCase();
+
+      const filtered = adminAllEmployees.filter(emp => {
+        if (adminStaffFilter === 'GA' && emp.grupo !== 'A') return false;
+        if (adminStaffFilter === 'GB' && emp.grupo !== 'B') return false;
+        if (adminStaffFilter === 'GC' && emp.grupo !== 'C') return false;
+        if (adminStaffFilter === 'LEADERS' && !((emp.rol_app || '').includes('LIDER') || (emp.posicion || '').toLowerCase().includes('lider'))) return false;
+
+        if (q) {
+          const fn = (emp.nombre_completo || '').toLowerCase();
+          const p = (emp.pesel || '').toLowerCase();
+          return fn.includes(q) || p.includes(q);
+        }
+        return true;
+      });
+
+      const totalBadge = document.getElementById('admin-staff-total-badge');
+      if (totalBadge) totalBadge.innerText = `${filtered.length} Colaboradores`;
+
+      container.innerHTML = '';
+      if (filtered.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:16px;">No se encontraron colaboradores coincidentes.</div>';
+        return;
+      }
+
+      filtered.forEach(emp => {
+        const isRevealed = Boolean(adminRevealedPesels[emp.id]);
+        const maskedPesel = (emp.pesel && emp.pesel.length >= 4) ? ('*'.repeat(emp.pesel.length - 4) + emp.pesel.slice(-4)) : '****';
+        const displayPesel = isRevealed ? (emp.pesel || '--') : maskedPesel;
+
+        const isSigned = (emp.tipo_contrato || '').toUpperCase() === 'TAK' || (emp.tipo_contrato || '').toUpperCase() === 'SI';
+        const contratoLabel = isSigned ? 'Firmado (TAK / Zlecenie)' : (emp.tipo_contrato || 'En trámite');
+        const telSanitized = (emp.telefono || '').replace(/\s+/g, '').replace(/\+/g, '');
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.cssText = 'padding:14px; border-radius:12px; margin-bottom:10px; border:1px solid var(--border); background:var(--surface);';
+
+        card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <div>
+              <strong style="font-size:0.95rem; color:#0f172a;">${emp.nombre_completo}</strong>
+              <div style="font-size:0.75rem; color:#64748b; margin-top:1px;">
+                ${emp.posicion || 'produkcja'} &bull; Nacionalidad: ${emp.nacionalidad || 'Polonia'}
+              </div>
+            </div>
+            <span style="background:#eff6ff; color:#1e40af; font-size:0.75rem; font-weight:800; padding:3px 8px; border-radius:6px;">
+              Grupo ${emp.grupo || 'A'} &bull; Turno ${emp.turno_actual || '1'}
+            </span>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.78rem; background:#f8fafc; padding:8px 10px; border-radius:8px; margin-bottom:10px;">
+            <div>
+              <span style="color:#64748b; display:block; font-size:0.7rem;">CONTRATO (UMOWA):</span>
+              <strong style="color:${isSigned ? '#15803d' : '#b45309'};">${contratoLabel}</strong>
+            </div>
+            <div>
+              <span style="color:#64748b; display:block; font-size:0.7rem;">INICIO EN PLANTA:</span>
+              <strong style="color:#334155;">${emp.fecha_inicio || '--'}</strong>
+            </div>
+            <div>
+              <span style="color:#64748b; display:block; font-size:0.7rem;">PESEL:</span>
+              <strong style="color:#334155;">${displayPesel}</strong>
+              <button type="button" onclick="toggleAdminPeselReveal('${emp.id}')" style="background:none; border:none; color:#2563eb; font-size:0.7rem; font-weight:700; cursor:pointer; padding:0 4px;">${isRevealed ? 'Ocultar' : 'Revelar'}</button>
+            </div>
+            <div>
+              <span style="color:#64748b; display:block; font-size:0.7rem;">TELÉFONO:</span>
+              <strong style="color:#334155;">${emp.telefono || '--'}</strong>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            ${telSanitized ? `
+              <a href="https://wa.me/${telSanitized}" target="_blank" style="padding:6px 12px; background:#22c55e; color:#fff; border-radius:8px; text-decoration:none; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
+                💬 WhatsApp
+              </a>
+            ` : '<div style="font-size:0.75rem; color:#94a3b8;">Sin teléfono</div>'}
+            <button type="button" onclick="goToAdminHistoryForEmployee('${emp.id}')" style="padding:6px 12px; background:#0284c7; color:#fff; border:none; border-radius:8px; font-size:0.75rem; font-weight:700; cursor:pointer;">
+              📚 Ver Historial & PDF
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function toggleAdminPeselReveal(empId) {
+      adminRevealedPesels[empId] = !adminRevealedPesels[empId];
+      renderAdminStaffDirectory();
+    }
+
+    function goToAdminHistoryForEmployee(empId) {
+      const sel = document.getElementById('admin-history-emp-select');
+      if (sel) sel.value = String(empId);
+      switchTab('admin-history', document.getElementById('nav-btn-admin-history'));
+      onAdminHistoryEmployeeChanged();
+    }
+
+    // Historial Multimensual & PDFs
+    function populateAdminHistorySelect() {
+      const sel = document.getElementById('admin-history-emp-select');
+      if (!sel) return;
+      const currentVal = sel.value;
+      sel.innerHTML = '';
+
+      adminAllEmployees.forEach(emp => {
+        const opt = document.createElement('option');
+        opt.value = String(emp.id);
+        opt.innerText = `${emp.nombre_completo} (Grupo ${emp.grupo || 'A'} - Turno ${emp.turno_actual || '1'})`;
+        sel.appendChild(opt);
+      });
+
+      if (currentVal && adminAllEmployees.some(e => String(e.id) === String(currentVal))) {
+        sel.value = currentVal;
+      } else if (adminAllEmployees.length > 0) {
+        sel.value = String(adminAllEmployees[0].id);
+      }
+
+      renderAdminHistoryMonthsBar();
+      onAdminHistoryEmployeeChanged();
+    }
+
+    function renderAdminHistoryMonthsBar() {
+      const container = document.getElementById('admin-history-months-bar');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const monthNames = {
+        '2026-04': 'Abril',
+        '2026-05': 'Mayo',
+        '2026-06': 'Junio',
+        '2026-07': 'Julio',
+        '2026-08': 'Agosto',
+        '2026-09': 'Septiembre',
+        '2026-10': 'Octubre'
+      };
+
+      AVAILABLE_MONTHS.forEach(mKey => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.innerText = (monthNames[mKey] || mKey) + (mKey === '2026-10' ? ' (Activo)' : '');
+        btn.style.cssText = `padding:6px 12px; border-radius:20px; font-size:0.75rem; font-weight:700; border:1px solid var(--border); white-space:nowrap; cursor:pointer; background:${adminHistoryMonthKey === mKey ? 'var(--primary)' : 'var(--surface)'}; color:${adminHistoryMonthKey === mKey ? '#fff' : 'var(--text)'};`;
+        btn.onclick = () => {
+          adminHistoryMonthKey = mKey;
+          renderAdminHistoryMonthsBar();
+          onAdminHistoryEmployeeChanged();
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function onAdminHistoryEmployeeChanged() {
+      const sel = document.getElementById('admin-history-emp-select');
+      if (!sel) return;
+      const empId = sel.value;
+      adminSelectedHistoryEmp = adminAllEmployees.find(e => String(e.id) === String(empId));
+      renderAdminHistoryTable();
+    }
+
+    function renderAdminHistoryTable() {
+      const tableContainer = document.getElementById('admin-history-days-table');
+      const totalHrsEl = document.getElementById('admin-history-emp-total-hrs');
+      const daysCountEl = document.getElementById('admin-history-emp-days-count');
+      const monthLblEl = document.getElementById('admin-history-selected-month-lbl');
+
+      if (!tableContainer || !adminSelectedHistoryEmp) return;
+
+      const emp = adminSelectedHistoryEmp;
+      const mKey = adminHistoryMonthKey;
+
+      const monthNames = {
+        '2026-04': 'Abril 2026',
+        '2026-05': 'Mayo 2026',
+        '2026-06': 'Junio 2026',
+        '2026-07': 'Julio 2026',
+        '2026-08': 'Agosto 2026',
+        '2026-09': 'Septiembre 2026',
+        '2026-10': 'Octubre 2026'
+      };
+      if (monthLblEl) monthLblEl.innerText = monthNames[mKey] || mKey;
+
+      let totalHours = 0.0;
+      let daysList = [];
+
+      if (mKey === '2026-10') {
+        totalHours = parseFloat(emp.horas_mes_actual || 0);
+        daysList = emp.dias_trabajados_detalle || [];
+      } else if (emp.historial_meses && emp.historial_meses[mKey]) {
+        const mData = emp.historial_meses[mKey];
+        totalHours = parseFloat(mData.total_horas || mData.total_horas_mes || 0);
+        daysList = mData.dias || [];
+      }
+
+      if (totalHrsEl) totalHrsEl.innerText = totalHours.toFixed(1) + ' hrs';
+      const workedDaysCount = daysList.filter(d => parseFloat(d.horas_trabajadas || 0) > 0).length;
+      if (daysCountEl) daysCountEl.innerText = `${workedDaysCount} jornadas trabajadas`;
+
+      tableContainer.innerHTML = '';
+      if (daysList.length === 0) {
+        tableContainer.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:16px;">Sin jornadas detalladas para este mes.</div>';
+        return;
+      }
+
+      const table = document.createElement('table');
+      table.style.cssText = 'width:100%; border-collapse:collapse; font-size:0.78rem; text-align:left;';
+      table.innerHTML = `
+        <thead>
+          <tr style="background:#f1f5f9; color:#475569; border-bottom:1px solid #cbd5e1;">
+            <th style="padding:8px 10px;">DÍA</th>
+            <th style="padding:8px 6px;">ENTRADA</th>
+            <th style="padding:8px 6px;">SALIDA</th>
+            <th style="padding:8px 6px;">HORAS</th>
+            <th style="padding:8px 10px;">ESTADO</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+      const tbody = table.querySelector('tbody');
+
+      daysList.forEach(d => {
+        const tr = document.createElement('tr');
+        tr.style.cssText = 'border-bottom:1px solid #f1f5f9;';
+
+        const hrs = parseFloat(d.horas_trabajadas || 0);
+        let statusBadge = '<span style="color:#64748b;">Normal</span>';
+        if (d.color_hex || d.estado_dia !== 'NORMAL') {
+          const bg = d.color_hex || '#f59e0b';
+          statusBadge = `<span style="background:${bg}20; color:${bg}; font-weight:700; padding:2px 6px; border-radius:4px;">${d.estado_label || d.estado_dia}</span>`;
+        }
+
+        tr.innerHTML = `
+          <td style="padding:8px 10px; font-weight:700; color:#1e293b;">Día ${d.dia}</td>
+          <td style="padding:8px 6px; color:#475569;">${d.hora_inicio || '--'}</td>
+          <td style="padding:8px 6px; color:#475569;">${d.hora_fin || '--'}</td>
+          <td style="padding:8px 6px; font-weight:800; color:#0f172a;">${hrs > 0 ? hrs.toFixed(1) + 'h' : '--'}</td>
+          <td style="padding:8px 10px;">${statusBadge}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      tableContainer.appendChild(table);
+    }
+
+    function openAdminSelectedPdf() {
+      if (!adminSelectedHistoryEmp) return;
+      const emp = adminSelectedHistoryEmp;
+      const mKey = adminHistoryMonthKey;
+      const monthNames = {
+        '2026-04': 'Abril 2026',
+        '2026-05': 'Mayo 2026',
+        '2026-06': 'Junio 2026',
+        '2026-07': 'Julio 2026',
+        '2026-08': 'Agosto 2026',
+        '2026-09': 'Septiembre 2026',
+        '2026-10': 'Octubre 2026'
+      };
+      let totalHours = 0.0;
+      let daysList = [];
+
+      if (mKey === '2026-10') {
+        totalHours = parseFloat(emp.horas_mes_actual || 0);
+        daysList = emp.dias_trabajados_detalle || [];
+      } else if (emp.historial_meses && emp.historial_meses[mKey]) {
+        const mData = emp.historial_meses[mKey];
+        totalHours = parseFloat(mData.total_horas || mData.total_horas_mes || 0);
+        daysList = mData.dias || [];
+      }
+
+      renderOfficialPdfCertificateForMonth(emp, mKey, monthNames[mKey] || mKey, totalHours, daysList);
+      switchTab('pdf', document.getElementById('nav-btn-pdf'));
+    }
+
+    function renderAdminAuditLogsFromDocs(docs) {
+      const container = document.getElementById('admin-audit-logs-container');
+      if (!container) return;
+
+      const list = docs.map(doc => {
+        const fields = parseFirestoreDoc(doc.fields);
+        const id = fields.id || doc.name.split('/').pop();
+        if (id === '0') return null;
+        const nombre = fields.nombre_completo || fields.nombre || '';
+        if (!nombre) return null;
+        return {
+          nombre: nombre,
+          ultima_conexion: fields.ultima_conexion || '',
+          timestamp: fields.ultima_conexion_timestamp || 0,
+          plataforma: fields.ultima_conexion_plataforma || 'Web'
+        };
+      }).filter(Boolean).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+      container.innerHTML = '';
+      if (list.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:12px;">Sin registros recientes.</div>';
+        return;
+      }
+
+      list.slice(0, 8).forEach(item => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f1f5f9; font-size:0.78rem;';
+        const isApp = (item.plataforma || '').toLowerCase().includes('android');
+        row.innerHTML = `
+          <div>
+            <strong style="color:#0f172a;">${item.nombre}</strong>
+            <span style="font-size:0.7rem; color:#64748b; margin-left:6px;">${item.plataforma ? ('• ' + item.plataforma) : ''}</span>
+          </div>
+          <span style="color:#2563eb; font-weight:700;">${item.ultima_conexion || 'Reciente'}</span>
+        `;
+        container.appendChild(row);
+      });
     }
 
     async function attemptLogin() {
@@ -1777,6 +2587,49 @@
       if (isLeader) badge.innerText = dict.role_leader;
       else if (isCoord) badge.innerText = dict.role_coordinator;
       else badge.innerText = dict.role_operator;
+      // Conmutación Dinámica de Navegación según Rol
+      const navProfile = document.getElementById('nav-btn-profile');
+      const navHours = document.getElementById('nav-btn-hours');
+      const navNext = document.getElementById('nav-btn-next');
+      const navGrp = document.getElementById('nav-btn-group');
+      const navCrd = document.getElementById('nav-btn-coord');
+
+      const adminDaily = document.getElementById('nav-btn-admin-daily');
+      const adminStaff = document.getElementById('nav-btn-admin-staff');
+      const adminHistory = document.getElementById('nav-btn-admin-history');
+      const adminPanel = document.getElementById('nav-btn-admin-panel');
+
+      if (isAdmin) {
+        // Ocultar pestañas operativas de planta
+        if (navProfile) navProfile.classList.add('hidden');
+        if (navHours) navHours.classList.add('hidden');
+        if (navNext) navNext.classList.add('hidden');
+        if (navGrp) navGrp.classList.add('hidden');
+        if (navCrd) navCrd.classList.add('hidden');
+
+        // Mostrar las 4 pestañas ejecutivas del Administrador
+        if (adminDaily) adminDaily.classList.remove('hidden');
+        if (adminStaff) adminStaff.classList.remove('hidden');
+        if (adminHistory) adminHistory.classList.remove('hidden');
+        if (adminPanel) adminPanel.classList.remove('hidden');
+
+        badge.innerText = '🛡️ ADMINISTRACIÓN';
+        initAdminModules(emp);
+        switchTab('admin-daily', adminDaily);
+        return;
+      } else {
+        // Restaurar pestañas operativas estándar
+        if (navProfile) navProfile.classList.remove('hidden');
+        if (navHours) navHours.classList.remove('hidden');
+        if (navNext) navNext.classList.remove('hidden');
+
+        // Ocultar pestañas de administrador
+        if (adminDaily) adminDaily.classList.add('hidden');
+        if (adminStaff) adminStaff.classList.add('hidden');
+        if (adminHistory) adminHistory.classList.add('hidden');
+        if (adminPanel) adminPanel.classList.add('hidden');
+      }
+
 
       // Ficha Personal
       document.getElementById('info-pesel').innerText = emp.pesel || '--';
