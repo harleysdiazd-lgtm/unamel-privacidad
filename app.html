@@ -1825,25 +1825,25 @@
     <!-- Pestañas Ejecutivas para ROL ADMINISTRATIVO (v1.1.0) -->
     <button id="nav-btn-admin-daily" class="nav-item hidden" onclick="switchTab('admin-daily', this)">
       <span class="nav-icon">⏱️</span>
-      <span>Horas & Asist.</span>
+      <span id="nav-lbl-admin-daily">Horas & Asist.</span>
     </button>
     <button id="nav-btn-admin-staff" class="nav-item hidden" onclick="switchTab('admin-staff', this)">
       <span class="nav-icon">👥</span>
-      <span>Plantilla</span>
+      <span id="nav-lbl-admin-staff">Plantilla</span>
     </button>
     <button id="nav-btn-admin-history" class="nav-item hidden" onclick="switchTab('admin-history', this)">
       <span class="nav-icon">📚</span>
-      <span>Historial</span>
+      <span id="nav-lbl-admin-history">Historial</span>
     </button>
     <button id="nav-btn-admin-panel" class="nav-item hidden" onclick="switchTab('admin-panel', this)">
       <span class="nav-icon">🛡️</span>
-      <span>Panel Admin</span>
+      <span id="nav-lbl-admin-panel">Panel Admin</span>
     </button>
   </nav>
 
   <script>
     const VAULT = {};
-    const I18N_DICT = {"es": {"title_login": "Portal del Trabajador", "sub_login": "Acceso confidencial a su programación laboral", "label_pesel": "Número PESEL o Teléfono", "label_pin": "Código PIN de Acceso (4 dígitos)", "btn_login": "Ingresar al Sistema", "btn_logout": "Cerrar Sesión", "security_note": "🔒 Sistema seguro protegido con cifrado de punto a punto (RODO/GDPR).", "view_personal": "Ver información personal y contacto", "personal_sheet": "Ficha Personal y Contractual", "pesel": "Número PESEL", "housing": "Alojamiento Asignado", "phone": "Teléfono de Contacto", "contract": "Contrato Firmado (Umowa)", "birth": "Fecha de Nacimiento", "start_date": "Fecha de Inicio en Fábrica", "shift_base": "Turno y Horario de la Semana Actual", "current_shift": "Turno Asignado", "break_1": "1ª Pausa Programada", "break_2": "2ª Pausa Programada", "plant_equipment": "Dotación e Instalaciones en Planta", "locker": "Casillero (Szafka)", "card": "Tarjeta Acceso (Karta)", "my_hours": "Mis Horas", "total_worked": "Total Horas Facturadas", "download_pdf": "Descargar / Ver Reporte Oficial PDF", "next_week": "Próx. Semana", "profile": "Mi Perfil", "report_pdf": "Reporte PDF", "swipe_hint": "👈 Desliza para cambiar mes 👉", "month_prev": "Mes anterior", "month_next": "Mes siguiente", "total_hours_billed": "Total Horas Facturadas", "days_attendance": "Días con Asistencia", "role_leader": "⭐ LÍDER DE LÍNEA", "role_coordinator": "💼 COORDINADOR", "role_operator": "OPERARIO", "contract_signed": "Firmado (TAK / SI)", "contract_pending": "En trámite", "shift_label": "Turno", "group_label": "Grupo", "day_prefix": "Día", "normal_shift": "Jornada Normal", "no_hours_this_month": "Sin jornadas detalladas este mes.", "current_cycle": "Ciclo laboral en curso", "expected_schedule": "Horario previsto:", "line_leader_title": "Líder de Línea:", "badge_confirmed": "CONFIRMADO", "badge_assigned": "Asignado", "badge_rest": "Descanso", "badge_free": "Libre", "survey_card_title": "Encuesta de Satisfacción y Operaciones", "survey_card_desc": "Tu opinión sobre condiciones, transporte y fábrica es confidencial y vital.", "survey_btn_participate": "Completar Encuesta", "survey_results_btn": "Ver Respuestas de Encuestas", "survey_dialog_title": "Encuesta de Satisfacción Laboral", "survey_q1": "1. ¿Cómo califica el ambiente laboral y la coordinación en su línea de trabajo?", "survey_q2": "2. Comentarios o sugerencias para mejorar el bienestar en la fábrica (Opcional):", "survey_placeholder": "Escriba su comentario aquí...", "survey_cancel": "Cancelar", "survey_submit": "Enviar Encuesta", "survey_success": "¡Encuesta enviada con éxito! Muchas gracias por su colaboración.", "survey_admin_title": "Resultados de Encuestas", "survey_results_empty": "No se han registrado respuestas de encuestas todavía.", "table_day": "DÍA", "table_start": "INICIO", "table_end": "FIN", "table_hours": "HORAS", "legend_medical": "● Azul: Incapacidad Médica", "legend_unauthorized": "● Amarillo: No Autorizado", "legend_penalty": "● Rojo: Penalización", "legend_pending": "● Naranja: Por Confirmar", "login_hint_text": "💡 Ingrese su número PESEL (o teléfono registrado). Su PIN corresponde a los últimos 4 dígitos de su PESEL o su clave personal asignada.", "current_month_notice": "Mes en curso (Octubre 2026). Las horas facturadas se consolidarán al cierre mensual.", "my_group": "Mi Grupo", "group_members_count": "Colaboradores Asignados", "no_group_members": "No hay colaboradores registrados en este grupo.", "group_title_line": "Línea de Producción", "search_group_placeholder": "Buscar colaborador por nombre o PESEL...", "full_group_view": "Ver Pantalla Completa de Mi Grupo", "attendance_today": "Asistencia Hoy", "btn_mark_attendance": "Registrar Asistencia", "status_pending": "⏳ Pendiente", "status_present": "✅ Presente", "status_absent": "❌ Ausente", "status_late": "⏱️ Retardo", "status_early": "🚪 Salida Temprana", "status_medical": "🏥 Incapacidad Médica", "status_authorized": "🌴 Permiso Autorizado", "status_unauthorized": "⛔ No Autorizado", "status_pending_confirm": "⚠️ Por Confirmar", "time_entry": "Entrada", "time_exit": "Salida", "status_justified": "📋 Permiso", "support_workers_title": "Personal de Apoyo / Horas Extra", "role_leader_line": "Líder de Línea", "today_word": "Hoy", "workers_count_word": "trabajadores", "months": {"2026-04": "Abril 2026", "2026-05": "Mayo 2026", "2026-06": "Junio 2026", "2026-07": "Julio 2026", "2026-08": "Agosto 2026", "2026-09": "Septiembre 2026", "2026-10": "Octubre 2026"}, "days": {"lunes": "Lunes", "martes": "Martes", "miercoles": "Miércoles", "miércoles": "Miércoles", "jueves": "Jueves", "viernes": "Viernes", "sabado": "Sábado", "sábado": "Sábado", "domingo": "Domingo", "monday": "Lunes", "tuesday": "Martes", "wednesday": "Miércoles", "thursday": "Jueves", "friday": "Viernes", "saturday": "Sábado", "sunday": "Domingo"}}, "en": {"title_login": "Worker Portal", "sub_login": "Confidential access to your work schedule", "label_pesel": "PESEL Number or Phone", "label_pin": "Access PIN (4 digits)", "btn_login": "Log In to System", "btn_logout": "Log Out", "security_note": "🔒 Secure system protected with end-to-end encryption (GDPR).", "view_personal": "View personal info and contact", "personal_sheet": "Personal & Contract Record", "pesel": "PESEL Number", "housing": "Assigned Housing", "phone": "Contact Phone", "contract": "Signed Contract (Umowa)", "birth": "Birth Date", "start_date": "Factory Start Date", "shift_base": "Current Week Shift and Schedule", "current_shift": "Current Shift", "break_1": "1st Scheduled Break", "break_2": "2nd Scheduled Break", "plant_equipment": "Plant Equipment & Facilities", "locker": "Locker (Szafka)", "card": "Access Card (Karta)", "my_hours": "My Hours", "total_worked": "Total Billed Hours", "download_pdf": "Download / View Official PDF", "next_week": "Next Week", "profile": "My Profile", "report_pdf": "PDF Report", "swipe_hint": "👈 Swipe to change month 👉", "month_prev": "Previous Month", "month_next": "Next Month", "total_hours_billed": "Total Billed Hours", "days_attendance": "Days with Attendance", "role_leader": "⭐ LINE LEADER", "role_coordinator": "💼 COORDINATOR", "role_operator": "OPERATOR", "contract_signed": "Signed (TAK / YES)", "contract_pending": "In Process", "shift_label": "Shift", "group_label": "Group", "day_prefix": "Day", "normal_shift": "Normal Shift", "no_hours_this_month": "No detailed shifts recorded for this month.", "current_cycle": "Current work cycle", "expected_schedule": "Expected schedule:", "line_leader_title": "Line Leader:", "badge_confirmed": "CONFIRMED", "badge_assigned": "Assigned", "badge_rest": "Rest", "badge_free": "Free", "survey_card_title": "Satisfaction & Operations Survey", "survey_card_desc": "Your feedback on conditions, transport, and factory operations is essential and confidential.", "survey_btn_participate": "Take Survey", "survey_results_btn": "View Survey Responses", "survey_dialog_title": "Work Satisfaction Survey", "survey_q1": "1. How do you rate the work environment and coordination in your work line?", "survey_q2": "2. Comments or suggestions to improve factory wellbeing (Optional):", "survey_placeholder": "Write your comments here...", "survey_cancel": "Cancel", "survey_submit": "Submit Survey", "survey_success": "Survey submitted successfully! Thank you for your feedback.", "survey_admin_title": "Survey Responses", "survey_results_empty": "No survey responses recorded yet.", "table_day": "DAY", "table_start": "START", "table_end": "END", "table_hours": "HOURS", "legend_medical": "● Blue: Medical Leave", "legend_unauthorized": "● Yellow: Unauthorized", "legend_penalty": "● Red: Penalty", "legend_pending": "● Orange: To Confirm", "login_hint_text": "💡 Enter your PESEL number (or registered phone). Your PIN is the last 4 digits of your PESEL or assigned passcode.", "current_month_notice": "Current month in progress (October 2026). Billed hours will be finalized at month-end.", "my_group": "My Group", "group_members_count": "Assigned Collaborators", "no_group_members": "No collaborators found in this group.", "group_title_line": "Production Line", "search_group_placeholder": "Search collaborator by name or PESEL...", "full_group_view": "View Full Group Screen", "attendance_today": "Today's Attendance", "btn_mark_attendance": "Take Attendance", "status_pending": "⏳ Pending", "status_present": "✅ Present", "status_absent": "❌ Absent", "status_late": "⏱️ Late", "status_early": "🚪 Early Leave", "status_medical": "🏥 Medical Leave", "status_authorized": "🌴 Authorized Leave", "status_unauthorized": "⛔ Unauthorized Absence", "status_pending_confirm": "⚠️ To Confirm", "time_entry": "Entry", "time_exit": "Exit", "status_justified": "📋 Excused", "support_workers_title": "Support Workers / Overtime", "role_leader_line": "Line Leader", "today_word": "Today", "workers_count_word": "workers", "months": {"2026-04": "April 2026", "2026-05": "May 2026", "2026-06": "June 2026", "2026-07": "July 2026", "2026-08": "August 2026", "2026-09": "September 2026", "2026-10": "October 2026"}, "days": {"lunes": "Monday", "martes": "Tuesday", "miercoles": "Wednesday", "miércoles": "Wednesday", "jueves": "Thursday", "viernes": "Friday", "sabado": "Saturday", "sábado": "Saturday", "domingo": "Sunday", "monday": "Monday", "tuesday": "Tuesday", "wednesday": "Wednesday", "thursday": "Thursday", "friday": "Friday", "saturday": "Saturday", "sunday": "Sunday"}}, "pl": {"title_login": "Portal Pracownika", "sub_login": "Poufny dostęp do harmonogramu pracy", "label_pesel": "Numer PESEL lub Telefon", "label_pin": "Kod PIN dostępu (4 cyfry)", "btn_login": "Zaloguj się do systemu", "btn_logout": "Wyloguj się", "security_note": "🔒 Bezpieczny system chroniony szyfrowaniem end-to-end (RODO).", "view_personal": "Zobacz dane osobowe i kontakt", "personal_sheet": "Karta Osobowa i Umowa", "pesel": "Numer PESEL", "housing": "Przydzielone zakwaterowanie", "phone": "Telefon kontaktowy", "contract": "Podpisana umowa", "birth": "Data urodzenia", "start_date": "Data rozpoczęcia pracy", "shift_base": "Zmiana i grafik w bieżącym tygodniu", "current_shift": "Aktualna zmiana", "break_1": "1. przerwa w pracy", "break_2": "2. przerwa w pracy", "plant_equipment": "Wyposażenie w zakładzie", "locker": "Szafka", "card": "Karta dostępowa", "my_hours": "Moje godziny", "total_worked": "Łącznie rozliczone godziny", "download_pdf": "Pobierz / Zobacz oficjalny raport PDF", "next_week": "Nast. tydzień", "profile": "Mój profil", "report_pdf": "Raport PDF", "swipe_hint": "👈 Przesuń, aby zmienić miesiąc 👉", "month_prev": "Poprzedni miesiąc", "month_next": "Następny miesiąc", "total_hours_billed": "Łącznie rozliczone godziny", "days_attendance": "Dni z obecnością", "role_leader": "⭐ LIDER LINII", "role_coordinator": "💼 KOORDYNATOR", "role_operator": "PRACOWNIK PRODUKCJI", "contract_signed": "Podpisana (TAK)", "contract_pending": "W toku", "shift_label": "Zmiana", "group_label": "Grupa", "day_prefix": "Dzień", "normal_shift": "Zwykły dzień", "no_hours_this_month": "Brak szczegółowych dni w tym miesiącu.", "current_cycle": "Bieżący cykl pracy", "expected_schedule": "Przewidywane godziny:", "line_leader_title": "Lider linii:", "badge_confirmed": "POTWIERDZONE", "badge_assigned": "Przydzielony", "badge_rest": "Odpoczynek", "badge_free": "Wolne", "survey_card_title": "Ankieta Satysfakcji i Operacji", "survey_card_desc": "Twoja opinia o warunkach, transporcie i fabryce jest poufna i kluczowa.", "survey_btn_participate": "Wypełnij ankietę", "survey_results_btn": "Zobacz odpowiedzi ankiety", "survey_dialog_title": "Ankieta Satysfakcji z Pracy", "survey_q1": "1. Jak oceniasz atmosferę pracy i koordynację na swojej linii?", "survey_q2": "2. Uwagi lub sugestie dotyczące poprawy warunków w fabryce (Opcjonalnie):", "survey_placeholder": "Wpisz swój komentarz tutaj...", "survey_cancel": "Anuluj", "survey_submit": "Wyślij Ankietę", "survey_success": "Ankieta wysłana pomyślnie! Dziękujemy.", "survey_admin_title": "Odpowiedzi Ankiety", "survey_results_empty": "Brak zarejestrowanych odpowiedzi na ankietę.", "table_day": "DZIEŃ", "table_start": "START", "table_end": "KONIEC", "table_hours": "GODZINY", "legend_medical": "● Niebieski: Zwolnienie lekarskie", "legend_unauthorized": "● Żółty: Nieusprawiedliwione", "legend_penalty": "● Czerwony: Kara", "legend_pending": "● Pomarańczowy: Do potwierdzenia", "login_hint_text": "💡 Wpisz swój numer PESEL lub telefon. Twój PIN to 4 ostatnie cyfry numeru PESEL lub przypisany kod dostępu.", "current_month_notice": "Bieżący miesiąc w toku (Październik 2026). Rozliczone godziny zostaną skonsolidowane po zamknięciu miesiąca.", "my_group": "Moja Grupa", "group_members_count": "Przypisani Pracownicy", "no_group_members": "Brak pracowników w tej grupie.", "group_title_line": "Linia Produkcyjna", "search_group_placeholder": "Szukaj pracownika po nazwisku lub PESEL...", "full_group_view": "Zobacz Pełny Ekran Grupy", "attendance_today": "Dzisiejsza Obecność", "btn_mark_attendance": "Zarejestruj Obecność", "status_pending": "⏳ Oczekuje", "status_present": "✅ Obecny", "status_absent": "❌ Nieobecny", "status_late": "⏱️ Spóźnienie", "status_early": "🚪 Wczesne Wyjście", "status_medical": "🏥 Zwolnienie Lekarskie", "status_justified": "📋 Usprawiedliwione", "support_workers_title": "Pracownicy Wsparcia / Nadgodziny", "role_leader_line": "Lider Linii", "today_word": "Dzisiaj", "workers_count_word": "pracowników", "months": {"2026-04": "Kwiecień 2026", "2026-05": "Maj 2026", "2026-06": "Czerwiec 2026", "2026-07": "Lipiec 2026", "2026-08": "Sierpień 2026", "2026-09": "Wrzesień 2026", "2026-10": "Październik 2026"}, "days": {"lunes": "Poniedziałek", "martes": "Wtorek", "miercoles": "Środa", "miércoles": "Środa", "jueves": "Czwartek", "viernes": "Piątek", "sabado": "Sobota", "sábado": "Sobota", "domingo": "Niedziela", "monday": "Poniedziałek", "tuesday": "Wtorek", "wednesday": "Środa", "thursday": "Czwartek", "friday": "Piątek", "saturday": "Sobota", "sunday": "Niedziela"}}, "uk": {"title_login": "Портал Працівника", "sub_login": "Конфіденційний доступ до робочого графіка", "label_pesel": "Номер PESEL або Телефон", "label_pin": "PIN-код доступу (4 цифри)", "btn_login": "Увійти в систему", "btn_logout": "Вийти", "security_note": "🔒 Захищена система із наскрізним шифруванням (GDPR).", "view_personal": "Переглянути особисті дані та контакти", "personal_sheet": "Особиста картка та договір", "pesel": "Номер PESEL", "housing": "Призначене житло", "phone": "Контактний телефон", "contract": "Підписаний договір (Umowa)", "birth": "Дата народження", "start_date": "Дата початку роботи", "shift_base": "Зміна та графік поточного тижня", "current_shift": "Поточна зміна", "break_1": "1-ша запланована перерва", "break_2": "2-га запланована перерва", "plant_equipment": "Оснащення на заводі", "locker": "Шафка (Szafka)", "card": "Картка доступу (Karta)", "my_hours": "Мої години", "total_worked": "Всього відпрацьованих годин", "download_pdf": "Завантажити / Переглянути звіт PDF", "next_week": "Наст. тиждень", "profile": "Мій профіль", "report_pdf": "Звіт PDF", "swipe_hint": "👈 Проведіть, щоб змінити місяць 👉", "month_prev": "Попередній місяць", "month_next": "Наступний місяць", "total_hours_billed": "Всього нарахованих годин", "days_attendance": "Дні з відвідуваністю", "role_leader": "⭐ ЛІДЕР ЛІНІЇ", "role_coordinator": "💼 КООРДИНАТОР", "role_operator": "ОПЕРАТОР ВИРОБНИЦТВА", "contract_signed": "Підписано (TAK)", "contract_pending": "В процесі", "shift_label": "Зміна", "group_label": "Група", "day_prefix": "День", "normal_shift": "Звичайна зміна", "no_hours_this_month": "Немає детальних змін за цей місяць.", "current_cycle": "Поточний робочий цикл", "expected_schedule": "Очікуваний розклад:", "line_leader_title": "Лідер лінії:", "badge_confirmed": "ПІДТВЕРДЖЕНО", "badge_assigned": "Призначено", "badge_rest": "Відпочинок", "badge_free": "Вільний", "survey_card_title": "Опитування щодо задоволеності та операцій", "survey_card_desc": "Ваша думка щодо умов, транспорту та заводу є конфіденційною та важливою.", "survey_btn_participate": "Пройти опитування", "survey_results_btn": "Переглянути відповіді опитування", "survey_dialog_title": "Опитування щодо задоволеності працею", "survey_q1": "1. Як ви оцінюєте робочу атмосферу та координацію на вашій лінії?", "survey_q2": "2. Коментарі або пропозиції щодо покращення умов на заводі (Необов'язково):", "survey_placeholder": "Напишіть свій коментар тут...", "survey_cancel": "Скасувати", "survey_submit": "Надіслати опитування", "survey_success": "Опитування успішно надіслано! Дякуємо.", "survey_admin_title": "Відповіді на опитування", "survey_results_empty": "Немає зареєстрованих відповідей на опитування.", "table_day": "ДЕНЬ", "table_start": "ПОЧАТОК", "table_end": "КІНЕЦЬ", "table_hours": "ГОДИНИ", "legend_medical": "● Синій: Лікарняний", "legend_unauthorized": "● Жовтий: Несанкціоновано", "legend_penalty": "● Червоний: Штраф", "legend_pending": "● Помаранчевий: На підтвердженні", "login_hint_text": "💡 Введіть ваш номер PESEL або зареєстрований телефон. Ваш PIN-код — останні 4 цифри PESEL або призначений пароль.", "current_month_notice": "Поточний місяць триває (Жовтень 2026). Нараховані години будуть підтверджені після закриття місяця.", "my_group": "Моя Група", "group_members_count": "Призначені Працівники", "no_group_members": "Немає призначених працівників у цій групі.", "group_title_line": "Виробнича Лінія", "search_group_placeholder": "Пошук працівника за ім'ям або PESEL...", "full_group_view": "Переглянути Повний Екран Групи", "attendance_today": "Сьогоднішня Відвідуваність", "btn_mark_attendance": "Відмітити Відвідуваність", "status_pending": "⏳ Очікує", "status_present": "✅ Присутній", "status_absent": "❌ Відсутній", "status_late": "⏱️ Запізнення", "status_early": "🚪 Ранній Вихід", "status_medical": "🏥 Лікарняний", "status_authorized": "🌴 Дозволена відпустка", "status_unauthorized": "⛔ Несанкціоновано", "status_pending_confirm": "⚠️ Підтвердити", "time_entry": "Вхід", "time_exit": "Вихід", "status_justified": "📋 Поважна Причина", "support_workers_title": "Працівники Підтримки / Наднормові", "role_leader_line": "Лідер Лінії", "today_word": "Сьогодні", "workers_count_word": "працівників", "months": {"2026-04": "Квітень 2026", "2026-05": "Травень 2026", "2026-06": "Червень 2026", "2026-07": "Липень 2026", "2026-08": "Серпень 2026", "2026-09": "Вересень 2026", "2026-10": "Жовтень 2026"}, "days": {"lunes": "Понеділок", "martes": "Вівторок", "miercoles": "Середа", "miércoles": "Середа", "jueves": "Четвер", "viernes": "П'ятниця", "sabado": "Субота", "sábado": "Субота", "domingo": "Неділя", "monday": "Понеділок", "tuesday": "Вівторок", "wednesday": "Середа", "thursday": "Четвер", "friday": "П'ятниця", "saturday": "Субота", "sunday": "Неділя"}}, "ar": {"title_login": "بوابة العامل", "sub_login": "وصول سري إلى جدول عملك", "label_pesel": "رقم PESEL أو الهاتف", "label_pin": "رمز PIN للدخول (4 أرقام)", "btn_login": "الدخول إلى النظام", "btn_logout": "تسجيل الخروج", "security_note": "🔒 نظام آمن محمي بتشفير شامل (GDPR).", "view_personal": "عرض البيانات الشخصية وجهات الاتصال", "personal_sheet": "الملف الشخصي والتعاقدي", "pesel": "رقم PESEL", "housing": "السكن المخصص", "phone": "هاتف الاتصال", "contract": "العقد الموقع (Umowa)", "birth": "تاريخ الميلاد", "start_date": "تاريخ بدء العمل في المصنع", "shift_base": "وردية وجدول الأسبوع الحالي", "current_shift": "الوردية المحددة", "break_1": "فترة الاستراحة الأولى", "break_2": "فترة الاستراحة الثانية", "plant_equipment": "المعدات والتجهيزات في المصنع", "locker": "الخزانة (Szafka)", "card": "بطاقة الدخول (Karta)", "my_hours": "ساعاتي", "total_worked": "إجمالي الساعات المفوترة", "download_pdf": "تحميل / عرض التقرير الرسمي PDF", "next_week": "الأسبوع القادم", "profile": "ملفي الشخصي", "report_pdf": "تقرير PDF", "swipe_hint": "👈 اسحب لتغيير الشهر 👉", "month_prev": "الشهر السابق", "month_next": "الشهر التالي", "total_hours_billed": "إجمالي الساعات المفوترة", "days_attendance": "أيام الحضور", "role_leader": "⭐ قائد الخط", "role_coordinator": "💼 المنسق", "role_operator": "عامل إنتاج", "contract_signed": "موقع (TAK / نعم)", "contract_pending": "قيد الإجراء", "shift_label": "الوردية", "group_label": "المجموعة", "day_prefix": "اليوم", "normal_shift": "يوم عمل عادي", "no_hours_this_month": "لا توجد تفاصيل ورديات لهذا الشهر.", "current_cycle": "دورة العمل الحالية", "expected_schedule": "الجدول المتوقع:", "line_leader_title": "قائد الخط:", "badge_confirmed": "مؤكد", "badge_assigned": "محدد", "badge_rest": "استراحة", "badge_free": "عطلة", "survey_card_title": "استبيان الرضا والعمليات", "survey_card_desc": "رأيك حول الظروف والمواصلات والمصنع سري وأساسي جداً.", "survey_btn_participate": "إجراء الاستبيان", "survey_results_btn": "عرض إجابات الاستبيان", "survey_dialog_title": "استبيان الرضا المهني", "survey_q1": "1. كيف تقيم بيئة العمل والتنسيق في خط عملك؟", "survey_q2": "2. ملاحظات أو اقتراحات لتحسين ظروف المصنع (اختياري):", "survey_placeholder": "اكتب تعليقك هنا...", "survey_cancel": "إلغاء", "survey_submit": "إرسال الاستبيان", "survey_success": "تم إرسال الاستبيان بنجاح! شكراً جزيلاً لتعاونك.", "survey_admin_title": "نتائج الاستبيانات", "survey_results_empty": "لم يتم تسجيل أي ردود حتى الآن.", "table_day": "اليوم", "table_start": "البدء", "table_end": "الانتهاء", "table_hours": "الساعات", "legend_medical": "● أزرق: إجازة مرضية", "legend_unauthorized": "● أصفر: غير مصرح به", "legend_penalty": "● أحمر: عقوبة", "legend_pending": "● برتقالي: قيد التأكيد", "login_hint_text": "💡 أدخل رقم PESEL أو الهاتف المسجل. رمز PIN هو آخر 4 أرقام من PESEL أو كلمة مرورك الخاصة.", "current_month_notice": "الشهر الحالي قيد التقدم (أكتوبر 2026). سيتم اعتماد الساعات المفوترة عند إغلاق الشهر.", "my_group": "مجموعتي", "group_members_count": "العمال المعينون", "no_group_members": "لا يوجد عمال مسجلون في هذه المجموعة.", "group_title_line": "خط الإنتاج", "search_group_placeholder": "البحث عن عامل بالاسم أو PESEL...", "full_group_view": "عرض شاشة المجموعة الكاملة", "attendance_today": "حضور اليوم", "btn_mark_attendance": "تسجيل الحضور =:", "status_pending": "⏳ معلق", "status_present": "✅ حاضر", "status_absent": "❌ غائب", "status_late": "⏱️ تأخر", "status_early": "🚪 خروج مبكر", "status_medical": "🏥 إجازة مرضية", "status_authorized": "🌴 إجازة معتمدة", "status_unauthorized": "⛔ غير مصرح", "status_pending_confirm": "⚠️ قيد التأكيد", "time_entry": "الدخول", "time_exit": "الخروج", "status_justified": "📋 مبرر", "support_workers_title": "عمال الدعم والإضافي", "role_leader_line": "قائد خط الإنتاج", "today_word": "اليوم", "workers_count_word": "عمال", "months": {"2026-04": "أبريل 2026", "2026-05": "مايو 2026", "2026-06": "يونيو 2026", "2026-07": "يوليو 2026", "2026-08": "أغسطس 2026", "2026-09": "سبتمبر 2026", "2026-10": "أكتوبر 2026"}, "days": {"lunes": "الإثنين", "martes": "الثلاثاء", "miercoles": "الأربعاء", "miércoles": "الأربعاء", "jueves": "الخميس", "viernes": "الجمعة", "sabado": "السبت", "sábado": "السبت", "domingo": "الأحد", "monday": "الإثنين", "tuesday": "الثلاثاء", "wednesday": "الأربعاء", "thursday": "الخميس", "friday": "الجمعة", "saturday": "السبت", "sunday": "الأحد"}}, "so": {"title_login": "Albaabka Shaqaalaha", "sub_login": "Helitaanka jadwalka shaqada si qarsoodi ah", "label_pesel": "Lambarka PESEL ama Telefoonka", "label_pin": "Koodhka PIN (4 lambar)", "btn_login": "Gal Nidaamka", "btn_logout": "Ka Bax", "security_note": "🔒 Nidaam ammaan ah oo lagu ilaaliyo sirta (GDPR).", "view_personal": "Eeg macluumaadka shakhsiga ah", "personal_sheet": "Warqadda Shaqaalaha & Heshiiska", "pesel": "Lambarka PESEL", "housing": "Guriga Laguu Qoondeeyay", "phone": "Telefoonka Xiriirka", "contract": "Heshiiska Saxiixan (Umowa)", "birth": "Taariikhda Dhalashada", "start_date": "Taariikhda Bilowga Warshadda", "shift_base": "Wareegga & Jadwalka Toddobaadkan", "current_shift": "Wareegga Hadda", "break_1": "Nafaqada 1aad ee Qorsheysan", "break_2": "Nafaqada 2aad ee Qorsheysan", "plant_equipment": "Qalabka & Xarumaha Warshadda", "locker": "Qasnada (Szafka)", "card": "Kaarka Gelitaanka (Karta)", "my_hours": "Saacadahayga", "total_worked": "Wadarta Saacadaha La Shaqeeyay", "download_pdf": "Soo Dejiso / Eeg Warbixinta Rasmiga ah ee PDF", "next_week": "Toddobaadka Xiga", "profile": "Boggeyga", "report_pdf": "Warbixinta PDF", "swipe_hint": "👈 Jiid si aad u beddesho bisha 👉", "month_prev": "Bishii Hore", "month_next": "Bisha Xigta", "total_hours_billed": "Wadarta Saacadaha La Qaatay", "days_attendance": "Maalmaha imaanshaha", "role_leader": "⭐ HOGAAMIYAHA KHADKA", "role_coordinator": "💼 ISKU-DUWAHA", "role_operator": "SHAQAALE WAX-SOOSAAR", "contract_signed": "Saxiixan (HAA / TAK)", "contract_pending": "Socda", "shift_label": "Wareegga", "group_label": "Kooxda", "day_prefix": "Maalin", "normal_shift": "Shaqo Caadi ah", "no_hours_this_month": "Faahfaahin ma jirto bishan.", "current_cycle": "Wareegga shaqada ee hadda", "expected_schedule": "Jadwalka la filayo:", "line_leader_title": "Hogaamiyaha Khadka:", "badge_confirmed": "LA XAQIIJIYAY", "badge_assigned": "Loo qoondeeyay", "badge_rest": "Nasiino", "badge_free": "Bilaash", "survey_card_title": "Sahanka Qanacsanaanta & Hawlaha", "survey_card_desc": "Fikraddaada ku saabsan xaaladaha, gaadiidka iyo warshadda waa qarsoodi waana muhiim.", "survey_btn_participate": "Buuxi Sahanka", "survey_results_btn": "Eeg Jawaabaha Sahanka", "survey_dialog_title": "Sahanka Qanacsanaanta Shaqada", "survey_q1": "1. Sideed u qiimeysaa jawiga shaqada iyo isku-duwidda khadkaaga?", "survey_q2": "2. Faallooyin ama talooyin lagu hagaajinayo xaaladda warshadda (Ikhtiyaari):", "survey_placeholder": "Halkan ku qor faalladaada...", "survey_cancel": "Jooji", "survey_submit": "Dir Sahanka", "survey_success": "Sahanka si guul leh ayaa loo diray! Mahadsanid.", "survey_admin_title": "Jawaabaha Sahanka", "survey_results_empty": "Weli ma jiraan jawaabo sahan oo la diiwaangeliyay.", "table_day": "MAALIN", "table_start": "BILOW", "table_end": "DHAMMAAD", "table_hours": "SAACADO", "legend_medical": "● Buluug: Fasax Caafimaad", "legend_unauthorized": "● Huruud: Aan Fasaxneyn", "legend_penalty": "● Casan: Ciqaab", "legend_pending": "● Liin: La Xaqiijinayo", "login_hint_text": "💡 Geli lambarkaaga PESEL ama telefoonka. PIN-kaagu waa 4-ta lambar ee u dambeeya PESEL ama furahaaga gaarka ah.", "current_month_notice": "Bisha hadda socota (Oktoobar 2026). Saacadaha la qaatay waxaa la xaqiijin doonaa dhammaadka bisha.", "my_group": "Kooxdayda", "group_members_count": "Shaqaalaha loo xilsaaray", "no_group_members": "Kooxdan wax shaqaale ah lagama helin.", "group_title_line": "Khadka Wax-soo-saarka", "search_group_placeholder": "Raadi shaqaale magac ama PESEL...", "full_group_view": "Fiiri Shaashadda Kooxda oo Dhan", "attendance_today": "Imaanshaha Maanta", "btn_mark_attendance": "Diiwaangeli Imaanshaha", "status_pending": "⏳ La sugayo", "status_present": "✅ Jooga", "status_absent": "❌ Maqan", "status_late": "⏱️ Soo daahay", "status_early": "🚪 Baxay Goor hore", "status_medical": "🏥 Fasax Caafimaad", "status_justified": "📋 Sababaysan", "support_workers_title": "Shaqaalaha Taageerada / Saacadaha Dheeraadka", "role_leader_line": "Hogaamiyaha Khadka", "today_word": "Maanta", "workers_count_word": "shaqaale", "months": {"2026-04": "Abriil 2026", "2026-05": "May 2026", "2026-06": "Juun 2026", "2026-07": "Luuliyo 2026", "2026-08": "Ogosto 2026", "2026-09": "Sebtembar 2026", "2026-10": "Oktoobar 2026"}, "days": {"lunes": "Isniin", "martes": "Talaado", "miercoles": "Arbaco", "miércoles": "Arbaco", "jueves": "Khamiis", "viernes": "Jimco", "sabado": "Sabti", "sábado": "Sabti", "domingo": "Axad", "monday": "Isniin", "tuesday": "Talaado", "wednesday": "Arbaco", "thursday": "Khamiis", "friday": "Jimco", "saturday": "Sabti", "sunday": "Axad"}}};
+    const I18N_DICT = {"es": {"title_login": "Portal del Trabajador", "sub_login": "Acceso confidencial a su programación laboral", "label_pesel": "Número PESEL o Teléfono", "label_pin": "Código PIN de Acceso (4 dígitos)", "btn_login": "Ingresar al Sistema", "btn_logout": "Cerrar Sesión", "security_note": "🔒 Sistema seguro protegido con cifrado de punto a punto (RODO/GDPR).", "view_personal": "Ver información personal y contacto", "personal_sheet": "Ficha Personal y Contractual", "pesel": "Número PESEL", "housing": "Alojamiento Asignado", "phone": "Teléfono de Contacto", "contract": "Contrato Firmado (Umowa)", "birth": "Fecha de Nacimiento", "start_date": "Fecha de Inicio en Fábrica", "shift_base": "Turno y Horario de la Semana Actual", "current_shift": "Turno Asignado", "break_1": "1ª Pausa Programada", "break_2": "2ª Pausa Programada", "plant_equipment": "Dotación e Instalaciones en Planta", "locker": "Casillero (Szafka)", "card": "Tarjeta Acceso (Karta)", "my_hours": "Mis Horas", "total_worked": "Total Horas Facturadas", "download_pdf": "Descargar / Ver Reporte Oficial PDF", "next_week": "Próx. Semana", "profile": "Mi Perfil", "report_pdf": "Reporte PDF", "swipe_hint": "👈 Desliza para cambiar mes 👉", "month_prev": "Mes anterior", "month_next": "Mes siguiente", "total_hours_billed": "Total Horas Facturadas", "days_attendance": "Días con Asistencia", "role_leader": "⭐ LÍDER DE LÍNEA", "role_coordinator": "💼 COORDINADOR", "role_operator": "OPERARIO", "contract_signed": "Firmado (TAK / SI)", "contract_pending": "En trámite", "shift_label": "Turno", "group_label": "Grupo", "day_prefix": "Día", "normal_shift": "Jornada Normal", "no_hours_this_month": "Sin jornadas detalladas este mes.", "current_cycle": "Ciclo laboral en curso", "expected_schedule": "Horario previsto:", "line_leader_title": "Líder de Línea:", "badge_confirmed": "CONFIRMADO", "badge_assigned": "Asignado", "badge_rest": "Descanso", "badge_free": "Libre", "survey_card_title": "Encuesta de Satisfacción y Operaciones", "survey_card_desc": "Tu opinión sobre condiciones, transporte y fábrica es confidencial y vital.", "survey_btn_participate": "Completar Encuesta", "survey_results_btn": "Ver Respuestas de Encuestas", "survey_dialog_title": "Encuesta de Satisfacción Laboral", "survey_q1": "1. ¿Cómo califica el ambiente laboral y la coordinación en su línea de trabajo?", "survey_q2": "2. Comentarios o sugerencias para mejorar el bienestar en la fábrica (Opcional):", "survey_placeholder": "Escriba su comentario aquí...", "survey_cancel": "Cancelar", "survey_submit": "Enviar Encuesta", "survey_success": "¡Encuesta enviada con éxito! Muchas gracias por su colaboración.", "survey_admin_title": "Resultados de Encuestas", "survey_results_empty": "No se han registrado respuestas de encuestas todavía.", "table_day": "DÍA", "table_start": "INICIO", "table_end": "FIN", "table_hours": "HORAS", "legend_medical": "● Azul: Incapacidad Médica", "legend_unauthorized": "● Amarillo: No Autorizado", "legend_penalty": "● Rojo: Penalización", "legend_pending": "● Naranja: Por Confirmar", "login_hint_text": "💡 Ingrese su número PESEL (o teléfono registrado). Su PIN corresponde a los últimos 4 dígitos de su PESEL o su clave personal asignada.", "current_month_notice": "Mes en curso (Octubre 2026). Las horas facturadas se consolidarán al cierre mensual.", "my_group": "Mi Grupo", "group_members_count": "Colaboradores Asignados", "no_group_members": "No hay colaboradores registrados en este grupo.", "group_title_line": "Línea de Producción", "search_group_placeholder": "Buscar colaborador por nombre o PESEL...", "full_group_view": "Ver Pantalla Completa de Mi Grupo", "attendance_today": "Asistencia Hoy", "btn_mark_attendance": "Registrar Asistencia", "status_pending": "⏳ Pendiente", "status_present": "✅ Presente", "status_absent": "❌ Ausente", "status_late": "⏱️ Retardo", "status_early": "🚪 Salida Temprana", "status_medical": "🏥 Incapacidad Médica", "status_authorized": "🌴 Permiso Autorizado", "status_unauthorized": "⛔ No Autorizado", "status_pending_confirm": "⚠️ Por Confirmar", "time_entry": "Entrada", "time_exit": "Salida", "status_justified": "📋 Permiso", "support_workers_title": "Personal de Apoyo / Horas Extra", "role_leader_line": "Líder de Línea", "today_word": "Hoy", "workers_count_word": "trabajadores", "months": {"2026-04": "Abril 2026", "2026-05": "Mayo 2026", "2026-06": "Junio 2026", "2026-07": "Julio 2026", "2026-08": "Agosto 2026", "2026-09": "Septiembre 2026", "2026-10": "Octubre 2026"}, "days": {"lunes": "Lunes", "martes": "Martes", "miercoles": "Miércoles", "miércoles": "Miércoles", "jueves": "Jueves", "viernes": "Viernes", "sabado": "Sábado", "sábado": "Sábado", "domingo": "Domingo", "monday": "Lunes", "tuesday": "Martes", "wednesday": "Miércoles", "thursday": "Jueves", "friday": "Viernes", "saturday": "Sábado", "sunday": "Domingo"}, "admin_tab_daily": "Horas & Asist.", "admin_tab_staff": "Plantilla", "admin_tab_history": "Historial", "admin_tab_panel": "Panel Admin", "admin_daily_title": "⏱️ Horas & Asistencia Diaria", "admin_daily_subtitle": "Control de Jornadas y Llamado de Lista en Planta", "admin_daily_summary_title": "📊 Resumen de la Jornada", "admin_daily_count_suffix": "colaboradores", "admin_staff_title": "👥 Directorio de Plantilla", "admin_staff_subtitle": "Expedientes de Contrato, Posición y Contacto", "admin_staff_search_placeholder": "🔍 Buscar por nombre, apellido o PESEL...", "admin_history_title": "📚 Historial de Trabajo & Reportes PDF", "admin_history_subtitle": "Auditoría Multimensual (Abril a Octubre 2026) y Certificados Oficiales", "admin_history_select_emp": "Seleccione Colaborador:", "admin_history_select_month": "Seleccione Mes de Consulta:", "admin_history_days_title": "📅 Desglose Diario de Jornadas e Incidencias", "admin_history_no_days": "Sin jornadas detalladas para este mes.", "admin_history_worked_days": "jornadas trabajadas", "admin_btn_view_pdf": "📄 Ver Reporte PDF", "admin_panel_title": "🛡️ Consola Ejecutiva de Administración", "admin_panel_subtitle": "Supervisión General, Rotación y Auditoría", "admin_panel_rotation_title": "🔄 Rotación Oficial de Turnos y Líderes en Planta", "admin_panel_audit_title": "📜 Auditoría de Inicios de Sesión (Android y Web)", "admin_panel_system_title": "⚡ Estado del Ecosistema", "admin_filter_all": "Todos", "admin_filter_t1": "Turno 1", "admin_filter_t2": "Turno 2", "admin_filter_t3": "Turno 3", "admin_filter_alerts": "⚠️ Solo Novedades", "admin_filter_leaders": "⭐ Líderes", "admin_kpi_present": "🟢 Presentes", "admin_kpi_late": "⏱️ Retardos", "admin_kpi_absent": "❌ Ausentes", "admin_kpi_hours": "⏱️ Horas Netas", "admin_btn_update": "🔄 Actualizar", "admin_btn_reveal": "Revelar", "admin_btn_hide": "Ocultar", "admin_btn_contact": "💬 Contactar", "admin_btn_view_history": "📚 Ver Historial & PDF", "admin_status_attended": "ASISTIÓ (Presente)", "admin_status_not_attended": "NO ASISTIÓ", "admin_status_late": "RETARDO", "admin_status_early": "SALIDA TEMPRANA", "admin_status_medical": "INCAPACIDAD", "admin_status_permission": "PERMISO", "admin_status_pending": "PENDIENTE", "admin_contract_signed": "Firmado (TAK / Zlecenie)", "admin_contract_pending": "En trámite", "admin_badge_role": "🛡️ ADMINISTRACIÓN", "admin_table_day": "DÍA", "admin_table_entry": "ENTRADA", "admin_table_exit": "SALIDA", "admin_table_hours": "HORAS", "admin_table_status": "ESTADO"}, "en": {"title_login": "Worker Portal", "sub_login": "Confidential access to your work schedule", "label_pesel": "PESEL Number or Phone", "label_pin": "Access PIN (4 digits)", "btn_login": "Log In to System", "btn_logout": "Log Out", "security_note": "🔒 Secure system protected with end-to-end encryption (GDPR).", "view_personal": "View personal info and contact", "personal_sheet": "Personal & Contract Record", "pesel": "PESEL Number", "housing": "Assigned Housing", "phone": "Contact Phone", "contract": "Signed Contract (Umowa)", "birth": "Birth Date", "start_date": "Factory Start Date", "shift_base": "Current Week Shift and Schedule", "current_shift": "Current Shift", "break_1": "1st Scheduled Break", "break_2": "2nd Scheduled Break", "plant_equipment": "Plant Equipment & Facilities", "locker": "Locker (Szafka)", "card": "Access Card (Karta)", "my_hours": "My Hours", "total_worked": "Total Billed Hours", "download_pdf": "Download / View Official PDF", "next_week": "Next Week", "profile": "My Profile", "report_pdf": "PDF Report", "swipe_hint": "👈 Swipe to change month 👉", "month_prev": "Previous Month", "month_next": "Next Month", "total_hours_billed": "Total Billed Hours", "days_attendance": "Days with Attendance", "role_leader": "⭐ LINE LEADER", "role_coordinator": "💼 COORDINATOR", "role_operator": "OPERATOR", "contract_signed": "Signed (TAK / YES)", "contract_pending": "In Process", "shift_label": "Shift", "group_label": "Group", "day_prefix": "Day", "normal_shift": "Normal Shift", "no_hours_this_month": "No detailed shifts recorded for this month.", "current_cycle": "Current work cycle", "expected_schedule": "Expected schedule:", "line_leader_title": "Line Leader:", "badge_confirmed": "CONFIRMED", "badge_assigned": "Assigned", "badge_rest": "Rest", "badge_free": "Free", "survey_card_title": "Satisfaction & Operations Survey", "survey_card_desc": "Your feedback on conditions, transport, and factory operations is essential and confidential.", "survey_btn_participate": "Take Survey", "survey_results_btn": "View Survey Responses", "survey_dialog_title": "Work Satisfaction Survey", "survey_q1": "1. How do you rate the work environment and coordination in your work line?", "survey_q2": "2. Comments or suggestions to improve factory wellbeing (Optional):", "survey_placeholder": "Write your comments here...", "survey_cancel": "Cancel", "survey_submit": "Submit Survey", "survey_success": "Survey submitted successfully! Thank you for your feedback.", "survey_admin_title": "Survey Responses", "survey_results_empty": "No survey responses recorded yet.", "table_day": "DAY", "table_start": "START", "table_end": "END", "table_hours": "HOURS", "legend_medical": "● Blue: Medical Leave", "legend_unauthorized": "● Yellow: Unauthorized", "legend_penalty": "● Red: Penalty", "legend_pending": "● Orange: To Confirm", "login_hint_text": "💡 Enter your PESEL number (or registered phone). Your PIN is the last 4 digits of your PESEL or assigned passcode.", "current_month_notice": "Current month in progress (October 2026). Billed hours will be finalized at month-end.", "my_group": "My Group", "group_members_count": "Assigned Collaborators", "no_group_members": "No collaborators found in this group.", "group_title_line": "Production Line", "search_group_placeholder": "Search collaborator by name or PESEL...", "full_group_view": "View Full Group Screen", "attendance_today": "Today's Attendance", "btn_mark_attendance": "Take Attendance", "status_pending": "⏳ Pending", "status_present": "✅ Present", "status_absent": "❌ Absent", "status_late": "⏱️ Late", "status_early": "🚪 Early Leave", "status_medical": "🏥 Medical Leave", "status_authorized": "🌴 Authorized Leave", "status_unauthorized": "⛔ Unauthorized Absence", "status_pending_confirm": "⚠️ To Confirm", "time_entry": "Entry", "time_exit": "Exit", "status_justified": "📋 Excused", "support_workers_title": "Support Workers / Overtime", "role_leader_line": "Line Leader", "today_word": "Today", "workers_count_word": "workers", "months": {"2026-04": "April 2026", "2026-05": "May 2026", "2026-06": "June 2026", "2026-07": "July 2026", "2026-08": "August 2026", "2026-09": "September 2026", "2026-10": "October 2026"}, "days": {"lunes": "Monday", "martes": "Tuesday", "miercoles": "Wednesday", "miércoles": "Wednesday", "jueves": "Thursday", "viernes": "Friday", "sabado": "Saturday", "sábado": "Saturday", "domingo": "Sunday", "monday": "Monday", "tuesday": "Tuesday", "wednesday": "Wednesday", "thursday": "Thursday", "friday": "Friday", "saturday": "Saturday", "sunday": "Sunday"}, "admin_tab_daily": "Hours & Attend.", "admin_tab_staff": "Staff", "admin_tab_history": "History", "admin_tab_panel": "Admin Panel", "admin_daily_title": "⏱️ Daily Hours & Attendance", "admin_daily_subtitle": "Shift Tracking and Plant Roll Call", "admin_daily_summary_title": "📊 Shift Summary", "admin_daily_count_suffix": "workers", "admin_staff_title": "👥 Staff Directory", "admin_staff_subtitle": "Contract Records, Job Positions and Contacts", "admin_staff_search_placeholder": "🔍 Search by name, surname or PESEL...", "admin_history_title": "📚 Work History & PDF Reports", "admin_history_subtitle": "Multi-Month Audit (April to October 2026) and Official Certificates", "admin_history_select_emp": "Select Collaborator:", "admin_history_select_month": "Select Query Month:", "admin_history_days_title": "📅 Daily Breakdown of Shifts and Incidents", "admin_history_no_days": "No detailed shifts recorded for this month.", "admin_history_worked_days": "worked shifts", "admin_btn_view_pdf": "📄 View PDF Report", "admin_panel_title": "🛡️ Executive Administration Console", "admin_panel_subtitle": "General Oversight, Rotation and Audit", "admin_panel_rotation_title": "🔄 Official Shifts and Line Leaders Rotation", "admin_panel_audit_title": "📜 Logins Audit (Android & Web)", "admin_panel_system_title": "⚡ Ecosystem Status", "admin_filter_all": "All", "admin_filter_t1": "Shift 1", "admin_filter_t2": "Shift 2", "admin_filter_t3": "Shift 3", "admin_filter_alerts": "⚠️ Alerts Only", "admin_filter_leaders": "⭐ Leaders", "admin_kpi_present": "🟢 Present", "admin_kpi_late": "⏱️ Late", "admin_kpi_absent": "❌ Absent", "admin_kpi_hours": "⏱️ Net Hours", "admin_btn_update": "🔄 Refresh", "admin_btn_reveal": "Reveal", "admin_btn_hide": "Hide", "admin_btn_contact": "💬 Contact", "admin_btn_view_history": "📚 View History & PDF", "admin_status_attended": "ATTENDED (Present)", "admin_status_not_attended": "ABSENT", "admin_status_late": "LATE", "admin_status_early": "EARLY LEAVE", "admin_status_medical": "MEDICAL LEAVE", "admin_status_permission": "LEAVE PERMIT", "admin_status_pending": "PENDING", "admin_contract_signed": "Signed (TAK / Zlecenie)", "admin_contract_pending": "In Process", "admin_badge_role": "🛡️ ADMINISTRATION", "admin_table_day": "DAY", "admin_table_entry": "ENTRY", "admin_table_exit": "EXIT", "admin_table_hours": "HOURS", "admin_table_status": "STATUS"}, "pl": {"title_login": "Portal Pracownika", "sub_login": "Poufny dostęp do harmonogramu pracy", "label_pesel": "Numer PESEL lub Telefon", "label_pin": "Kod PIN dostępu (4 cyfry)", "btn_login": "Zaloguj się do systemu", "btn_logout": "Wyloguj się", "security_note": "🔒 Bezpieczny system chroniony szyfrowaniem end-to-end (RODO).", "view_personal": "Zobacz dane osobowe i kontakt", "personal_sheet": "Karta Osobowa i Umowa", "pesel": "Numer PESEL", "housing": "Przydzielone zakwaterowanie", "phone": "Telefon kontaktowy", "contract": "Podpisana umowa", "birth": "Data urodzenia", "start_date": "Data rozpoczęcia pracy", "shift_base": "Zmiana i grafik w bieżącym tygodniu", "current_shift": "Aktualna zmiana", "break_1": "1. przerwa w pracy", "break_2": "2. przerwa w pracy", "plant_equipment": "Wyposażenie w zakładzie", "locker": "Szafka", "card": "Karta dostępowa", "my_hours": "Moje godziny", "total_worked": "Łącznie rozliczone godziny", "download_pdf": "Pobierz / Zobacz oficjalny raport PDF", "next_week": "Nast. tydzień", "profile": "Mój profil", "report_pdf": "Raport PDF", "swipe_hint": "👈 Przesuń, aby zmienić miesiąc 👉", "month_prev": "Poprzedni miesiąc", "month_next": "Następny miesiąc", "total_hours_billed": "Łącznie rozliczone godziny", "days_attendance": "Dni z obecnością", "role_leader": "⭐ LIDER LINII", "role_coordinator": "💼 KOORDYNATOR", "role_operator": "PRACOWNIK PRODUKCJI", "contract_signed": "Podpisana (TAK)", "contract_pending": "W toku", "shift_label": "Zmiana", "group_label": "Grupa", "day_prefix": "Dzień", "normal_shift": "Zwykły dzień", "no_hours_this_month": "Brak szczegółowych dni w tym miesiącu.", "current_cycle": "Bieżący cykl pracy", "expected_schedule": "Przewidywane godziny:", "line_leader_title": "Lider linii:", "badge_confirmed": "POTWIERDZONE", "badge_assigned": "Przydzielony", "badge_rest": "Odpoczynek", "badge_free": "Wolne", "survey_card_title": "Ankieta Satysfakcji i Operacji", "survey_card_desc": "Twoja opinia o warunkach, transporcie i fabryce jest poufna i kluczowa.", "survey_btn_participate": "Wypełnij ankietę", "survey_results_btn": "Zobacz odpowiedzi ankiety", "survey_dialog_title": "Ankieta Satysfakcji z Pracy", "survey_q1": "1. Jak oceniasz atmosferę pracy i koordynację na swojej linii?", "survey_q2": "2. Uwagi lub sugestie dotyczące poprawy warunków w fabryce (Opcjonalnie):", "survey_placeholder": "Wpisz swój komentarz tutaj...", "survey_cancel": "Anuluj", "survey_submit": "Wyślij Ankietę", "survey_success": "Ankieta wysłana pomyślnie! Dziękujemy.", "survey_admin_title": "Odpowiedzi Ankiety", "survey_results_empty": "Brak zarejestrowanych odpowiedzi na ankietę.", "table_day": "DZIEŃ", "table_start": "START", "table_end": "KONIEC", "table_hours": "GODZINY", "legend_medical": "● Niebieski: Zwolnienie lekarskie", "legend_unauthorized": "● Żółty: Nieusprawiedliwione", "legend_penalty": "● Czerwony: Kara", "legend_pending": "● Pomarańczowy: Do potwierdzenia", "login_hint_text": "💡 Wpisz swój numer PESEL lub telefon. Twój PIN to 4 ostatnie cyfry numeru PESEL lub przypisany kod dostępu.", "current_month_notice": "Bieżący miesiąc w toku (Październik 2026). Rozliczone godziny zostaną skonsolidowane po zamknięciu miesiąca.", "my_group": "Moja Grupa", "group_members_count": "Przypisani Pracownicy", "no_group_members": "Brak pracowników w tej grupie.", "group_title_line": "Linia Produkcyjna", "search_group_placeholder": "Szukaj pracownika po nazwisku lub PESEL...", "full_group_view": "Zobacz Pełny Ekran Grupy", "attendance_today": "Dzisiejsza Obecność", "btn_mark_attendance": "Zarejestruj Obecność", "status_pending": "⏳ Oczekuje", "status_present": "✅ Obecny", "status_absent": "❌ Nieobecny", "status_late": "⏱️ Spóźnienie", "status_early": "🚪 Wczesne Wyjście", "status_medical": "🏥 Zwolnienie Lekarskie", "status_justified": "📋 Usprawiedliwione", "support_workers_title": "Pracownicy Wsparcia / Nadgodziny", "role_leader_line": "Lider Linii", "today_word": "Dzisiaj", "workers_count_word": "pracowników", "months": {"2026-04": "Kwiecień 2026", "2026-05": "Maj 2026", "2026-06": "Czerwiec 2026", "2026-07": "Lipiec 2026", "2026-08": "Sierpień 2026", "2026-09": "Wrzesień 2026", "2026-10": "Październik 2026"}, "days": {"lunes": "Poniedziałek", "martes": "Wtorek", "miercoles": "Środa", "miércoles": "Środa", "jueves": "Czwartek", "viernes": "Piątek", "sabado": "Sobota", "sábado": "Sobota", "domingo": "Niedziela", "monday": "Poniedziałek", "tuesday": "Wtorek", "wednesday": "Środa", "thursday": "Czwartek", "friday": "Piątek", "saturday": "Sobota", "sunday": "Niedziela"}, "admin_tab_daily": "Godziny i Obecność", "admin_tab_staff": "Pracownicy", "admin_tab_history": "Historia", "admin_tab_panel": "Panel Admina", "admin_daily_title": "⏱️ Dzienne Godziny i Obecność", "admin_daily_subtitle": "Kontrola Zmian Roboczych i Lista Obecności na Zakładzie", "admin_daily_summary_title": "📊 Podsumowanie Dnia", "admin_daily_count_suffix": "pracowników", "admin_staff_title": "👥 Kartoteka Pracowników", "admin_staff_subtitle": "Umowy, Stanowiska i Dane Kontaktowe", "admin_staff_search_placeholder": "🔍 Szukaj po imieniu, nazwisku lub PESEL...", "admin_history_title": "📚 Historia Pracy i Raporty PDF", "admin_history_subtitle": "Audyt Wielomiesięczny (Kwiecień - Październik 2026) i Certyfikaty", "admin_history_select_emp": "Wybierz Pracownika:", "admin_history_select_month": "Wybierz Miesiąc:", "admin_history_days_title": "📅 Szczegółowy Wykaz Dni i Zdarzeń", "admin_history_no_days": "Brak zarejestrowanych dni dla tego miesiąca.", "admin_history_worked_days": "przepracowanych dni", "admin_btn_view_pdf": "📄 Pokaż Raport PDF", "admin_panel_title": "🛡️ Panel Administracyjny", "admin_panel_subtitle": "Nadzór Ogólny, Rotacja i Audyt", "admin_panel_rotation_title": "🔄 Oficjalna Rotacja Zmian i Liderów", "admin_panel_audit_title": "📜 Logowania do Systemu (Android i Web)", "admin_panel_system_title": "⚡ Status Ekosystemu", "admin_filter_all": "Wszyscy", "admin_filter_t1": "Zmiana 1", "admin_filter_t2": "Zmiana 2", "admin_filter_t3": "Zmiana 3", "admin_filter_alerts": "⚠️ Tylko Uwagi", "admin_filter_leaders": "⭐ Liderzy", "admin_kpi_present": "🟢 Obecni", "admin_kpi_late": "⏱️ Spóźnienia", "admin_kpi_absent": "❌ Nieobecni", "admin_kpi_hours": "⏱️ Godziny Netto", "admin_btn_update": "🔄 Odśwież", "admin_btn_reveal": "Pokaż", "admin_btn_hide": "Ukryj", "admin_btn_contact": "💬 Kontakt", "admin_btn_view_history": "📚 Historia i PDF", "admin_status_attended": "OBECNY", "admin_status_not_attended": "NIEOBECNY", "admin_status_late": "SPÓŹNIENIE", "admin_status_early": "WCZESNE WYJŚCIE", "admin_status_medical": "ZWOLNIENIE LEKARSKIE", "admin_status_permission": "USPRAWIEDLIWIONE", "admin_status_pending": "OCZEKUJE", "admin_contract_signed": "Podpisana (TAK / Zlecenie)", "admin_contract_pending": "W toku", "admin_badge_role": "🛡️ ADMINISTRACJA", "admin_table_day": "DZIEŃ", "admin_table_entry": "START", "admin_table_exit": "KONIEC", "admin_table_hours": "GODZINY", "admin_table_status": "STATUS"}, "uk": {"title_login": "Портал Працівника", "sub_login": "Конфіденційний доступ до робочого графіка", "label_pesel": "Номер PESEL або Телефон", "label_pin": "PIN-код доступу (4 цифри)", "btn_login": "Увійти в систему", "btn_logout": "Вийти", "security_note": "🔒 Захищена система із наскрізним шифруванням (GDPR).", "view_personal": "Переглянути особисті дані та контакти", "personal_sheet": "Особиста картка та договір", "pesel": "Номер PESEL", "housing": "Призначене житло", "phone": "Контактний телефон", "contract": "Підписаний договір (Umowa)", "birth": "Дата народження", "start_date": "Дата початку роботи", "shift_base": "Зміна та графік поточного тижня", "current_shift": "Поточна зміна", "break_1": "1-ша запланована перерва", "break_2": "2-га запланована перерва", "plant_equipment": "Оснащення на заводі", "locker": "Шафка (Szafka)", "card": "Картка доступу (Karta)", "my_hours": "Мої години", "total_worked": "Всього відпрацьованих годин", "download_pdf": "Завантажити / Переглянути звіт PDF", "next_week": "Наст. тиждень", "profile": "Мій профіль", "report_pdf": "Звіт PDF", "swipe_hint": "👈 Проведіть, щоб змінити місяць 👉", "month_prev": "Попередній місяць", "month_next": "Наступний місяць", "total_hours_billed": "Всього нарахованих годин", "days_attendance": "Дні з відвідуваністю", "role_leader": "⭐ ЛІДЕР ЛІНІЇ", "role_coordinator": "💼 КООРДИНАТОР", "role_operator": "ОПЕРАТОР ВИРОБНИЦТВА", "contract_signed": "Підписано (TAK)", "contract_pending": "В процесі", "shift_label": "Зміна", "group_label": "Група", "day_prefix": "День", "normal_shift": "Звичайна зміна", "no_hours_this_month": "Немає детальних змін за цей місяць.", "current_cycle": "Поточний робочий цикл", "expected_schedule": "Очікуваний розклад:", "line_leader_title": "Лідер лінії:", "badge_confirmed": "ПІДТВЕРДЖЕНО", "badge_assigned": "Призначено", "badge_rest": "Відпочинок", "badge_free": "Вільний", "survey_card_title": "Опитування щодо задоволеності та операцій", "survey_card_desc": "Ваша думка щодо умов, транспорту та заводу є конфіденційною та важливою.", "survey_btn_participate": "Пройти опитування", "survey_results_btn": "Переглянути відповіді опитування", "survey_dialog_title": "Опитування щодо задоволеності працею", "survey_q1": "1. Як ви оцінюєте робочу атмосферу та координацію на вашій лінії?", "survey_q2": "2. Коментарі або пропозиції щодо покращення умов на заводі (Необов'язково):", "survey_placeholder": "Напишіть свій коментар тут...", "survey_cancel": "Скасувати", "survey_submit": "Надіслати опитування", "survey_success": "Опитування успішно надіслано! Дякуємо.", "survey_admin_title": "Відповіді на опитування", "survey_results_empty": "Немає зареєстрованих відповідей на опитування.", "table_day": "ДЕНЬ", "table_start": "ПОЧАТОК", "table_end": "КІНЕЦЬ", "table_hours": "ГОДИНИ", "legend_medical": "● Синій: Лікарняний", "legend_unauthorized": "● Жовтий: Несанкціоновано", "legend_penalty": "● Червоний: Штраф", "legend_pending": "● Помаранчевий: На підтвердженні", "login_hint_text": "💡 Введіть ваш номер PESEL або зареєстрований телефон. Ваш PIN-код — останні 4 цифри PESEL або призначений пароль.", "current_month_notice": "Поточний місяць триває (Жовтень 2026). Нараховані години будуть підтверджені після закриття місяця.", "my_group": "Моя Група", "group_members_count": "Призначені Працівники", "no_group_members": "Немає призначених працівників у цій групі.", "group_title_line": "Виробнича Лінія", "search_group_placeholder": "Пошук працівника за ім'ям або PESEL...", "full_group_view": "Переглянути Повний Екран Групи", "attendance_today": "Сьогоднішня Відвідуваність", "btn_mark_attendance": "Відмітити Відвідуваність", "status_pending": "⏳ Очікує", "status_present": "✅ Присутній", "status_absent": "❌ Відсутній", "status_late": "⏱️ Запізнення", "status_early": "🚪 Ранній Вихід", "status_medical": "🏥 Лікарняний", "status_authorized": "🌴 Дозволена відпустка", "status_unauthorized": "⛔ Несанкціоновано", "status_pending_confirm": "⚠️ Підтвердити", "time_entry": "Вхід", "time_exit": "Вихід", "status_justified": "📋 Поважна Причина", "support_workers_title": "Працівники Підтримки / Наднормові", "role_leader_line": "Лідер Лінії", "today_word": "Сьогодні", "workers_count_word": "працівників", "months": {"2026-04": "Квітень 2026", "2026-05": "Травень 2026", "2026-06": "Червень 2026", "2026-07": "Липень 2026", "2026-08": "Серпень 2026", "2026-09": "Вересень 2026", "2026-10": "Жовтень 2026"}, "days": {"lunes": "Понеділок", "martes": "Вівторок", "miercoles": "Середа", "miércoles": "Середа", "jueves": "Четвер", "viernes": "П'ятниця", "sabado": "Субота", "sábado": "Субота", "domingo": "Неділя", "monday": "Понеділок", "tuesday": "Вівторок", "wednesday": "Середа", "thursday": "Четвер", "friday": "П'ятниця", "saturday": "Субота", "sunday": "Неділя"}, "admin_tab_daily": "Години та Відвідуваність", "admin_tab_staff": "Персонал", "admin_tab_history": "Історія", "admin_tab_panel": "Панель Адміна", "admin_daily_title": "⏱️ Щоденні Години та Відвідуваність", "admin_daily_subtitle": "Контроль Змін та Перекличка на Заводі", "admin_daily_summary_title": "📊 Підсумок Дня", "admin_daily_count_suffix": "працівників", "admin_staff_title": "👥 Довідник Персоналу", "admin_staff_subtitle": "Договори, Посади та Контакти", "admin_staff_search_placeholder": "🔍 Пошук за ім'ям, прізвищем або PESEL...", "admin_history_title": "📚 Історія Роботи та Звіти PDF", "admin_history_subtitle": "Багатомісячний Аудит (Квітень - Жовтень 2026) та Звіти", "admin_history_select_emp": "Виберіть Працівника:", "admin_history_select_month": "Виберіть Місяць:", "admin_history_days_title": "📅 Деталізація Днів та Подій", "admin_history_no_days": "Немає детальних змін за цей місяць.", "admin_history_worked_days": "відпрацьованих змін", "admin_btn_view_pdf": "📄 Переглянути Звіт PDF", "admin_panel_title": "🛡️ Панель Адміністратора", "admin_panel_subtitle": "Загальний Нагляд, Ротація та Аудит", "admin_panel_rotation_title": "🔄 Офіційна Ротація Змін та Лідерів", "admin_panel_audit_title": "📜 Журнал Входів (Android та Web)", "admin_panel_system_title": "⚡ Стан Екосистеми", "admin_filter_all": "Всі", "admin_filter_t1": "Зміна 1", "admin_filter_t2": "Зміна 2", "admin_filter_t3": "Зміна 3", "admin_filter_alerts": "⚠️ Тільки Порушення", "admin_filter_leaders": "⭐ Лідери", "admin_kpi_present": "🟢 Присутні", "admin_kpi_late": "⏱️ Запізнення", "admin_kpi_absent": "❌ Відсутні", "admin_kpi_hours": "⏱️ Години Нетто", "admin_btn_update": "🔄 Оновити", "admin_btn_reveal": "Показати", "admin_btn_hide": "Приховати", "admin_btn_contact": "💬 Зв'язатися", "admin_btn_view_history": "📚 Історія та PDF", "admin_status_attended": "ПРИСУТНІЙ", "admin_status_not_attended": "ВІДСУТНІЙ", "admin_status_late": "ЗАПІЗНЕННЯ", "admin_status_early": "РАННІЙ ВИХІД", "admin_status_medical": "ЛІКАРНЯНИЙ", "admin_status_permission": "ПОВАЖНА ПРИЧИНА", "admin_status_pending": "ОЧІКУЄ", "admin_contract_signed": "Підписано (TAK / Zlecenie)", "admin_contract_pending": "В процесі", "admin_badge_role": "🛡️ АДМІНІСТРАЦІЯ", "admin_table_day": "ДЕНЬ", "admin_table_entry": "ПОЧАТОК", "admin_table_exit": "КІНЕЦЬ", "admin_table_hours": "ГОДИНИ", "admin_table_status": "СТАТУС"}, "ar": {"title_login": "بوابة العامل", "sub_login": "وصول سري إلى جدول عملك", "label_pesel": "رقم PESEL أو الهاتف", "label_pin": "رمز PIN للدخول (4 أرقام)", "btn_login": "الدخول إلى النظام", "btn_logout": "تسجيل الخروج", "security_note": "🔒 نظام آمن محمي بتشفير شامل (GDPR).", "view_personal": "عرض البيانات الشخصية وجهات الاتصال", "personal_sheet": "الملف الشخصي والتعاقدي", "pesel": "رقم PESEL", "housing": "السكن المخصص", "phone": "هاتف الاتصال", "contract": "العقد الموقع (Umowa)", "birth": "تاريخ الميلاد", "start_date": "تاريخ بدء العمل في المصنع", "shift_base": "وردية وجدول الأسبوع الحالي", "current_shift": "الوردية المحددة", "break_1": "فترة الاستراحة الأولى", "break_2": "فترة الاستراحة الثانية", "plant_equipment": "المعدات والتجهيزات في المصنع", "locker": "الخزانة (Szafka)", "card": "بطاقة الدخول (Karta)", "my_hours": "ساعاتي", "total_worked": "إجمالي الساعات المفوترة", "download_pdf": "تحميل / عرض التقرير الرسمي PDF", "next_week": "الأسبوع القادم", "profile": "ملفي الشخصي", "report_pdf": "تقرير PDF", "swipe_hint": "👈 اسحب لتغيير الشهر 👉", "month_prev": "الشهر السابق", "month_next": "الشهر التالي", "total_hours_billed": "إجمالي الساعات المفوترة", "days_attendance": "أيام الحضور", "role_leader": "⭐ قائد الخط", "role_coordinator": "💼 المنسق", "role_operator": "عامل إنتاج", "contract_signed": "موقع (TAK / نعم)", "contract_pending": "قيد الإجراء", "shift_label": "الوردية", "group_label": "المجموعة", "day_prefix": "اليوم", "normal_shift": "يوم عمل عادي", "no_hours_this_month": "لا توجد تفاصيل ورديات لهذا الشهر.", "current_cycle": "دورة العمل الحالية", "expected_schedule": "الجدول المتوقع:", "line_leader_title": "قائد الخط:", "badge_confirmed": "مؤكد", "badge_assigned": "محدد", "badge_rest": "استراحة", "badge_free": "عطلة", "survey_card_title": "استبيان الرضا والعمليات", "survey_card_desc": "رأيك حول الظروف والمواصلات والمصنع سري وأساسي جداً.", "survey_btn_participate": "إجراء الاستبيان", "survey_results_btn": "عرض إجابات الاستبيان", "survey_dialog_title": "استبيان الرضا المهني", "survey_q1": "1. كيف تقيم بيئة العمل والتنسيق في خط عملك؟", "survey_q2": "2. ملاحظات أو اقتراحات لتحسين ظروف المصنع (اختياري):", "survey_placeholder": "اكتب تعليقك هنا...", "survey_cancel": "إلغاء", "survey_submit": "إرسال الاستبيان", "survey_success": "تم إرسال الاستبيان بنجاح! شكراً جزيلاً لتعاونك.", "survey_admin_title": "نتائج الاستبيانات", "survey_results_empty": "لم يتم تسجيل أي ردود حتى الآن.", "table_day": "اليوم", "table_start": "البدء", "table_end": "الانتهاء", "table_hours": "الساعات", "legend_medical": "● أزرق: إجازة مرضية", "legend_unauthorized": "● أصفر: غير مصرح به", "legend_penalty": "● أحمر: عقوبة", "legend_pending": "● برتقالي: قيد التأكيد", "login_hint_text": "💡 أدخل رقم PESEL أو الهاتف المسجل. رمز PIN هو آخر 4 أرقام من PESEL أو كلمة مرورك الخاصة.", "current_month_notice": "الشهر الحالي قيد التقدم (أكتوبر 2026). سيتم اعتماد الساعات المفوترة عند إغلاق الشهر.", "my_group": "مجموعتي", "group_members_count": "العمال المعينون", "no_group_members": "لا يوجد عمال مسجلون في هذه المجموعة.", "group_title_line": "خط الإنتاج", "search_group_placeholder": "البحث عن عامل بالاسم أو PESEL...", "full_group_view": "عرض شاشة المجموعة الكاملة", "attendance_today": "حضور اليوم", "btn_mark_attendance": "تسجيل الحضور =:", "status_pending": "⏳ معلق", "status_present": "✅ حاضر", "status_absent": "❌ غائب", "status_late": "⏱️ تأخر", "status_early": "🚪 خروج مبكر", "status_medical": "🏥 إجازة مرضية", "status_authorized": "🌴 إجازة معتمدة", "status_unauthorized": "⛔ غير مصرح", "status_pending_confirm": "⚠️ قيد التأكيد", "time_entry": "الدخول", "time_exit": "الخروج", "status_justified": "📋 مبرر", "support_workers_title": "عمال الدعم والإضافي", "role_leader_line": "قائد خط الإنتاج", "today_word": "اليوم", "workers_count_word": "عمال", "months": {"2026-04": "أبريل 2026", "2026-05": "مايو 2026", "2026-06": "يونيو 2026", "2026-07": "يوليو 2026", "2026-08": "أغسطس 2026", "2026-09": "سبتمبر 2026", "2026-10": "أكتوبر 2026"}, "days": {"lunes": "الإثنين", "martes": "الثلاثاء", "miercoles": "الأربعاء", "miércoles": "الأربعاء", "jueves": "الخميس", "viernes": "الجمعة", "sabado": "السبت", "sábado": "السبت", "domingo": "الأحد", "monday": "الإثنين", "tuesday": "الثلاثاء", "wednesday": "الأربعاء", "thursday": "الخميس", "friday": "الجمعة", "saturday": "السبت", "sunday": "الأحد"}, "admin_tab_daily": "الساعات والحضور", "admin_tab_staff": "طاقم العمل", "admin_tab_history": "السجل", "admin_tab_panel": "لوحة الإدارة", "admin_daily_title": "⏱️ الساعات والحضور اليومي", "admin_daily_subtitle": "مراقبة الورديات والنداء اليومي في المصنع", "admin_daily_summary_title": "📊 ملخص اليوم", "admin_daily_count_suffix": "عمال", "admin_staff_title": "👥 دليل العمال", "admin_staff_subtitle": "ملفات العقود والوظائف وجهات الاتصال", "admin_staff_search_placeholder": "🔍 بحث بالاسم أو اللقب أو PESEL...", "admin_history_title": "📚 سجل العمل الشهري وتقارير PDF", "admin_history_subtitle": "تدقيق متعدد الأشهر (أبريل - أكتوبر 2026) والشهادات", "admin_history_select_emp": "اختر العامل:", "admin_history_select_month": "اختر الشهر:", "admin_history_days_title": "📅 تفصيل الأيام والملاحظات", "admin_history_no_days": "لا توجد تفاصيل ورديات لهذا الشهر.", "admin_history_worked_days": "أيام عمل فعلية", "admin_btn_view_pdf": "📄 عرض تقرير PDF", "admin_panel_title": "🛡️ لوحة الإدارة التنفيذية", "admin_panel_subtitle": "الإشراف العام وتدوير الورديات والتدقيق", "admin_panel_rotation_title": "🔄 التدوير الرسمي للورديات والقادة", "admin_panel_audit_title": "📜 سجل تسجيل الدخول (Android و Web)", "admin_panel_system_title": "⚡ حالة النظام", "admin_filter_all": "الكل", "admin_filter_t1": "الوردية 1", "admin_filter_t2": "الوردية 2", "admin_filter_t3": "الوردية 3", "admin_filter_alerts": "⚠️ الملاحظات فقط", "admin_filter_leaders": "⭐ القادة", "admin_kpi_present": "🟢 حاضرون", "admin_kpi_late": "⏱️ تأخيرات", "admin_kpi_absent": "❌ غائبون", "admin_kpi_hours": "⏱️ ساعات صافية", "admin_btn_update": "🔄 تحديث", "admin_btn_reveal": "إظهار", "admin_btn_hide": "إخفاء", "admin_btn_contact": "💬 تواصل", "admin_btn_view_history": "📚 السجل و PDF", "admin_status_attended": "حاضر", "admin_status_not_attended": "غائب", "admin_status_late": "متأخر", "admin_status_early": "خروج مبكر", "admin_status_medical": "إجازة مرضية", "admin_status_permission": "مبرر", "admin_status_pending": "معلق", "admin_contract_signed": "موقع (TAK / Zlecenie)", "admin_contract_pending": "قيد الإجراء", "admin_badge_role": "🛡️ الإدارة", "admin_table_day": "اليوم", "admin_table_entry": "البدء", "admin_table_exit": "الانتهاء", "admin_table_hours": "الساعات", "admin_table_status": "الحالة"}, "so": {"title_login": "Albaabka Shaqaalaha", "sub_login": "Helitaanka jadwalka shaqada si qarsoodi ah", "label_pesel": "Lambarka PESEL ama Telefoonka", "label_pin": "Koodhka PIN (4 lambar)", "btn_login": "Gal Nidaamka", "btn_logout": "Ka Bax", "security_note": "🔒 Nidaam ammaan ah oo lagu ilaaliyo sirta (GDPR).", "view_personal": "Eeg macluumaadka shakhsiga ah", "personal_sheet": "Warqadda Shaqaalaha & Heshiiska", "pesel": "Lambarka PESEL", "housing": "Guriga Laguu Qoondeeyay", "phone": "Telefoonka Xiriirka", "contract": "Heshiiska Saxiixan (Umowa)", "birth": "Taariikhda Dhalashada", "start_date": "Taariikhda Bilowga Warshadda", "shift_base": "Wareegga & Jadwalka Toddobaadkan", "current_shift": "Wareegga Hadda", "break_1": "Nafaqada 1aad ee Qorsheysan", "break_2": "Nafaqada 2aad ee Qorsheysan", "plant_equipment": "Qalabka & Xarumaha Warshadda", "locker": "Qasnada (Szafka)", "card": "Kaarka Gelitaanka (Karta)", "my_hours": "Saacadahayga", "total_worked": "Wadarta Saacadaha La Shaqeeyay", "download_pdf": "Soo Dejiso / Eeg Warbixinta Rasmiga ah ee PDF", "next_week": "Toddobaadka Xiga", "profile": "Boggeyga", "report_pdf": "Warbixinta PDF", "swipe_hint": "👈 Jiid si aad u beddesho bisha 👉", "month_prev": "Bishii Hore", "month_next": "Bisha Xigta", "total_hours_billed": "Wadarta Saacadaha La Qaatay", "days_attendance": "Maalmaha imaanshaha", "role_leader": "⭐ HOGAAMIYAHA KHADKA", "role_coordinator": "💼 ISKU-DUWAHA", "role_operator": "SHAQAALE WAX-SOOSAAR", "contract_signed": "Saxiixan (HAA / TAK)", "contract_pending": "Socda", "shift_label": "Wareegga", "group_label": "Kooxda", "day_prefix": "Maalin", "normal_shift": "Shaqo Caadi ah", "no_hours_this_month": "Faahfaahin ma jirto bishan.", "current_cycle": "Wareegga shaqada ee hadda", "expected_schedule": "Jadwalka la filayo:", "line_leader_title": "Hogaamiyaha Khadka:", "badge_confirmed": "LA XAQIIJIYAY", "badge_assigned": "Loo qoondeeyay", "badge_rest": "Nasiino", "badge_free": "Bilaash", "survey_card_title": "Sahanka Qanacsanaanta & Hawlaha", "survey_card_desc": "Fikraddaada ku saabsan xaaladaha, gaadiidka iyo warshadda waa qarsoodi waana muhiim.", "survey_btn_participate": "Buuxi Sahanka", "survey_results_btn": "Eeg Jawaabaha Sahanka", "survey_dialog_title": "Sahanka Qanacsanaanta Shaqada", "survey_q1": "1. Sideed u qiimeysaa jawiga shaqada iyo isku-duwidda khadkaaga?", "survey_q2": "2. Faallooyin ama talooyin lagu hagaajinayo xaaladda warshadda (Ikhtiyaari):", "survey_placeholder": "Halkan ku qor faalladaada...", "survey_cancel": "Jooji", "survey_submit": "Dir Sahanka", "survey_success": "Sahanka si guul leh ayaa loo diray! Mahadsanid.", "survey_admin_title": "Jawaabaha Sahanka", "survey_results_empty": "Weli ma jiraan jawaabo sahan oo la diiwaangeliyay.", "table_day": "MAALIN", "table_start": "BILOW", "table_end": "DHAMMAAD", "table_hours": "SAACADO", "legend_medical": "● Buluug: Fasax Caafimaad", "legend_unauthorized": "● Huruud: Aan Fasaxneyn", "legend_penalty": "● Casan: Ciqaab", "legend_pending": "● Liin: La Xaqiijinayo", "login_hint_text": "💡 Geli lambarkaaga PESEL ama telefoonka. PIN-kaagu waa 4-ta lambar ee u dambeeya PESEL ama furahaaga gaarka ah.", "current_month_notice": "Bisha hadda socota (Oktoobar 2026). Saacadaha la qaatay waxaa la xaqiijin doonaa dhammaadka bisha.", "my_group": "Kooxdayda", "group_members_count": "Shaqaalaha loo xilsaaray", "no_group_members": "Kooxdan wax shaqaale ah lagama helin.", "group_title_line": "Khadka Wax-soo-saarka", "search_group_placeholder": "Raadi shaqaale magac ama PESEL...", "full_group_view": "Fiiri Shaashadda Kooxda oo Dhan", "attendance_today": "Imaanshaha Maanta", "btn_mark_attendance": "Diiwaangeli Imaanshaha", "status_pending": "⏳ La sugayo", "status_present": "✅ Jooga", "status_absent": "❌ Maqan", "status_late": "⏱️ Soo daahay", "status_early": "🚪 Baxay Goor hore", "status_medical": "🏥 Fasax Caafimaad", "status_justified": "📋 Sababaysan", "support_workers_title": "Shaqaalaha Taageerada / Saacadaha Dheeraadka", "role_leader_line": "Hogaamiyaha Khadka", "today_word": "Maanta", "workers_count_word": "shaqaale", "months": {"2026-04": "Abriil 2026", "2026-05": "May 2026", "2026-06": "Juun 2026", "2026-07": "Luuliyo 2026", "2026-08": "Ogosto 2026", "2026-09": "Sebtembar 2026", "2026-10": "Oktoobar 2026"}, "days": {"lunes": "Isniin", "martes": "Talaado", "miercoles": "Arbaco", "miércoles": "Arbaco", "jueves": "Khamiis", "viernes": "Jimco", "sabado": "Sabti", "sábado": "Sabti", "domingo": "Axad", "monday": "Isniin", "tuesday": "Talaado", "wednesday": "Arbaco", "thursday": "Khamiis", "friday": "Jimco", "saturday": "Sabti", "sunday": "Axad"}, "admin_tab_daily": "Saacadaha & Imaanshaha", "admin_tab_staff": "Shaqaalaha", "admin_tab_history": "Taariikhda", "admin_tab_panel": "Qaybta Maamulka", "admin_daily_title": "⏱️ Saacadaha & Imaanshaha Maalinlaha", "admin_daily_subtitle": "Kormeerka Wareegyada & Liiska Imaanshaha Warshadda", "admin_daily_summary_title": "📊 Koobidda Maalinta", "admin_daily_count_suffix": "shaqaale", "admin_staff_title": "👥 Liiska Shaqaalaha", "admin_staff_subtitle": "Diiwaanka Heshiisyada, Shaqooyinka & Xiriirka", "admin_staff_search_placeholder": "🔍 Raadi magac ama PESEL...", "admin_history_title": "📚 Taariikhda Shaqada & Warbixinnada PDF", "admin_history_subtitle": "Hanti-dhowrka Bilaha Badan (Abriil - Oktoobar 2026)", "admin_history_select_emp": "Dooro Shaqaale:", "admin_history_select_month": "Dooro Bisha:", "admin_history_days_title": "📅 Faahfaahinta Maalmaha & Dhacdooyinka", "admin_history_no_days": "Faahfaahin ma jirto bishan.", "admin_history_worked_days": "maalmood la shaqeeyay", "admin_btn_view_pdf": "📄 Eeg Warbixinta PDF", "admin_panel_title": "🛡️ Qaybta Maamulka Fulinta", "admin_panel_subtitle": "Kormeerka Guud, Wareegga & Hanti-dhowrka", "admin_panel_rotation_title": "🔄 Wareegga Rasmiga ah ee Hogaamiyeyaasha", "admin_panel_audit_title": "📜 Diiwaanka Gelitaanka (Android & Web)", "admin_panel_system_title": "⚡ Xaaladda Nidaamka", "admin_filter_all": "Dhammaan", "admin_filter_t1": "Wareegga 1", "admin_filter_t2": "Wareegga 2", "admin_filter_t3": "Wareegga 3", "admin_filter_alerts": "⚠️ Digniinaha Kaliya", "admin_filter_leaders": "⭐ Hogaamiyeyaasha", "admin_kpi_present": "🟢 Jooga", "admin_kpi_late": "⏱️ Soo daahay", "admin_kpi_absent": "❌ Maqan", "admin_kpi_hours": "⏱️ Saacadaha Dhabta", "admin_btn_update": "🔄 Cusbooneysii", "admin_btn_reveal": "Muuji", "admin_btn_hide": "Qari", "admin_btn_contact": "💬 La Xiriir", "admin_btn_view_history": "📚 Eeg Taariikhda & PDF", "admin_status_attended": "JOOGA", "admin_status_not_attended": "MAQAN", "admin_status_late": "SOO DAAHAY", "admin_status_early": "BAXAY GOOR HORE", "admin_status_medical": "FASAX CAAFIMAAD", "admin_status_permission": "SABABAYSAN", "admin_status_pending": "LA SUGAYO", "admin_contract_signed": "Saxiixan (TAK / Zlecenie)", "admin_contract_pending": "Socda", "admin_badge_role": "🛡️ MAAMULKA", "admin_table_day": "MAALIN", "admin_table_entry": "BILOW", "admin_table_exit": "DHAMMAAD", "admin_table_hours": "SAACADO", "admin_table_status": "XALAD"}};
     let currentUser = null;
     let currentLang = localStorage.getItem('unamel_lang') || 'es';
 
@@ -1879,7 +1879,7 @@
 
 
     // =========================================================================
-    // MÓDULOS EJECUTIVOS PARA EL ROL ADMINISTRATIVO (v1.1.0)
+    // MÓDULOS EJECUTIVOS PARA EL ROL ADMINISTRATIVO (v1.1.0 - I18N & FIX)
     // =========================================================================
     let adminAllEmployees = [];
     let adminAttendanceMap = {};
@@ -1890,35 +1890,94 @@
     let adminSelectedHistoryEmp = null;
     let adminRevealedPesels = {};
 
+    function normalizeAdminText(str) {
+      if (!str) return '';
+      return str.toString().toLowerCase().trim().replace(/\s+/g, ' ');
+    }
+
+    function getAdminDict() {
+      return I18N_DICT[currentLang] || I18N_DICT['es'];
+    }
+
     function initAdminModules(emp) {
       adminSelectedDate = new Date().toISOString().split('T')[0];
+      translateAdminStaticElements();
       loadAdminDailyData();
       fetchAdminStaff();
     }
 
+    function translateAdminStaticElements() {
+      const dict = getAdminDict();
+      const setTxt = (id, val) => { const el = document.getElementById(id); if (el && val) el.innerText = val; };
+      const setPlaceholder = (id, val) => { const el = document.getElementById(id); if (el && val) el.placeholder = val; };
+
+      // Nav labels
+      setTxt('nav-lbl-admin-daily', dict.admin_tab_daily);
+      setTxt('nav-lbl-admin-staff', dict.admin_tab_staff);
+      setTxt('nav-lbl-admin-history', dict.admin_tab_history);
+      setTxt('nav-lbl-admin-panel', dict.admin_tab_panel);
+
+      // Tab titles
+      setTxt('admin-daily-main-title', dict.admin_daily_title);
+      setTxt('admin-staff-main-title', dict.admin_staff_title);
+      setTxt('admin-staff-sub-title', dict.admin_staff_subtitle);
+      setTxt('admin-history-main-title', dict.admin_history_title);
+      setTxt('admin-history-sub-title', dict.admin_history_subtitle);
+      setTxt('admin-panel-main-title', dict.admin_panel_title);
+      setTxt('admin-panel-sub-title', dict.admin_panel_subtitle);
+
+      // Section labels
+      setTxt('admin-daily-summary-lbl', dict.admin_daily_summary_title);
+      setTxt('admin-history-select-emp-lbl', dict.admin_history_select_emp);
+      setTxt('admin-history-select-month-lbl', dict.admin_history_select_month);
+      setTxt('admin-history-days-title-lbl', dict.admin_history_days_title);
+      setTxt('admin-panel-rotation-lbl', dict.admin_panel_rotation_title);
+      setTxt('admin-panel-audit-lbl', dict.admin_panel_audit_title);
+      setTxt('admin-panel-system-lbl', dict.admin_panel_system_title);
+
+      // Search placeholder
+      setPlaceholder('admin-staff-search', dict.admin_staff_search_placeholder);
+
+      // Buttons
+      setTxt('admin-btn-daily-update', dict.admin_btn_update);
+      setTxt('admin-btn-panel-update', dict.admin_btn_update);
+      setTxt('admin-btn-open-pdf-text', dict.admin_btn_view_pdf);
+
+      // Role badge
+      const badge = document.getElementById('user-role-badge');
+      if (badge && currentUser && (currentUser.rol_app === 'ADMINISTRATIVO' || String(currentUser.id) === '2023')) {
+        badge.innerText = dict.admin_badge_role || '🛡️ ADMINISTRACIÓN';
+      }
+    }
+
     function formatAdminDateHeader(dateStr) {
       try {
+        const dict = getAdminDict();
         const parts = dateStr.split('-');
         const y = parts[0], m = parts[1], d = parts[2];
-        const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
         const dt = new Date(dateStr + 'T12:00:00');
-        const dow = dayNames[dt.getDay()];
+        const dayKey = dayKeys[dt.getDay()];
+        const dow = (dict.days && dict.days[dayKey]) ? dict.days[dayKey] : dayKey;
         const today = new Date().toISOString().split('T')[0];
         const isToday = (dateStr === today);
-        return (isToday ? 'Hoy (' : '') + `${dow} ${d}-${m}-${y}` + (isToday ? ')' : '');
+        return (isToday ? (dict.today_word || 'Hoy') + ' (' : '') + `${dow} ${d}-${m}-${y}` + (isToday ? ')' : '');
       } catch (e) {
         return dateStr;
       }
     }
 
     async function loadAdminDailyData() {
+      const dict = getAdminDict();
       const dTitle = document.getElementById('admin-daily-date-title');
       const dLbl = document.getElementById('admin-selected-date-lbl');
       if (dLbl) dLbl.innerText = formatAdminDateHeader(adminSelectedDate);
-      if (dTitle) dTitle.innerText = 'Jornada en Planta: ' + adminSelectedDate;
+      if (dTitle) dTitle.innerText = (dict.admin_daily_subtitle || 'Jornada') + ': ' + adminSelectedDate;
 
-      const attUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + adminSelectedDate + '/registros?key=' + FIRESTORE_API_KEY + '&pageSize=300';
+      // 1. Fetch live attendance with fallback to 'registro_asistencia' to guarantee 100% read success (zero 403)
       const dispUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles?key=' + FIRESTORE_API_KEY + '&pageSize=100';
+      const attUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + adminSelectedDate + '/registros?key=' + FIRESTORE_API_KEY + '&pageSize=300';
+      const flatUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia?pageSize=300&key=' + FIRESTORE_API_KEY;
 
       try {
         const [attRes, dispRes] = await Promise.all([
@@ -1927,6 +1986,19 @@
         ]);
 
         let attDocs = attRes.documents || [];
+        if (attDocs.length === 0) {
+          try {
+            const rFlat = await fetch(flatUrl, { cache: 'no-cache' });
+            if (rFlat.ok) {
+              const dFlat = await rFlat.json();
+              attDocs = (dFlat.documents || []).filter(doc => {
+                const docName = doc.name.split('/').pop();
+                return docName.startsWith(adminSelectedDate + '_');
+              });
+            }
+          } catch(ef) { console.warn('Fallback flat error:', ef); }
+        }
+
         if (dispRes.documents && dispRes.documents.length > 0) {
           adminAllEmployees = dispRes.documents.map(d => parseFirestoreDoc(d.fields)).filter(e => {
             const eid = String(e.id || '');
@@ -1935,6 +2007,7 @@
           });
         }
 
+        // Búsqueda Inteligente Multi-Clave: ID, PESEL y Nombre Normalizado (resuelve desfase de María José ID 28 vs 29)
         adminAttendanceMap = {};
         attDocs.forEach(d => {
           const f = d.fields || {};
@@ -1943,15 +2016,17 @@
           const idFromDoc = docName.includes('_') ? docName.split('_').slice(1).join('_').replace('_EXTRA', '') : docName;
           const empId = String(rawId || idFromDoc);
           const pesel = f.pesel ? (f.pesel.stringValue || f.pesel) : '';
+          const empName = f.employeeName ? (f.employeeName.stringValue || f.employeeName) : '';
           const st = f.status ? (f.status.stringValue || f.status) : (f.estado ? (f.estado.stringValue || f.estado) : 'PENDIENTE');
           const rec = {
             status: st,
-            name: f.employeeName ? (f.employeeName.stringValue || f.employeeName) : '',
+            name: empName,
             notes: f.notes ? (f.notes.stringValue || f.notes) : '',
             markedBy: f.markedBy ? (f.markedBy.stringValue || f.markedBy) : ''
           };
-          adminAttendanceMap[empId] = rec;
+          if (empId) adminAttendanceMap[empId] = rec;
           if (pesel) adminAttendanceMap[String(pesel)] = rec;
+          if (empName) adminAttendanceMap[normalizeAdminText(empName)] = rec;
         });
 
         renderAdminDailyList();
@@ -1974,7 +2049,7 @@
       adminDailyFilter = flt;
       document.querySelectorAll('.admin-daily-filter-btn').forEach(b => {
         b.style.background = 'var(--surface)';
-        b.style.color = (b.innerText.includes('Novedades')) ? '#dc2626' : 'var(--text)';
+        b.style.color = (b.innerText.includes('Novedades') || b.innerText.includes('Alerts') || b.innerText.includes('Uwagi')) ? '#dc2626' : 'var(--text)';
       });
       if (btn) {
         btn.style.background = 'var(--primary)';
@@ -1987,8 +2062,9 @@
       const container = document.getElementById('admin-daily-attendance-list');
       if (!container) return;
 
+      const dict = getAdminDict();
       const selectedDayNum = parseInt(adminSelectedDate.split('-')[2], 10);
-      const selectedMonthKey = adminSelectedDate.slice(0, 7); // YYYY-MM
+      const selectedMonthKey = adminSelectedDate.slice(0, 7);
 
       let cntPresentes = 0, cntRetardos = 0, cntAusentes = 0, totalNetHours = 0.0;
 
@@ -1997,7 +2073,7 @@
         if (adminDailyFilter === 'T2') return String(emp.turno_actual || '1') === '2';
         if (adminDailyFilter === 'T3') return String(emp.turno_actual || '1') === '3';
         if (adminDailyFilter === 'ALERTS') {
-          const rec = adminAttendanceMap[String(emp.id)] || (emp.pesel ? adminAttendanceMap[String(emp.pesel)] : null);
+          const rec = adminAttendanceMap[String(emp.id)] || (emp.pesel ? adminAttendanceMap[String(emp.pesel)] : null) || adminAttendanceMap[normalizeAdminText(emp.nombre_completo)];
           const st = rec ? (rec.status || '').toUpperCase() : 'PENDIENTE';
           return st === 'NO_ASISTIO' || st === 'RETARDO' || st === 'SALIDA_TEMPRANA' || st === 'INCAPACIDAD_MEDICA' || st === 'JUSTIFICADO';
         }
@@ -2006,7 +2082,7 @@
 
       container.innerHTML = '';
       if (filteredStaff.length === 0) {
-        container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:16px;">No se encontraron registros para este filtro.</div>';
+        container.innerHTML = `<div style="color:var(--text-muted); text-align:center; padding:16px;">${dict.admin_history_no_days || 'No records found.'}</div>`;
         document.getElementById('admin-cnt-presentes').innerText = 0;
         document.getElementById('admin-cnt-retardos').innerText = 0;
         document.getElementById('admin-cnt-ausentes').innerText = 0;
@@ -2025,8 +2101,10 @@
           excelDayRecord = dList.find(d => parseInt(d.dia, 10) === selectedDayNum);
         }
 
-        // 2. Extraer registro en vivo de llamado de lista
-        const attRec = adminAttendanceMap[String(emp.id)] || (emp.pesel ? adminAttendanceMap[String(emp.pesel)] : null);
+        // 2. Extraer registro en vivo con búsqueda inteligente por ID, PESEL o NOMBRE NORMALIZADO (Crucial para María José)
+        const attRec = adminAttendanceMap[String(emp.id)] || 
+                       (emp.pesel ? adminAttendanceMap[String(emp.pesel)] : null) || 
+                       adminAttendanceMap[normalizeAdminText(emp.nombre_completo)];
         const liveStatus = attRec ? (attRec.status || 'PENDIENTE').toUpperCase() : 'PENDIENTE';
         const liveNotes = attRec ? (attRec.notes || '') : '';
 
@@ -2035,7 +2113,7 @@
         let dayHours = hasExcelHours ? parseFloat(excelDayRecord.horas_trabajadas) : 0.0;
         totalNetHours += dayHours;
 
-        let badgeBg = '#f1f5f9', badgeColor = '#64748b', badgeText = 'PENDIENTE', iconPrefix = '⏳ ';
+        let badgeBg = '#f1f5f9', badgeColor = '#64748b', badgeText = dict.admin_status_pending, iconPrefix = '⏳ ';
 
         if (hasExcelHours) {
           cntPresentes++;
@@ -2044,20 +2122,20 @@
           iconPrefix = '⏱️ ';
         } else if (liveStatus === 'ASISTIO' || liveStatus === 'A_TIEMPO' || liveStatus === 'PRESENTE') {
           cntPresentes++;
-          badgeBg = '#dcfce7'; badgeColor = '#15803d'; badgeText = 'ASISTIÓ (Presente)'; iconPrefix = '🟢 ';
+          badgeBg = '#dcfce7'; badgeColor = '#15803d'; badgeText = dict.admin_status_attended; iconPrefix = '🟢 ';
         } else if (liveStatus === 'RETARDO') {
           cntRetardos++;
-          badgeBg = '#ffedd5'; badgeColor = '#c2410c'; badgeText = 'RETARDO'; iconPrefix = '⏱️ ';
+          badgeBg = '#ffedd5'; badgeColor = '#c2410c'; badgeText = dict.admin_status_late; iconPrefix = '⏱️ ';
         } else if (liveStatus === 'NO_ASISTIO' || liveStatus === 'AUSENTE') {
           cntAusentes++;
-          badgeBg = '#fee2e2'; badgeColor = '#b91c1c'; badgeText = 'NO ASISTIÓ'; iconPrefix = '❌ ';
+          badgeBg = '#fee2e2'; badgeColor = '#b91c1c'; badgeText = dict.admin_status_not_attended; iconPrefix = '❌ ';
         } else if (liveStatus === 'SALIDA_TEMPRANA') {
           cntPresentes++;
-          badgeBg = '#f3e8ff'; badgeColor = '#7e22ce'; badgeText = 'SALIDA TEMPRANA'; iconPrefix = '🚪 ';
-        } else if (liveStatus === 'INCAPACIDAD_MEDICA') {
-          badgeBg = '#e0f2fe'; badgeColor = '#0369a1'; badgeText = 'INCAPACIDAD'; iconPrefix = '🏥 ';
+          badgeBg = '#f3e8ff'; badgeColor = '#7e22ce'; badgeText = dict.admin_status_early; iconPrefix = '🚪 ';
+        } else if (liveStatus === 'INCAPACIDAD_MEDICA' || liveStatus === 'INCAPACIDAD') {
+          badgeBg = '#e0f2fe'; badgeColor = '#0369a1'; badgeText = dict.admin_status_medical; iconPrefix = '🏥 ';
         } else if (liveStatus === 'JUSTIFICADO' || liveStatus === 'PERMISO') {
-          badgeBg = '#f5f3ff'; badgeColor = '#6d28d9'; badgeText = 'PERMISO'; iconPrefix = '📋 ';
+          badgeBg = '#f5f3ff'; badgeColor = '#6d28d9'; badgeText = dict.admin_status_permission; iconPrefix = '📋 ';
         }
 
         const isAbsent = (liveStatus === 'NO_ASISTIO' || (!hasExcelHours && liveStatus === 'NO_ASISTIO'));
@@ -2073,17 +2151,17 @@
               <span style="font-size:0.7rem; background:#eff6ff; color:#1e40af; padding:1px 6px; border-radius:4px; font-weight:700;">G-${emp.grupo || 'A'}</span>
             </div>
             <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">
-              Turno ${emp.turno_actual || '1'} (${emp.horario_turno || '06:00 - 14:00'}) &bull; ${emp.posicion || 'produkcja'}
+              ${dict.shift_label || 'Turno'} ${emp.turno_actual || '1'} (${emp.horario_turno || '06:00 - 14:00'}) &bull; ${emp.posicion || 'produkcja'}
             </div>
-            ${liveNotes ? '<div style="font-size:0.72rem; color:#d97706; margin-top:3px;">📝 Nota: ' + liveNotes + '</div>' : ''}
+            ${liveNotes ? '<div style="font-size:0.72rem; color:#d97706; margin-top:3px;">📝 ' + liveNotes + '</div>' : ''}
           </div>
           <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
             <span style="background:${badgeBg}; color:${badgeColor}; font-size:0.75rem; font-weight:700; padding:4px 8px; border-radius:6px; white-space:nowrap;">
               ${iconPrefix}${badgeText}
             </span>
             ${isAbsent && telSanitized ? `
-              <a href="https://wa.me/${telSanitized}?text=${encodeURIComponent('Hola ' + emp.nombre + ', le escribimos de Coordinación ND Serwis / UNAMEL para consultar el motivo de su ausencia hoy ' + adminSelectedDate + '.')}" target="_blank" style="font-size:0.72rem; background:#22c55e; color:#fff; padding:3px 8px; border-radius:4px; text-decoration:none; font-weight:700; display:inline-flex; align-items:center; gap:3px;">
-                💬 Contactar
+              <a href="https://wa.me/${telSanitized}?text=${encodeURIComponent('Hola ' + emp.nombre + ', le escribimos de ND Serwis / UNAMEL para consultar el motivo de su ausencia hoy ' + adminSelectedDate + '.')}" target="_blank" style="font-size:0.72rem; background:#22c55e; color:#fff; padding:3px 8px; border-radius:4px; text-decoration:none; font-weight:700; display:inline-flex; align-items:center; gap:3px;">
+                ${dict.admin_btn_contact || '💬 Contactar'}
               </a>
             ` : ''}
           </div>
@@ -2096,10 +2174,9 @@
       document.getElementById('admin-cnt-ausentes').innerText = cntAusentes;
       document.getElementById('admin-cnt-horas-totales').innerText = totalNetHours.toFixed(1);
       const bCnt = document.getElementById('admin-daily-count-badge');
-      if (bCnt) bCnt.innerText = `${filteredStaff.length} colaboradores`;
+      if (bCnt) bCnt.innerText = `${filteredStaff.length} ${dict.admin_daily_count_suffix || 'colaboradores'}`;
     }
 
-    // Directoria de Plantilla & Expedientes
     async function fetchAdminStaff() {
       if (adminAllEmployees.length === 0) {
         const dispUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles?key=' + FIRESTORE_API_KEY + '&pageSize=100';
@@ -2136,6 +2213,7 @@
       const container = document.getElementById('admin-staff-list');
       if (!container) return;
 
+      const dict = getAdminDict();
       const q = (document.getElementById('admin-staff-search')?.value || '').trim().toLowerCase();
 
       const filtered = adminAllEmployees.filter(emp => {
@@ -2153,11 +2231,11 @@
       });
 
       const totalBadge = document.getElementById('admin-staff-total-badge');
-      if (totalBadge) totalBadge.innerText = `${filtered.length} Colaboradores`;
+      if (totalBadge) totalBadge.innerText = `${filtered.length} ${dict.admin_daily_count_suffix || 'Colaboradores'}`;
 
       container.innerHTML = '';
       if (filtered.length === 0) {
-        container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:16px;">No se encontraron colaboradores coincidentes.</div>';
+        container.innerHTML = `<div style="color:var(--text-muted); text-align:center; padding:16px;">${dict.admin_history_no_days || 'No collaborators found.'}</div>`;
         return;
       }
 
@@ -2167,7 +2245,7 @@
         const displayPesel = isRevealed ? (emp.pesel || '--') : maskedPesel;
 
         const isSigned = (emp.tipo_contrato || '').toUpperCase() === 'TAK' || (emp.tipo_contrato || '').toUpperCase() === 'SI';
-        const contratoLabel = isSigned ? 'Firmado (TAK / Zlecenie)' : (emp.tipo_contrato || 'En trámite');
+        const contratoLabel = isSigned ? dict.admin_contract_signed : (emp.tipo_contrato || dict.admin_contract_pending);
         const telSanitized = (emp.telefono || '').replace(/\s+/g, '').replace(/\+/g, '');
 
         const card = document.createElement('div');
@@ -2179,30 +2257,30 @@
             <div>
               <strong style="font-size:0.95rem; color:#0f172a;">${emp.nombre_completo}</strong>
               <div style="font-size:0.75rem; color:#64748b; margin-top:1px;">
-                ${emp.posicion || 'produkcja'} &bull; Nacionalidad: ${emp.nacionalidad || 'Polonia'}
+                ${emp.posicion || 'produkcja'} &bull; ${emp.nacionalidad || 'Polonia'}
               </div>
             </div>
             <span style="background:#eff6ff; color:#1e40af; font-size:0.75rem; font-weight:800; padding:3px 8px; border-radius:6px;">
-              Grupo ${emp.grupo || 'A'} &bull; Turno ${emp.turno_actual || '1'}
+              ${dict.group_label || 'Grupo'} ${emp.grupo || 'A'} &bull; ${dict.shift_label || 'Turno'} ${emp.turno_actual || '1'}
             </span>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.78rem; background:#f8fafc; padding:8px 10px; border-radius:8px; margin-bottom:10px;">
             <div>
-              <span style="color:#64748b; display:block; font-size:0.7rem;">CONTRATO (UMOWA):</span>
+              <span style="color:#64748b; display:block; font-size:0.7rem;">${dict.contract || 'CONTRATO'}:</span>
               <strong style="color:${isSigned ? '#15803d' : '#b45309'};">${contratoLabel}</strong>
             </div>
             <div>
-              <span style="color:#64748b; display:block; font-size:0.7rem;">INICIO EN PLANTA:</span>
+              <span style="color:#64748b; display:block; font-size:0.7rem;">${dict.start_date || 'INICIO EN PLANTA'}:</span>
               <strong style="color:#334155;">${emp.fecha_inicio || '--'}</strong>
             </div>
             <div>
-              <span style="color:#64748b; display:block; font-size:0.7rem;">PESEL:</span>
+              <span style="color:#64748b; display:block; font-size:0.7rem;">${dict.pesel || 'PESEL'}:</span>
               <strong style="color:#334155;">${displayPesel}</strong>
-              <button type="button" onclick="toggleAdminPeselReveal('${emp.id}')" style="background:none; border:none; color:#2563eb; font-size:0.7rem; font-weight:700; cursor:pointer; padding:0 4px;">${isRevealed ? 'Ocultar' : 'Revelar'}</button>
+              <button type="button" onclick="toggleAdminPeselReveal('${emp.id}')" style="background:none; border:none; color:#2563eb; font-size:0.7rem; font-weight:700; cursor:pointer; padding:0 4px;">${isRevealed ? dict.admin_btn_hide : dict.admin_btn_reveal}</button>
             </div>
             <div>
-              <span style="color:#64748b; display:block; font-size:0.7rem;">TELÉFONO:</span>
+              <span style="color:#64748b; display:block; font-size:0.7rem;">${dict.phone || 'TELÉFONO'}:</span>
               <strong style="color:#334155;">${emp.telefono || '--'}</strong>
             </div>
           </div>
@@ -2212,9 +2290,9 @@
               <a href="https://wa.me/${telSanitized}" target="_blank" style="padding:6px 12px; background:#22c55e; color:#fff; border-radius:8px; text-decoration:none; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
                 💬 WhatsApp
               </a>
-            ` : '<div style="font-size:0.75rem; color:#94a3b8;">Sin teléfono</div>'}
+            ` : '<div style="font-size:0.75rem; color:#94a3b8;">--</div>'}
             <button type="button" onclick="goToAdminHistoryForEmployee('${emp.id}')" style="padding:6px 12px; background:#0284c7; color:#fff; border:none; border-radius:8px; font-size:0.75rem; font-weight:700; cursor:pointer;">
-              📚 Ver Historial & PDF
+              ${dict.admin_btn_view_history}
             </button>
           </div>
         `;
@@ -2234,7 +2312,6 @@
       onAdminHistoryEmployeeChanged();
     }
 
-    // Historial Multimensual & PDFs
     function populateAdminHistorySelect() {
       const sel = document.getElementById('admin-history-emp-select');
       if (!sel) return;
@@ -2244,7 +2321,7 @@
       adminAllEmployees.forEach(emp => {
         const opt = document.createElement('option');
         opt.value = String(emp.id);
-        opt.innerText = `${emp.nombre_completo} (Grupo ${emp.grupo || 'A'} - Turno ${emp.turno_actual || '1'})`;
+        opt.innerText = `${emp.nombre_completo} (G-${emp.grupo || 'A'} - T${emp.turno_actual || '1'})`;
         sel.appendChild(opt);
       });
 
@@ -2262,21 +2339,13 @@
       const container = document.getElementById('admin-history-months-bar');
       if (!container) return;
       container.innerHTML = '';
-
-      const monthNames = {
-        '2026-04': 'Abril',
-        '2026-05': 'Mayo',
-        '2026-06': 'Junio',
-        '2026-07': 'Julio',
-        '2026-08': 'Agosto',
-        '2026-09': 'Septiembre',
-        '2026-10': 'Octubre'
-      };
+      const dict = getAdminDict();
 
       AVAILABLE_MONTHS.forEach(mKey => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.innerText = (monthNames[mKey] || mKey) + (mKey === '2026-10' ? ' (Activo)' : '');
+        const localizedMonth = (dict.months && dict.months[mKey]) ? dict.months[mKey].split(' ')[0] : mKey;
+        btn.innerText = localizedMonth + (mKey === '2026-10' ? ' *' : '');
         btn.style.cssText = `padding:6px 12px; border-radius:20px; font-size:0.75rem; font-weight:700; border:1px solid var(--border); white-space:nowrap; cursor:pointer; background:${adminHistoryMonthKey === mKey ? 'var(--primary)' : 'var(--surface)'}; color:${adminHistoryMonthKey === mKey ? '#fff' : 'var(--text)'};`;
         btn.onclick = () => {
           adminHistoryMonthKey = mKey;
@@ -2305,17 +2374,10 @@
 
       const emp = adminSelectedHistoryEmp;
       const mKey = adminHistoryMonthKey;
+      const dict = getAdminDict();
 
-      const monthNames = {
-        '2026-04': 'Abril 2026',
-        '2026-05': 'Mayo 2026',
-        '2026-06': 'Junio 2026',
-        '2026-07': 'Julio 2026',
-        '2026-08': 'Agosto 2026',
-        '2026-09': 'Septiembre 2026',
-        '2026-10': 'Octubre 2026'
-      };
-      if (monthLblEl) monthLblEl.innerText = monthNames[mKey] || mKey;
+      const monthLocalizedName = (dict.months && dict.months[mKey]) ? dict.months[mKey] : mKey;
+      if (monthLblEl) monthLblEl.innerText = monthLocalizedName.toUpperCase();
 
       let totalHours = 0.0;
       let daysList = [];
@@ -2331,11 +2393,11 @@
 
       if (totalHrsEl) totalHrsEl.innerText = totalHours.toFixed(1) + ' hrs';
       const workedDaysCount = daysList.filter(d => parseFloat(d.horas_trabajadas || 0) > 0).length;
-      if (daysCountEl) daysCountEl.innerText = `${workedDaysCount} jornadas trabajadas`;
+      if (daysCountEl) daysCountEl.innerText = `${workedDaysCount} ${dict.admin_history_worked_days || 'jornadas trabajadas'}`;
 
       tableContainer.innerHTML = '';
       if (daysList.length === 0) {
-        tableContainer.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:16px;">Sin jornadas detalladas para este mes.</div>';
+        tableContainer.innerHTML = `<div style="color:var(--text-muted); text-align:center; padding:16px;">${dict.admin_history_no_days || 'Sin jornadas detalladas.'}</div>`;
         return;
       }
 
@@ -2344,11 +2406,11 @@
       table.innerHTML = `
         <thead>
           <tr style="background:#f1f5f9; color:#475569; border-bottom:1px solid #cbd5e1;">
-            <th style="padding:8px 10px;">DÍA</th>
-            <th style="padding:8px 6px;">ENTRADA</th>
-            <th style="padding:8px 6px;">SALIDA</th>
-            <th style="padding:8px 6px;">HORAS</th>
-            <th style="padding:8px 10px;">ESTADO</th>
+            <th style="padding:8px 10px;">${dict.admin_table_day || 'DÍA'}</th>
+            <th style="padding:8px 6px;">${dict.admin_table_entry || 'ENTRADA'}</th>
+            <th style="padding:8px 6px;">${dict.admin_table_exit || 'SALIDA'}</th>
+            <th style="padding:8px 6px;">${dict.admin_table_hours || 'HORAS'}</th>
+            <th style="padding:8px 10px;">${dict.admin_table_status || 'ESTADO'}</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -2367,7 +2429,7 @@
         }
 
         tr.innerHTML = `
-          <td style="padding:8px 10px; font-weight:700; color:#1e293b;">Día ${d.dia}</td>
+          <td style="padding:8px 10px; font-weight:700; color:#1e293b;">${dict.day_prefix || 'Día'} ${d.dia}</td>
           <td style="padding:8px 6px; color:#475569;">${d.hora_inicio || '--'}</td>
           <td style="padding:8px 6px; color:#475569;">${d.hora_fin || '--'}</td>
           <td style="padding:8px 6px; font-weight:800; color:#0f172a;">${hrs > 0 ? hrs.toFixed(1) + 'h' : '--'}</td>
@@ -2383,15 +2445,9 @@
       if (!adminSelectedHistoryEmp) return;
       const emp = adminSelectedHistoryEmp;
       const mKey = adminHistoryMonthKey;
-      const monthNames = {
-        '2026-04': 'Abril 2026',
-        '2026-05': 'Mayo 2026',
-        '2026-06': 'Junio 2026',
-        '2026-07': 'Julio 2026',
-        '2026-08': 'Agosto 2026',
-        '2026-09': 'Septiembre 2026',
-        '2026-10': 'Octubre 2026'
-      };
+      const dict = getAdminDict();
+      const monthLocalizedName = (dict.months && dict.months[mKey]) ? dict.months[mKey] : mKey;
+
       let totalHours = 0.0;
       let daysList = [];
 
@@ -2404,13 +2460,14 @@
         daysList = mData.dias || [];
       }
 
-      renderOfficialPdfCertificateForMonth(emp, mKey, monthNames[mKey] || mKey, totalHours, daysList);
+      renderOfficialPdfCertificateForMonth(emp, mKey, monthLocalizedName, totalHours, daysList);
       switchTab('pdf', document.getElementById('nav-btn-pdf'));
     }
 
     function renderAdminAuditLogsFromDocs(docs) {
       const container = document.getElementById('admin-audit-logs-container');
       if (!container) return;
+      const dict = getAdminDict();
 
       const list = docs.map(doc => {
         const fields = parseFirestoreDoc(doc.fields);
@@ -2428,14 +2485,13 @@
 
       container.innerHTML = '';
       if (list.length === 0) {
-        container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:12px;">Sin registros recientes.</div>';
+        container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:12px;">--</div>';
         return;
       }
 
       list.slice(0, 8).forEach(item => {
         const row = document.createElement('div');
         row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f1f5f9; font-size:0.78rem;';
-        const isApp = (item.plataforma || '').toLowerCase().includes('android');
         row.innerHTML = `
           <div>
             <strong style="color:#0f172a;">${item.nombre}</strong>
@@ -4033,6 +4089,14 @@
       if (sel) sel.value = lang;
 
       const dict = I18N_DICT[lang];
+      if (currentUser && (currentUser.rol_app === 'ADMINISTRATIVO' || String(currentUser.id) === '2023')) {
+        translateAdminStaticElements();
+        renderAdminDailyList();
+        renderAdminStaffDirectory();
+        renderAdminHistoryMonthsBar();
+        renderAdminHistoryTable();
+      }
+
 
       // Login
       const loginTitle = document.querySelector('.login-title');
