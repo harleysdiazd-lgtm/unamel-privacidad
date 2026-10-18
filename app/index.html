@@ -1674,6 +1674,22 @@
         </div>
       </div>
 
+      <!-- MODAL DE ESCANEO QR EN ENTRADA / SALIDA -->
+      <div id="modal-gate-scanner" class="modal-overlay hidden" onclick="if(event.target===this) closeGateScannerModal()">
+        <div class="modal-card" style="text-align:center;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3 style="font-size:1.05rem; font-weight:800; color:var(--primary); margin:0;">📷 Escáner de Entrada Oficial</h3>
+            <button type="button" onclick="closeGateScannerModal()" style="background:#f1f5f9; border:none; padding:6px 12px; border-radius:8px; font-weight:700; cursor:pointer;">✕</button>
+          </div>
+          <div id="gate-scanner-status-box" style="padding:16px; background:#0f172a; border-radius:12px; color:#fff; margin-bottom:14px;">
+            <div style="font-size:2rem; margin-bottom:8px;">✅</div>
+            <div style="font-weight:800; font-size:1rem; color:#4ade80;">¡ENTRADA REGISTRADA!</div>
+            <div id="gate-scanner-time" style="font-size:0.85rem; color:#94a3b8; margin-top:4px;">Registro de acceso verificado por GPS (Tolerancia 60m)</div>
+          </div>
+          <button type="button" onclick="onGateScanConfirmSuccess()" style="width:100%; padding:12px; background:#10b981; color:#fff; border:none; border-radius:10px; font-weight:800; font-size:0.95rem; cursor:pointer;">Aceptar e Ir a Mis Horas &rarr;</button>
+        </div>
+      </div>
+
     </div>
 
   </main>
@@ -3994,6 +4010,22 @@
       document.getElementById('screen-login').classList.remove('hidden');
       document.getElementById('login-pin').value = '';
     }
+
+    window.openGateScannerModal = function() {
+      const m = document.getElementById('modal-gate-scanner');
+      if (m) m.classList.remove('hidden');
+    };
+
+    window.closeGateScannerModal = function() {
+      const m = document.getElementById('modal-gate-scanner');
+      if (m) m.classList.add('hidden');
+    };
+
+    window.onGateScanConfirmSuccess = function() {
+      window.closeGateScannerModal();
+      // Redirigir de inmediato a la pestana de Mis Horas
+      switchTab('hours', document.getElementById('nav-btn-hours'));
+    };
 
     function switchTab(tabKey, btn) {
       document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
