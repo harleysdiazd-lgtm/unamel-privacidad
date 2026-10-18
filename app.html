@@ -3522,43 +3522,55 @@
 
       const tf = activeTradingTimeframe;
       if (tf === '30m') {
-        for (let i = 12; i >= 0; i--) {
+        for (let i = 48; i >= 0; i--) {
           const d = new Date(now.getTime() - i * 30 * 60 * 1000);
           const ymd = d.toISOString().split('T')[0];
           const exp = getNoiseFreeExpected(d, plantEmps);
           const act = getActualScans(ymd, d.getHours(), d.getHours());
-          pastPoints.push({ timeLabel: fmtHour(d), fullLabel: fmtDay(d) + ' · ' + fmtHour(d), expected: exp.count, actual: act, isFuture: false, shift: exp.desc });
+          const h = d.getHours(), m = d.getMinutes();
+          const axis = (h === 0 && m === 0) ? fmtDay(d) : ((h === 12 && m === 0) ? '12:00' : (i === 0 ? fmtHour(d) : ''));
+          pastPoints.push({ timeLabel: fmtHour(d), fullLabel: fmtDay(d) + ' · ' + fmtHour(d), expected: exp.count, actual: act, isFuture: false, shift: exp.desc, axisLabel: axis });
         }
-        for (let j = 1; j <= 4; j++) {
+        for (let j = 1; j <= 336; j++) {
           const d = new Date(now.getTime() + j * 30 * 60 * 1000);
           const exp = getNoiseFreeExpected(d, plantEmps);
-          futurePoints.push({ timeLabel: fmtHour(d), fullLabel: fmtDay(d) + ' · ' + fmtHour(d), expected: exp.count, actual: 0, isFuture: true, shift: exp.desc });
+          const h = d.getHours(), m = d.getMinutes();
+          const axis = (h === 0 && m === 0) ? fmtDay(d) : ((h === 12 && m === 0) ? '12:00' : '');
+          futurePoints.push({ timeLabel: fmtHour(d), fullLabel: fmtDay(d) + ' · ' + fmtHour(d), expected: exp.count, actual: 0, isFuture: true, shift: exp.desc, axisLabel: axis });
         }
       } else if (tf === '1h') {
-        for (let i = 18; i >= 0; i--) {
+        for (let i = 48; i >= 0; i--) {
           const d = new Date(now.getTime() - i * 60 * 60 * 1000);
           const ymd = d.toISOString().split('T')[0];
           const exp = getNoiseFreeExpected(d, plantEmps);
           const act = getActualScans(ymd, d.getHours(), d.getHours());
-          pastPoints.push({ timeLabel: pad2(d.getHours()) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(d.getHours()) + ':00', expected: exp.count, actual: act, isFuture: false, shift: exp.desc });
+          const h = d.getHours();
+          const axis = (h === 0) ? fmtDay(d) : ((h === 12) ? '12:00' : (i === 0 ? pad2(h) + ':00' : ''));
+          pastPoints.push({ timeLabel: pad2(h) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(h) + ':00', expected: exp.count, actual: act, isFuture: false, shift: exp.desc, axisLabel: axis });
         }
-        for (let j = 1; j <= 6; j++) {
+        for (let j = 1; j <= 168; j++) {
           const d = new Date(now.getTime() + j * 60 * 60 * 1000);
           const exp = getNoiseFreeExpected(d, plantEmps);
-          futurePoints.push({ timeLabel: pad2(d.getHours()) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(d.getHours()) + ':00', expected: exp.count, actual: 0, isFuture: true, shift: exp.desc });
+          const h = d.getHours();
+          const axis = (h === 0) ? fmtDay(d) : ((h === 12) ? '12:00' : '');
+          futurePoints.push({ timeLabel: pad2(h) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(h) + ':00', expected: exp.count, actual: 0, isFuture: true, shift: exp.desc, axisLabel: axis });
         }
       } else if (tf === '4h') {
-        for (let i = 18; i >= 0; i--) {
+        for (let i = 42; i >= 0; i--) {
           const d = new Date(now.getTime() - i * 4 * 60 * 60 * 1000);
           const ymd = d.toISOString().split('T')[0];
           const exp = getNoiseFreeExpected(d, plantEmps);
           const act = getActualScans(ymd, Math.max(0, d.getHours() - 1), Math.min(23, d.getHours() + 2));
-          pastPoints.push({ timeLabel: fmtDay(d) + ' ' + pad2(d.getHours()) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(d.getHours()) + ':00', expected: exp.count, actual: act, isFuture: false, shift: exp.desc });
+          const h = d.getHours();
+          const axis = (h === 0) ? fmtDay(d) : ((h === 12) ? '12:00' : (i === 0 ? pad2(h) + ':00' : ''));
+          pastPoints.push({ timeLabel: fmtDay(d) + ' ' + pad2(h) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(h) + ':00', expected: exp.count, actual: act, isFuture: false, shift: exp.desc, axisLabel: axis });
         }
-        for (let j = 1; j <= 6; j++) {
+        for (let j = 1; j <= 42; j++) {
           const d = new Date(now.getTime() + j * 4 * 60 * 60 * 1000);
           const exp = getNoiseFreeExpected(d, plantEmps);
-          futurePoints.push({ timeLabel: fmtDay(d) + ' ' + pad2(d.getHours()) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(d.getHours()) + ':00', expected: exp.count, actual: 0, isFuture: true, shift: exp.desc });
+          const h = d.getHours();
+          const axis = (h === 0) ? fmtDay(d) : ((h === 12) ? '12:00' : '');
+          futurePoints.push({ timeLabel: fmtDay(d) + ' ' + pad2(h) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(h) + ':00', expected: exp.count, actual: 0, isFuture: true, shift: exp.desc, axisLabel: axis });
         }
       } else if (tf === '1D') {
         for (let i = 7; i >= 0; i--) {
@@ -3567,14 +3579,16 @@
           const dow = d.getDay();
           const expTotal = dow === 6 ? 0 : (dow === 0 ? 9 : 29);
           const act = getActualScans(ymd, 0, 23);
-          pastPoints.push({ timeLabel: fmtDay(d), fullLabel: ymd, expected: expTotal, actual: act, isFuture: false, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3') });
+          const axis = (i % 2 === 0 || i === 0) ? fmtDay(d) : '';
+          pastPoints.push({ timeLabel: fmtDay(d), fullLabel: ymd, expected: expTotal, actual: act, isFuture: false, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3'), axisLabel: axis });
         }
         for (let j = 1; j <= 7; j++) {
           const d = new Date(now.getTime() + j * 24 * 60 * 60 * 1000);
           const ymd = d.toISOString().split('T')[0];
           const dow = d.getDay();
           const expTotal = dow === 6 ? 0 : (dow === 0 ? 9 : 29);
-          futurePoints.push({ timeLabel: fmtDay(d), fullLabel: ymd, expected: expTotal, actual: 0, isFuture: true, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3') });
+          const axis = (j % 2 === 0) ? fmtDay(d) : '';
+          futurePoints.push({ timeLabel: fmtDay(d), fullLabel: ymd, expected: expTotal, actual: 0, isFuture: true, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3'), axisLabel: axis });
         }
       } else if (tf === '1M') {
         const cDay = now.getDate();
@@ -3584,13 +3598,16 @@
           const dow = dt.getDay();
           const expTotal = dow === 6 ? 0 : (dow === 0 ? 9 : 29);
           const act = getActualScans(ymd, 0, 23);
-          pastPoints.push({ timeLabel: d + ' Oct', fullLabel: d + ' de Octubre, 2026', expected: expTotal, actual: act, isFuture: false, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3') });
+          const axis = (d % 4 === 0 || d === cDay) ? (d + ' Oct') : '';
+          pastPoints.push({ timeLabel: d + ' Oct', fullLabel: d + ' de Octubre, 2026', expected: expTotal, actual: act, isFuture: false, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3'), axisLabel: axis });
         }
-        for (let d = cDay + 1; d <= Math.min(31, cDay + 7); d++) {
+        const endDay = Math.min(31, cDay + 7);
+        for (let d = cDay + 1; d <= endDay; d++) {
           const dt = new Date(now.getFullYear(), 9, d, 18, 0);
           const dow = dt.getDay();
           const expTotal = dow === 6 ? 0 : (dow === 0 ? 9 : 29);
-          futurePoints.push({ timeLabel: d + ' Oct', fullLabel: d + ' de Octubre, 2026', expected: expTotal, actual: 0, isFuture: true, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3') });
+          const axis = (d % 4 === 0 || d === endDay) ? (d + ' Oct') : '';
+          futurePoints.push({ timeLabel: d + ' Oct', fullLabel: d + ' de Octubre, 2026', expected: expTotal, actual: 0, isFuture: true, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3'), axisLabel: axis });
         }
       }
 
@@ -3721,12 +3738,7 @@
         ctx.textBaseline = 'top';
 
         allPts.forEach((pt, i) => {
-          let isTick = false;
-          if (tf === '30m') isTick = (i % 2 === 0) || (i === numPast - 1);
-          else if (tf === '1h') isTick = (i % 3 === 0) || (i === numPast - 1);
-          else if (tf === '4h') isTick = (i % 2 === 0) || (i === numPast - 1);
-          else if (tf === '1D') isTick = (i % 2 === 0) || (i === numPast - 1);
-          else if (tf === '1M') isTick = (i % 4 === 0) || (i === numPast - 1) || (i === allPts.length - 1);
+          let isTick = (pt.axisLabel && pt.axisLabel.length > 0) || (i === numPast - 1);
 
           if (isTick) {
             const x = getX(i);
@@ -3755,7 +3767,8 @@
             const isSelected = (i === tradingChartSelectedIdx);
             ctx.fillStyle = isSelected ? '#38bdf8' : '#94a3b8';
             const safeX = Math.max(20, Math.min(w - 20, x));
-            ctx.fillText(pt.timeLabel, safeX, chartH + 7);
+            const txt = (pt.axisLabel && pt.axisLabel.length > 0) ? pt.axisLabel : pt.timeLabel;
+            ctx.fillText(txt, safeX, chartH + 7);
           }
         });
 
