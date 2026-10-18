@@ -1448,12 +1448,16 @@
             <button type="button" id="tf-btn-1M" onclick="setTradingTimeframe('1M')" style="flex:1; background:transparent; border:none; color:#94a3b8; font-size:0.75rem; font-weight:700; padding:5px 0; border-radius:7px; cursor:pointer;">1M</button>
           </div>
 
-          <!-- Deslizador de Distribución y Navegación (Predeterminado 75% Pasado / 25% Futuro) -->
-          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.6); padding:4px 8px; border-radius:8px; border:1px solid #1e293b; margin-bottom:10px;">
-            <span id="slider-past-lbl" style="font-size:0.65rem; font-weight:700; color:#10b981;">◀ Historial (75%)</span>
-            <input type="range" id="trading-pan-slider" min="20" max="85" value="75" oninput="onTradingSliderChange(this.value)" style="flex:1; margin:0 10px; accent-color:#38bdf8; cursor:pointer;">
-            <span id="slider-fut-lbl" style="font-size:0.65rem; font-weight:700; color:#a855f7;">Futuro (25%) ▶</span>
-            <button type="button" onclick="resetTradingPanSlider()" style="background:#1e293b; color:#94a3b8; border:none; border-radius:6px; font-size:0.62rem; font-weight:800; padding:2px 6px; margin-left:6px; cursor:pointer;">↺ 75/25</button>
+          <!-- Deslizador de Navegación Temporal (PAN), Zoom y Snap AHORA -->
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.6); padding:4px 8px; border-radius:8px; border:1px solid #1e293b; margin-bottom:10px; gap:6px;">
+            <span style="font-size:0.65rem; font-weight:700; color:#10b981; white-space:nowrap;">◀ Pasado</span>
+            <input type="range" id="trading-pan-slider" min="0" max="100" value="0" step="0.5" oninput="onTradingSliderChange(this.value)" style="flex:1; margin:0 4px; accent-color:#38bdf8; cursor:pointer;">
+            <span style="font-size:0.65rem; font-weight:700; color:#a855f7; white-space:nowrap;">Futuro ▶</span>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <button type="button" onclick="tradingZoomOut()" style="background:#1e293b; color:#94a3b8; border:none; border-radius:6px; font-size:0.68rem; font-weight:800; padding:3px 6px; cursor:pointer;">🔍-</button>
+              <button type="button" onclick="tradingZoomIn()" style="background:#1e293b; color:#94a3b8; border:none; border-radius:6px; font-size:0.68rem; font-weight:800; padding:3px 6px; cursor:pointer;">🔍+</button>
+              <button type="button" onclick="resetTradingToNow()" style="background:#0369a1; color:#ffffff; border:none; border-radius:6px; font-size:0.65rem; font-weight:800; padding:3px 7px; cursor:pointer; white-space:nowrap;">📍 AHORA</button>
+            </div>
           </div>
 
           <!-- Lienzo HTML5 Canvas con soporte táctil para Scrubber y Eje X en la Base -->
@@ -1477,7 +1481,7 @@
             </div>
           </div>
           <div style="text-align:center; font-size:0.65rem; color:#64748b; margin-top:8px;">
-            👆 Desliza el dedo sobre la gráfica para inspeccionar horas puntuales
+            👆 Arrastra horizontalmente para explorar el tiempo · Toca para inspeccionar
           </div>
         </div>
 
@@ -3391,29 +3395,74 @@
     let activeTradingTimeframe = '1h';
     let tradingChartSelectedIdx = -1;
     let cachedTradingPoints = [];
-    window.currentPastRatio = 0.75;
+    function getDefaultVisibleCount(tf) {
+      if (tf === '30m') return 24;
+      if (tf === '1h') return 24;
+      if (tf === '4h') return 21;
+      if (tf === '1D') return 15;
+      if (tf === '1M') return 31;
+      return 24;
+    }
 
-    window.onTradingSliderChange = function(val) {
-      window.currentPastRatio = Math.max(0.20, Math.min(0.85, parseFloat(val) / 100));
-      const pastPct = Math.round(window.currentPastRatio * 100);
-      const futPct = 100 - pastPct;
-      const lblPast = document.getElementById('slider-past-lbl');
-      if (lblPast) lblPast.innerText = '◀ Historial (' + pastPct + '%)';
-      const lblFut = document.getElementById('slider-fut-lbl');
-      if (lblFut) lblFut.innerText = 'Futuro (' + futPct + '%) ▶';
+    function syncSliderUI(maxS) {
+      const slider = document.getElementById('trading-pan-slider');
+      if (slider) {
+        slider.value = maxS > 0 ? ((window.tradingScrollOffset || 0) / maxS) * 100 : 0;
+      }
+    }
+
+    window.tradingZoomIn = function() {
+      window.tradingVisibleCount = Math.max(10, (window.tradingVisibleCount || getDefaultVisibleCount(activeTradingTimeframe)) - 4);
+      if (window.cachedTradingPoints && window.cachedTradingPoints.length > 0) {
+        const maxScroll = Math.max(0, window.cachedTradingPoints.length - window.tradingVisibleCount);
+        window.tradingScrollOffset = Math.max(0, Math.min(maxScroll, window.tradingScrollOffset || 0));
+        syncSliderUI(maxScroll);
+      }
       if (window.lastCoordDispList && window.lastAttMap) {
         renderTradingChart(window.lastCoordDispList, window.lastAttMap);
       }
     };
 
-    window.resetTradingPanSlider = function() {
-      const slider = document.getElementById('trading-pan-slider');
-      if (slider) slider.value = 75;
-      window.onTradingSliderChange(75);
+    window.tradingZoomOut = function() {
+      const maxPts = window.cachedTradingPoints ? window.cachedTradingPoints.length : 60;
+      window.tradingVisibleCount = Math.min(Math.min(60, maxPts), (window.tradingVisibleCount || getDefaultVisibleCount(activeTradingTimeframe)) + 4);
+      if (window.cachedTradingPoints && window.cachedTradingPoints.length > 0) {
+        const maxScroll = Math.max(0, window.cachedTradingPoints.length - window.tradingVisibleCount);
+        window.tradingScrollOffset = Math.max(0, Math.min(maxScroll, window.tradingScrollOffset || 0));
+        syncSliderUI(maxScroll);
+      }
+      if (window.lastCoordDispList && window.lastAttMap) {
+        renderTradingChart(window.lastCoordDispList, window.lastAttMap);
+      }
+    };
+
+    window.resetTradingToNow = function() {
+      window.tradingVisibleCount = getDefaultVisibleCount(activeTradingTimeframe);
+      const allPts = window.cachedTradingPoints || [];
+      const nowIdx = window.tradingNowIndex !== undefined ? window.tradingNowIndex : 0;
+      const maxScroll = Math.max(0, allPts.length - window.tradingVisibleCount);
+      window.tradingScrollOffset = Math.max(0, Math.min(maxScroll, nowIdx - (window.tradingVisibleCount * 0.75)));
+      tradingChartSelectedIdx = nowIdx;
+      syncSliderUI(maxScroll);
+      if (window.lastCoordDispList && window.lastAttMap) {
+        renderTradingChart(window.lastCoordDispList, window.lastAttMap);
+      }
+    };
+
+    window.onTradingSliderChange = function(val) {
+      const allPts = window.cachedTradingPoints || [];
+      const visibleCount = window.tradingVisibleCount || getDefaultVisibleCount(activeTradingTimeframe);
+      const maxScroll = Math.max(0, allPts.length - visibleCount);
+      window.tradingScrollOffset = (parseFloat(val) / 100) * maxScroll;
+      if (window.lastCoordDispList && window.lastAttMap) {
+        renderTradingChart(window.lastCoordDispList, window.lastAttMap);
+      }
     };
 
     window.setTradingTimeframe = function(tf) {
       activeTradingTimeframe = tf;
+      window.tradingVisibleCount = getDefaultVisibleCount(tf);
+      window.tradingScrollOffset = null;
       ['30m', '1h', '4h', '1D', '1M'].forEach(t => {
         const btn = document.getElementById('tf-btn-' + t);
         if (btn) {
@@ -3522,8 +3571,14 @@
 
       const tf = activeTradingTimeframe;
       if (tf === '30m') {
+        const roundedNow = new Date(now);
+        roundedNow.setSeconds(0, 0);
+        const curM = roundedNow.getMinutes();
+        roundedNow.setMinutes(curM >= 30 ? 30 : 0);
+        const baseMs = roundedNow.getTime();
+
         for (let i = 48; i >= 0; i--) {
-          const d = new Date(now.getTime() - i * 30 * 60 * 1000);
+          const d = new Date(baseMs - i * 30 * 60 * 1000);
           const ymd = d.toISOString().split('T')[0];
           const exp = getNoiseFreeExpected(d, plantEmps);
           const act = getActualScans(ymd, d.getHours(), d.getHours());
@@ -3532,15 +3587,19 @@
           pastPoints.push({ timeLabel: fmtHour(d), fullLabel: fmtDay(d) + ' · ' + fmtHour(d), expected: exp.count, actual: act, isFuture: false, shift: exp.desc, axisLabel: axis });
         }
         for (let j = 1; j <= 336; j++) {
-          const d = new Date(now.getTime() + j * 30 * 60 * 1000);
+          const d = new Date(baseMs + j * 30 * 60 * 1000);
           const exp = getNoiseFreeExpected(d, plantEmps);
           const h = d.getHours(), m = d.getMinutes();
           const axis = (h === 0 && m === 0) ? fmtDay(d) : ((h === 12 && m === 0) ? '12:00' : '');
           futurePoints.push({ timeLabel: fmtHour(d), fullLabel: fmtDay(d) + ' · ' + fmtHour(d), expected: exp.count, actual: 0, isFuture: true, shift: exp.desc, axisLabel: axis });
         }
       } else if (tf === '1h') {
+        const roundedNow = new Date(now);
+        roundedNow.setMinutes(0, 0, 0);
+        const baseMs = roundedNow.getTime();
+
         for (let i = 48; i >= 0; i--) {
-          const d = new Date(now.getTime() - i * 60 * 60 * 1000);
+          const d = new Date(baseMs - i * 60 * 60 * 1000);
           const ymd = d.toISOString().split('T')[0];
           const exp = getNoiseFreeExpected(d, plantEmps);
           const act = getActualScans(ymd, d.getHours(), d.getHours());
@@ -3549,15 +3608,20 @@
           pastPoints.push({ timeLabel: pad2(h) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(h) + ':00', expected: exp.count, actual: act, isFuture: false, shift: exp.desc, axisLabel: axis });
         }
         for (let j = 1; j <= 168; j++) {
-          const d = new Date(now.getTime() + j * 60 * 60 * 1000);
+          const d = new Date(baseMs + j * 60 * 60 * 1000);
           const exp = getNoiseFreeExpected(d, plantEmps);
           const h = d.getHours();
           const axis = (h === 0) ? fmtDay(d) : ((h === 12) ? '12:00' : '');
           futurePoints.push({ timeLabel: pad2(h) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(h) + ':00', expected: exp.count, actual: 0, isFuture: true, shift: exp.desc, axisLabel: axis });
         }
       } else if (tf === '4h') {
+        const roundedNow = new Date(now);
+        const curH = roundedNow.getHours();
+        roundedNow.setHours(Math.floor(curH / 4) * 4, 0, 0, 0);
+        const baseMs = roundedNow.getTime();
+
         for (let i = 42; i >= 0; i--) {
-          const d = new Date(now.getTime() - i * 4 * 60 * 60 * 1000);
+          const d = new Date(baseMs - i * 4 * 60 * 60 * 1000);
           const ymd = d.toISOString().split('T')[0];
           const exp = getNoiseFreeExpected(d, plantEmps);
           const act = getActualScans(ymd, Math.max(0, d.getHours() - 1), Math.min(23, d.getHours() + 2));
@@ -3566,7 +3630,7 @@
           pastPoints.push({ timeLabel: fmtDay(d) + ' ' + pad2(h) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(h) + ':00', expected: exp.count, actual: act, isFuture: false, shift: exp.desc, axisLabel: axis });
         }
         for (let j = 1; j <= 42; j++) {
-          const d = new Date(now.getTime() + j * 4 * 60 * 60 * 1000);
+          const d = new Date(baseMs + j * 4 * 60 * 60 * 1000);
           const exp = getNoiseFreeExpected(d, plantEmps);
           const h = d.getHours();
           const axis = (h === 0) ? fmtDay(d) : ((h === 12) ? '12:00' : '');
@@ -3613,6 +3677,20 @@
 
       cachedTradingPoints = pastPoints.concat(futurePoints);
       const allPts = cachedTradingPoints;
+      window.cachedTradingPoints = allPts;
+      const nowIndex = Math.max(0, pastPoints.length - 1);
+      window.tradingNowIndex = nowIndex;
+
+      const visibleCount = window.tradingVisibleCount || getDefaultVisibleCount(tf);
+      window.tradingVisibleCount = visibleCount;
+      const maxScroll = Math.max(0, allPts.length - visibleCount);
+
+      if (window.tradingScrollOffset === null || window.tradingScrollOffset === undefined) {
+        window.tradingScrollOffset = Math.max(0, Math.min(maxScroll, nowIndex - (visibleCount * 0.75)));
+      } else {
+        window.tradingScrollOffset = Math.max(0, Math.min(maxScroll, window.tradingScrollOffset));
+      }
+      syncSliderUI(maxScroll);
 
       // KPIs
       const totProgPast = pastPoints.reduce((acc, p) => acc + p.expected, 0);
@@ -3632,7 +3710,7 @@
       if (lblEnd && futurePoints.length > 0) lblEnd.innerText = futurePoints[futurePoints.length - 1].timeLabel;
 
       if (tradingChartSelectedIdx < 0 || tradingChartSelectedIdx >= allPts.length) {
-        tradingChartSelectedIdx = Math.max(0, pastPoints.length - 1); // Por defecto en AHORA
+        tradingChartSelectedIdx = nowIndex; // Por defecto en AHORA
       }
 
       function updateHUD(idx) {
@@ -3686,30 +3764,30 @@
 
         const bottomPad = 28;
         const chartH = h - bottomPad;
-        const pastRatio = window.currentPastRatio || 0.75;
-        const xNow = w * pastRatio;
-        const numPast = pastPoints.length;
-        const numFuture = futurePoints.length;
+        const visibleCount = window.tradingVisibleCount || 24;
+        const scrollOffset = window.tradingScrollOffset || 0;
 
-        function getX(i) {
-          if (i < numPast) {
-            return numPast > 1 ? (i / (numPast - 1)) * xNow : xNow;
-          } else {
-            const fIdx = i - numPast;
-            return xNow + ((fIdx + 1) / Math.max(1, numFuture)) * (w - xNow);
-          }
+        function getPointX(i) {
+          return ((i - scrollOffset) / Math.max(1, visibleCount - 1)) * w;
         }
+        const xNow = getPointX(nowIndex);
 
         const maxVal = Math.max(12, ...allPts.map(p => Math.max(p.expected, p.actual)));
 
         // Zona Pasado vs Proyección Futura
-        ctx.fillStyle = '#090d16';
-        ctx.fillRect(0, 0, xNow, chartH);
-        const gradFut = ctx.createLinearGradient(xNow, 0, w, 0);
-        gradFut.addColorStop(0, 'rgba(12, 22, 45, 0.5)');
-        gradFut.addColorStop(1, 'rgba(19, 29, 56, 0.7)');
-        ctx.fillStyle = gradFut;
-        ctx.fillRect(xNow, 0, w - xNow, chartH);
+        if (xNow > 0) {
+          const pastW = Math.min(w, xNow);
+          ctx.fillStyle = '#090d16';
+          ctx.fillRect(0, 0, pastW, chartH);
+        }
+        if (xNow < w) {
+          const futStart = Math.max(0, xNow);
+          const gradFut = ctx.createLinearGradient(futStart, 0, w, 0);
+          gradFut.addColorStop(0, 'rgba(12, 22, 45, 0.5)');
+          gradFut.addColorStop(1, 'rgba(19, 29, 56, 0.7)');
+          ctx.fillStyle = gradFut;
+          ctx.fillRect(futStart, 0, w - futStart, chartH);
+        }
 
         // Guías horizontales
         ctx.strokeStyle = '#1e293b';
@@ -3737,57 +3815,104 @@
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
 
-        allPts.forEach((pt, i) => {
-          let isTick = (pt.axisLabel && pt.axisLabel.length > 0) || (i === numPast - 1);
+        const startIdx = Math.max(0, Math.floor(scrollOffset - 2));
+        const endIdx = Math.min(allPts.length - 1, Math.ceil(scrollOffset + visibleCount + 2));
+
+        // 1. Ticks y líneas verticales
+        for (let i = startIdx; i <= endIdx; i++) {
+          const pt = allPts[i];
+          const isTick = (pt.axisLabel && pt.axisLabel.length > 0) || (i === nowIndex);
 
           if (isTick) {
-            const x = getX(i);
+            const x = getPointX(i);
+            if (x >= -10 && x <= w + 10) {
+              // Línea vertical punteada de cuadrícula hacia arriba
+              if (Math.abs(x - xNow) > 10) {
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, chartH);
+                ctx.stroke();
+                ctx.setLineDash([]);
+              }
 
-            // Línea vertical punteada de cuadrícula hacia arriba
-            if (Math.abs(x - xNow) > 8) {
-              ctx.strokeStyle = '#1e293b';
-              ctx.lineWidth = 1;
-              ctx.setLineDash([4, 4]);
+              // Muesca de tick sobre el eje amarillo
+              ctx.strokeStyle = '#f59e0b';
+              ctx.lineWidth = 1.5;
               ctx.beginPath();
-              ctx.moveTo(x, 0);
-              ctx.lineTo(x, chartH);
+              ctx.moveTo(x, chartH);
+              ctx.lineTo(x, chartH + 5);
               ctx.stroke();
-              ctx.setLineDash([]);
             }
-
-            // Muesca de tick sobre el eje amarillo
-            ctx.strokeStyle = '#f59e0b';
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.moveTo(x, chartH);
-            ctx.lineTo(x, chartH + 5);
-            ctx.stroke();
-
-            // Texto de fecha / hora debajo de la base amarilla
-            const isSelected = (i === tradingChartSelectedIdx);
-            ctx.fillStyle = isSelected ? '#38bdf8' : '#94a3b8';
-            const safeX = Math.max(20, Math.min(w - 20, x));
-            const txt = (pt.axisLabel && pt.axisLabel.length > 0) ? pt.axisLabel : pt.timeLabel;
-            ctx.fillText(txt, safeX, chartH + 7);
           }
-        });
+        }
 
-        // Curva Programación (Gris Discontinua a través del 100% de la gráfica)
-        if (allPts.length > 0) {
+        // 2. Textos con prevención inteligente de colisiones
+        const minTextSpacing = 44;
+
+        // AHORA siempre se dibuja en xNow si está visible
+        if (xNow >= 0 && xNow <= w && nowIndex < allPts.length) {
+          const ptNow = allPts[nowIndex];
+          const isSel = (nowIndex === tradingChartSelectedIdx);
+          ctx.fillStyle = isSel ? '#38bdf8' : '#94a3b8';
+          const safeX = Math.max(20, Math.min(w - 20, xNow));
+          const txt = (ptNow.axisLabel && ptNow.axisLabel.length > 0) ? ptNow.axisLabel : ptNow.timeLabel;
+          ctx.fillText(txt, safeX, chartH + 7);
+        }
+
+        // Pasado (izquierda de xNow)
+        let lastPastX = (xNow >= 0 && xNow <= w) ? xNow : w;
+        for (let i = Math.min(nowIndex - 1, endIdx); i >= startIdx; i--) {
+          const pt = allPts[i];
+          if (pt.axisLabel && pt.axisLabel.length > 0) {
+            const x = getPointX(i);
+            if (x >= 15 && x <= w && (lastPastX - x) >= minTextSpacing) {
+              const isSel = (i === tradingChartSelectedIdx);
+              ctx.fillStyle = isSel ? '#38bdf8' : '#94a3b8';
+              const safeX = Math.max(20, Math.min(w - 20, x));
+              ctx.fillText(pt.axisLabel, safeX, chartH + 7);
+              lastPastX = x;
+            }
+          }
+        }
+
+        // Futuro (derecha de xNow)
+        let lastFutX = (xNow >= 0 && xNow <= w) ? xNow : 0;
+        for (let i = Math.max(nowIndex + 1, startIdx); i <= endIdx; i++) {
+          const pt = allPts[i];
+          if (pt.axisLabel && pt.axisLabel.length > 0) {
+            const x = getPointX(i);
+            if (x >= 0 && x <= (w - 15) && (x - lastFutX) >= minTextSpacing) {
+              const isSel = (i === tradingChartSelectedIdx);
+              ctx.fillStyle = isSel ? '#38bdf8' : '#94a3b8';
+              const safeX = Math.max(20, Math.min(w - 20, x));
+              ctx.fillText(pt.axisLabel, safeX, chartH + 7);
+              lastFutX = x;
+            }
+          }
+        }
+
+        // Curva Programación (Gris Discontinua a través del viewport visible)
+        if (startIdx <= endIdx) {
           ctx.beginPath();
-          ctx.moveTo(0, chartH);
-          allPts.forEach((pt, i) => {
-            const x = getX(i);
+          const firstX = getPointX(startIdx);
+          ctx.moveTo(firstX, chartH);
+          for (let i = startIdx; i <= endIdx; i++) {
+            const pt = allPts[i];
+            const x = getPointX(i);
             const y = chartH - (pt.expected / maxVal) * chartH;
-            if (i === 0) ctx.lineTo(x, y);
+            if (i === startIdx) ctx.lineTo(x, y);
             else {
-              const prevX = getX(i - 1);
+              const prevX = getPointX(i - 1);
               const prevY = chartH - (allPts[i - 1].expected / maxVal) * chartH;
               const cX = (prevX + x) / 2;
               ctx.bezierCurveTo(cX, prevY, cX, y, x, y);
             }
-          });
-          ctx.lineTo(w, chartH);
+          }
+          const lastX = getPointX(endIdx);
+          ctx.lineTo(lastX, chartH);
           ctx.closePath();
           const gExp = ctx.createLinearGradient(0, 0, 0, chartH);
           gExp.addColorStop(0, 'rgba(100, 116, 139, 0.2)');
@@ -3796,17 +3921,18 @@
           ctx.fill();
 
           ctx.beginPath();
-          allPts.forEach((pt, i) => {
-            const x = getX(i);
+          for (let i = startIdx; i <= endIdx; i++) {
+            const pt = allPts[i];
+            const x = getPointX(i);
             const y = chartH - (pt.expected / maxVal) * chartH;
-            if (i === 0) ctx.moveTo(x, y);
+            if (i === startIdx) ctx.moveTo(x, y);
             else {
-              const prevX = getX(i - 1);
+              const prevX = getPointX(i - 1);
               const prevY = chartH - (allPts[i - 1].expected / maxVal) * chartH;
               const cX = (prevX + x) / 2;
               ctx.bezierCurveTo(cX, prevY, cX, y, x, y);
             }
-          });
+          }
           ctx.strokeStyle = '#94a3b8';
           ctx.lineWidth = 2;
           ctx.setLineDash([6, 4]);
@@ -3814,22 +3940,26 @@
           ctx.setLineDash([]);
         }
 
-        // Curva Escaneos Reales (Verde Neón - Solo en el 75% Historial)
-        if (pastPoints.length > 0) {
+        // Curva Escaneos Reales (Verde Neón - Solo en el Historial)
+        const actualEnd = Math.min(endIdx, nowIndex);
+        if (startIdx <= actualEnd) {
           ctx.beginPath();
-          ctx.moveTo(0, chartH);
-          pastPoints.forEach((pt, i) => {
-            const x = getX(i);
+          const firstX = getPointX(startIdx);
+          ctx.moveTo(firstX, chartH);
+          for (let i = startIdx; i <= actualEnd; i++) {
+            const pt = allPts[i];
+            const x = getPointX(i);
             const y = chartH - (pt.actual / maxVal) * chartH;
-            if (i === 0) ctx.lineTo(x, y);
+            if (i === startIdx) ctx.lineTo(x, y);
             else {
-              const prevX = getX(i - 1);
-              const prevY = chartH - (pastPoints[i - 1].actual / maxVal) * chartH;
+              const prevX = getPointX(i - 1);
+              const prevY = chartH - (allPts[i - 1].actual / maxVal) * chartH;
               const cX = (prevX + x) / 2;
               ctx.bezierCurveTo(cX, prevY, cX, y, x, y);
             }
-          });
-          ctx.lineTo(xNow, chartH);
+          }
+          const lastActualX = getPointX(actualEnd);
+          ctx.lineTo(lastActualX, chartH);
           ctx.closePath();
           const gAct = ctx.createLinearGradient(0, 0, 0, chartH);
           gAct.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
@@ -3838,25 +3968,27 @@
           ctx.fill();
 
           ctx.beginPath();
-          pastPoints.forEach((pt, i) => {
-            const x = getX(i);
+          for (let i = startIdx; i <= actualEnd; i++) {
+            const pt = allPts[i];
+            const x = getPointX(i);
             const y = chartH - (pt.actual / maxVal) * chartH;
-            if (i === 0) ctx.moveTo(x, y);
+            if (i === startIdx) ctx.moveTo(x, y);
             else {
-              const prevX = getX(i - 1);
-              const prevY = chartH - (pastPoints[i - 1].actual / maxVal) * chartH;
+              const prevX = getPointX(i - 1);
+              const prevY = chartH - (allPts[i - 1].actual / maxVal) * chartH;
               const cX = (prevX + x) / 2;
               ctx.bezierCurveTo(cX, prevY, cX, y, x, y);
             }
-          });
+          }
           ctx.strokeStyle = '#10b981';
           ctx.lineWidth = 3;
           ctx.stroke();
 
           // Puntos reales con halo
-          pastPoints.forEach((pt, i) => {
+          for (let i = startIdx; i <= actualEnd; i++) {
+            const pt = allPts[i];
             if (pt.actual > 0) {
-              const x = getX(i);
+              const x = getPointX(i);
               const y = chartH - (pt.actual / maxVal) * chartH;
               ctx.beginPath();
               ctx.arc(x, y, 6, 0, Math.PI * 2);
@@ -3867,47 +3999,51 @@
               ctx.fillStyle = '#34d399';
               ctx.fill();
             }
-          });
+          }
         }
 
-        // Línea Divisoria AHORA (75%)
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.moveTo(xNow, 0);
-        ctx.lineTo(xNow, chartH);
-        ctx.stroke();
-        ctx.setLineDash([]);
+        // Línea Divisoria AHORA
+        if (xNow >= 0 && xNow <= w) {
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(xNow, 0);
+          ctx.lineTo(xNow, chartH);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
 
         // Cursor Crosshair
         const sIdx = Math.min(allPts.length - 1, Math.max(0, tradingChartSelectedIdx));
-        const scrubX = getX(sIdx);
-        const ptSel = allPts[sIdx];
-        const yExp = chartH - (ptSel.expected / maxVal) * chartH;
-        const yAct = chartH - (ptSel.actual / maxVal) * chartH;
+        const scrubX = getPointX(sIdx);
+        if (scrubX >= 0 && scrubX <= w) {
+          const ptSel = allPts[sIdx];
+          const yExp = chartH - (ptSel.expected / maxVal) * chartH;
+          const yAct = chartH - (ptSel.actual / maxVal) * chartH;
 
-        ctx.strokeStyle = ptSel.isFuture ? '#a855f7' : '#38bdf8';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(scrubX, 0);
-        ctx.lineTo(scrubX, chartH);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(scrubX, yExp, 4, 0, Math.PI * 2);
-        ctx.fillStyle = '#94a3b8';
-        ctx.fill();
-
-        if (!ptSel.isFuture) {
+          ctx.strokeStyle = ptSel.isFuture ? '#a855f7' : '#38bdf8';
+          ctx.lineWidth = 1.5;
           ctx.beginPath();
-          ctx.arc(scrubX, yAct, 6, 0, Math.PI * 2);
-          ctx.fillStyle = '#10b981';
-          ctx.fill();
+          ctx.moveTo(scrubX, 0);
+          ctx.lineTo(scrubX, chartH);
+          ctx.stroke();
+
           ctx.beginPath();
-          ctx.arc(scrubX, yAct, 2.5, 0, Math.PI * 2);
-          ctx.fillStyle = '#ffffff';
+          ctx.arc(scrubX, yExp, 4, 0, Math.PI * 2);
+          ctx.fillStyle = '#94a3b8';
           ctx.fill();
+
+          if (!ptSel.isFuture) {
+            ctx.beginPath();
+            ctx.arc(scrubX, yAct, 6, 0, Math.PI * 2);
+            ctx.fillStyle = '#10b981';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(scrubX, yAct, 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+          }
         }
       }
 
@@ -3915,34 +4051,70 @@
 
       if (!canvas._hasTradingListener) {
         canvas._hasTradingListener = true;
-        function handlePointer(evt) {
+        let isPointerDown = false;
+        let dragStartX = 0;
+        let dragStartOffset = 0;
+        let hasDragged = false;
+
+        function onPointerStart(evt) {
+          const clientX = (evt.touches && evt.touches[0]) ? evt.touches[0].clientX : evt.clientX;
+          if (clientX === undefined) return;
+          isPointerDown = true;
+          dragStartX = clientX;
+          dragStartOffset = window.tradingScrollOffset || 0;
+          hasDragged = false;
+        }
+
+        function onPointerMove(evt) {
+          if (!isPointerDown) return;
           const rect = canvas.getBoundingClientRect();
           const clientX = (evt.touches && evt.touches[0]) ? evt.touches[0].clientX : evt.clientX;
-          const relX = clientX - rect.left;
-          const frac = Math.max(0, Math.min(1, relX / rect.width));
-          const xNowFrac = window.currentPastRatio || 0.75;
-          const numPast = pastPoints.length;
-          const numFuture = futurePoints.length;
+          if (clientX === undefined) return;
+          const dx = clientX - dragStartX;
+          if (Math.abs(dx) > 3) hasDragged = true;
 
-          let idx = 0;
-          if (frac <= xNowFrac) {
-            const pastRatio = xNowFrac > 0 ? (frac / xNowFrac) : 0;
-            idx = numPast > 1 ? Math.round(pastRatio * (numPast - 1)) : 0;
-          } else {
-            const futRatio = (1 - xNowFrac) > 0 ? ((frac - xNowFrac) / (1 - xNowFrac)) : 0;
-            idx = numPast + (numFuture > 1 ? Math.round(futRatio * (numFuture - 1)) : 0);
+          const visibleCount = window.tradingVisibleCount || 24;
+          const stepPx = rect.width / Math.max(1, visibleCount - 1);
+          const deltaPts = -dx / stepPx;
+          const maxScroll = Math.max(0, (window.cachedTradingPoints ? window.cachedTradingPoints.length : 0) - visibleCount);
+          window.tradingScrollOffset = Math.max(0, Math.min(maxScroll, dragStartOffset + deltaPts));
+
+          const relX = clientX - rect.left;
+          const ptIdx = Math.round(window.tradingScrollOffset + (relX / rect.width) * (visibleCount - 1));
+          if (window.cachedTradingPoints && ptIdx >= 0 && ptIdx < window.cachedTradingPoints.length) {
+            tradingChartSelectedIdx = ptIdx;
+            updateHUD(ptIdx);
           }
-          idx = Math.min(allPts.length - 1, Math.max(0, idx));
-          if (idx !== tradingChartSelectedIdx) {
-            tradingChartSelectedIdx = idx;
-            updateHUD(idx);
-            draw();
+          syncSliderUI(maxScroll);
+          draw();
+        }
+
+        function onPointerEnd(evt) {
+          if (!isPointerDown) return;
+          isPointerDown = false;
+          if (!hasDragged) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = (evt.changedTouches && evt.changedTouches[0]) ? evt.changedTouches[0].clientX : evt.clientX;
+            if (clientX !== undefined) {
+              const relX = clientX - rect.left;
+              const visibleCount = window.tradingVisibleCount || 24;
+              const ptIdx = Math.round((window.tradingScrollOffset || 0) + (relX / rect.width) * (visibleCount - 1));
+              if (window.cachedTradingPoints && ptIdx >= 0 && ptIdx < window.cachedTradingPoints.length) {
+                tradingChartSelectedIdx = ptIdx;
+                updateHUD(ptIdx);
+                draw();
+              }
+            }
           }
         }
 
-        canvas.addEventListener('mousemove', handlePointer, { passive: true });
-        canvas.addEventListener('touchmove', handlePointer, { passive: true });
-        canvas.addEventListener('touchstart', handlePointer, { passive: true });
+        canvas.addEventListener('mousedown', onPointerStart);
+        window.addEventListener('mousemove', onPointerMove);
+        window.addEventListener('mouseup', onPointerEnd);
+
+        canvas.addEventListener('touchstart', onPointerStart, { passive: true });
+        canvas.addEventListener('touchmove', onPointerMove, { passive: true });
+        canvas.addEventListener('touchend', onPointerEnd, { passive: true });
       }
     }
 
