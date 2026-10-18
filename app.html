@@ -16,8 +16,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Escáner QR de Alta Compatibilidad Móvil -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
   <style>
+    @keyframes scanLaser {
+      0% { transform: translateY(-70px); opacity: 0.3; }
+      50% { transform: translateY(70px); opacity: 1; }
+      100% { transform: translateY(-70px); opacity: 0.3; }
+    }
+
     :root {
       --primary: #0d47a1;
       --primary-light: #1976d2;
@@ -1680,17 +1688,54 @@
 
       <!-- MODAL DE ESCANEO QR EN ENTRADA / SALIDA -->
       <div id="modal-gate-scanner" class="modal-overlay hidden" onclick="if(event.target===this) closeGateScannerModal()">
-        <div class="modal-card" style="text-align:center;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h3 style="font-size:1.05rem; font-weight:800; color:var(--primary); margin:0;">📷 Escáner de Entrada Oficial</h3>
-            <button type="button" onclick="closeGateScannerModal()" style="background:#f1f5f9; border:none; padding:6px 12px; border-radius:8px; font-weight:700; cursor:pointer;">✕</button>
+        <div class="modal-card" style="text-align:center; max-width:400px; width:92%; padding:18px 16px; border-radius:18px;">
+          
+          <!-- VISTA 1: CÁMARA ACTIVA DE ESCANEO -->
+          <div id="gate-scanner-view-camera">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span id="gate-modal-icon" style="font-size:1.25rem;">📷</span>
+                <h3 id="gate-modal-title" style="font-size:1.05rem; font-weight:800; color:var(--primary); margin:0;">Escáner de Entrada Oficial</h3>
+              </div>
+              <button type="button" onclick="closeGateScannerModal()" style="background:#f1f5f9; border:none; padding:6px 12px; border-radius:8px; font-weight:700; cursor:pointer;">✕</button>
+            </div>
+            
+            <p id="gate-scanner-subtitle" style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">
+              Enfoque el código QR ubicado en el acceso físico de la fábrica:
+            </p>
+
+            <!-- VISOR DE CÁMARA -->
+            <div style="position:relative; width:100%; max-width:300px; margin:0 auto 12px; border-radius:14px; overflow:hidden; background:#0f172a; min-height:250px; box-shadow:0 4px 16px rgba(0,0,0,0.2);">
+              <div id="gate-qr-reader" style="width:100%;"></div>
+              
+              <!-- Marco de Apuntado Visual -->
+              <div id="gate-scanner-targeting" style="pointer-events:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:190px; height:190px; border:2.5px dashed rgba(74, 222, 128, 0.85); border-radius:14px; box-shadow:0 0 0 9999px rgba(15, 23, 42, 0.4); display:flex; align-items:center; justify-content:center;">
+                <div style="width:170px; height:2px; background:linear-gradient(90deg, transparent, #4ade80, transparent); animation:scanLaser 2s infinite ease-in-out;"></div>
+              </div>
+            </div>
+
+            <!-- Feedback de Estado -->
+            <div id="gate-scanner-feedback" style="padding:10px 12px; background:#f8fafc; border:1px solid var(--border); border-radius:10px; font-size:0.8rem; color:#475569; margin-bottom:12px; font-weight:600;">
+              ⏳ Iniciando cámara... Apunte al código QR oficial.
+            </div>
+
+            <button type="button" onclick="closeGateScannerModal()" style="width:100%; padding:11px; background:#f1f5f9; color:#475569; border:none; border-radius:10px; font-weight:700; cursor:pointer;">
+              Cancelar
+            </button>
           </div>
-          <div id="gate-scanner-status-box" style="padding:16px; background:#0f172a; border-radius:12px; color:#fff; margin-bottom:14px;">
-            <div style="font-size:2rem; margin-bottom:8px;">✅</div>
-            <div style="font-weight:800; font-size:1rem; color:#4ade80;">¡ENTRADA REGISTRADA!</div>
-            <div id="gate-scanner-time" style="font-size:0.85rem; color:#94a3b8; margin-top:4px;">Registro de acceso verificado por GPS (Tolerancia 60m)</div>
+
+          <!-- VISTA 2: CONFIRMACIÓN EXITOSA -->
+          <div id="gate-scanner-view-success" class="hidden">
+            <div style="padding:20px 16px; background:#0f172a; border-radius:16px; color:#fff; margin-bottom:14px;">
+              <div style="font-size:2.8rem; margin-bottom:8px;">✅</div>
+              <div id="gate-success-title" style="font-weight:800; font-size:1.15rem; color:#4ade80;">¡ENTRADA REGISTRADA!</div>
+              <div id="gate-scanner-time" style="font-size:0.85rem; color:#94a3b8; margin-top:6px;">Registro de acceso verificado por GPS (Tolerancia 60m)</div>
+            </div>
+            <button type="button" onclick="onGateScanConfirmSuccess()" style="width:100%; padding:12px; background:#10b981; color:#fff; border:none; border-radius:10px; font-weight:800; font-size:0.95rem; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
+              Aceptar e Ir a Mis Horas &rarr;
+            </button>
           </div>
-          <button type="button" onclick="onGateScanConfirmSuccess()" style="width:100%; padding:12px; background:#10b981; color:#fff; border:none; border-radius:10px; font-weight:800; font-size:0.95rem; cursor:pointer;">Aceptar e Ir a Mis Horas &rarr;</button>
+
         </div>
       </div>
 
@@ -1984,6 +2029,7 @@
       }
 
       fetchAndRenderLeaderGroup(emp);
+      updateGateProfileButton();
       logWebAppAccess(emp);
     }
 
@@ -4196,15 +4242,237 @@
       document.getElementById('login-pin').value = '';
     }
 
-    window.openGateScannerModal = function() {
+    let gateHtml5QrCode = null;
+    let gateScanCurrentMode = 'ENTRADA';
+    let gateIsProcessingCode = false;
+
+    window.openGateScannerModal = function(forcedMode) {
+      if (forcedMode) {
+        gateScanCurrentMode = forcedMode;
+      } else {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const hasEntryToday = (currentUser && currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_entrada);
+        gateScanCurrentMode = hasEntryToday ? 'SALIDA' : 'ENTRADA';
+      }
+
       const m = document.getElementById('modal-gate-scanner');
-      if (m) m.classList.remove('hidden');
+      if (!m) return;
+
+      const vCam = document.getElementById('gate-scanner-view-camera');
+      const vSucc = document.getElementById('gate-scanner-view-success');
+      if (vCam) vCam.classList.remove('hidden');
+      if (vSucc) vSucc.classList.add('hidden');
+
+      const titleEl = document.getElementById('gate-modal-title');
+      const iconEl = document.getElementById('gate-modal-icon');
+      const fb = document.getElementById('gate-scanner-feedback');
+
+      if (gateScanCurrentMode === 'SALIDA') {
+        if (titleEl) titleEl.innerText = '🚪 Escáner de Salida Oficial';
+        if (iconEl) iconEl.innerText = '🚪';
+      } else {
+        if (titleEl) titleEl.innerText = '📷 Escáner de Entrada Oficial';
+        if (iconEl) iconEl.innerText = '📷';
+      }
+
+      if (fb) {
+        fb.innerHTML = '⏳ Iniciando cámara... Apunte al código QR oficial.';
+        fb.style.color = '#475569';
+        fb.style.background = '#f8fafc';
+      }
+
+      gateIsProcessingCode = false;
+      m.classList.remove('hidden');
+
+      if (typeof Html5Qrcode !== 'undefined') {
+        try {
+          if (!gateHtml5QrCode) {
+            gateHtml5QrCode = new Html5Qrcode('gate-qr-reader');
+          }
+          const config = { fps: 12, qrbox: { width: 200, height: 200 } };
+          
+          gateHtml5QrCode.start(
+            { facingMode: 'environment' },
+            config,
+            onGateQrCodeScanned,
+            function(err) {}
+          ).catch(function(err) {
+            console.warn('Fallback a cámara user:', err);
+            gateHtml5QrCode.start(
+              { facingMode: 'user' },
+              config,
+              onGateQrCodeScanned,
+              function(e) {}
+            ).catch(function(finalErr) {
+              if (fb) {
+                fb.innerHTML = '⚠️ No se pudo acceder a la cámara. Conceda permiso de cámara en su navegador o use un móvil.';
+                fb.style.color = '#dc2626';
+                fb.style.background = '#fef2f2';
+              }
+            });
+          });
+        } catch (ex) {
+          console.error('Error al inicializar cámara:', ex);
+        }
+      } else {
+        if (fb) {
+          fb.innerHTML = '⚠️ Biblioteca de cámara cargando. Espere un momento.';
+        }
+      }
     };
 
     window.closeGateScannerModal = function() {
+      if (gateHtml5QrCode) {
+        try {
+          if (gateHtml5QrCode.isScanning) {
+            gateHtml5QrCode.stop().then(function() {
+              gateHtml5QrCode.clear();
+            }).catch(function() {});
+          }
+        } catch (e) {}
+      }
       const m = document.getElementById('modal-gate-scanner');
       if (m) m.classList.add('hidden');
     };
+
+    async function onGateQrCodeScanned(decodedText) {
+      if (gateIsProcessingCode) return;
+      
+      const raw = (decodedText || '').trim();
+      if (!raw) return;
+
+      const upper = raw.toUpperCase();
+      const isValidGate = upper.startsWith('UNAMEL-GATE-') || 
+                          upper.startsWith('UNAMEL:GATE:') || 
+                          upper.startsWith('UNAMEL_GATE_') ||
+                          upper.includes('UNAMEL') ||
+                          upper === 'GATE-01' || upper === 'GATE-02' || upper === 'GATE-03';
+
+      const fb = document.getElementById('gate-scanner-feedback');
+
+      if (!isValidGate) {
+        if (fb) {
+          fb.innerHTML = '❌ Código no autorizado (' + raw.slice(0, 24) + '). Enfoque el QR oficial de la fábrica.';
+          fb.style.color = '#dc2626';
+          fb.style.background = '#fef2f2';
+        }
+        if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
+        return;
+      }
+
+      // Código válido detectado
+      gateIsProcessingCode = true;
+
+      if (gateHtml5QrCode && gateHtml5QrCode.isScanning) {
+        try {
+          await gateHtml5QrCode.stop();
+          gateHtml5QrCode.clear();
+        } catch (e) {}
+      }
+
+      if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.value = 880;
+        gain.gain.value = 0.1;
+        osc.start();
+        setTimeout(function() { osc.stop(); }, 180);
+      } catch (e) {}
+
+      const now = new Date();
+      const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      const todayYmd = now.toISOString().slice(0, 10);
+
+      // Registrar en Firestore
+      try {
+        if (currentUser) {
+          const empId = String(currentUser.id || currentUser.pesel || '').trim();
+          const isExit = (gateScanCurrentMode === 'SALIDA');
+          const statusField = isExit ? 'horaSalida' : 'horaEntrada';
+
+          const attDocUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + todayYmd + '/registros/' + encodeURIComponent(empId) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=' + statusField + '&updateMask.fieldPaths=status&updateMask.fieldPaths=employeeName&updateMask.fieldPaths=grupo&updateMask.fieldPaths=turno&updateMask.fieldPaths=qrGate';
+          
+          const payload = {
+            fields: {
+              [statusField]: { stringValue: timeStr },
+              status: { stringValue: 'A_TIEMPO' },
+              employeeName: { stringValue: currentUser.nombre_completo || '' },
+              grupo: { stringValue: currentUser.grupo || 'A' },
+              turno: { stringValue: String(currentUser.turno_actual || '1') },
+              qrGate: { stringValue: raw.slice(0, 30) }
+            }
+          };
+
+          fetch(attDocUrl, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }).catch(function() {});
+
+          if (!isExit) {
+            currentUser.ultimo_acceso_fecha = todayYmd;
+            currentUser.ultima_hora_entrada = timeStr;
+          } else {
+            currentUser.ultima_hora_salida = timeStr;
+          }
+        }
+      } catch (err) {
+        console.error('Error al guardar asistencia:', err);
+      }
+
+      // Mostrar confirmación
+      const vCam = document.getElementById('gate-scanner-view-camera');
+      const vSucc = document.getElementById('gate-scanner-view-success');
+      if (vCam) vCam.classList.add('hidden');
+      if (vSucc) vSucc.classList.remove('hidden');
+
+      const succTitle = document.getElementById('gate-success-title');
+      const succTime = document.getElementById('gate-scanner-time');
+
+      if (gateScanCurrentMode === 'SALIDA') {
+        if (succTitle) succTitle.innerText = '¡SALIDA REGISTRADA!';
+        if (succTime) succTime.innerText = 'Hora de salida: ' + timeStr + ' \u2022 Puerta ' + raw.slice(0, 16);
+      } else {
+        if (succTitle) succTitle.innerText = '¡ENTRADA REGISTRADA!';
+        if (succTime) succTime.innerText = 'Hora de entrada: ' + timeStr + ' \u2022 Puerta ' + raw.slice(0, 16);
+      }
+
+      updateGateProfileButton();
+    }
+
+    function updateGateProfileButton() {
+      const btn = document.getElementById('btn-gate-scan');
+      const txt = document.getElementById('btn-gate-scan-text');
+      const icon = document.getElementById('btn-gate-scan-icon');
+      if (!btn || !txt) return;
+
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const hasEntry = (currentUser && currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_entrada);
+      const hasExit = (currentUser && currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_salida);
+
+      if (hasExit) {
+        txt.innerText = '✅ Jornada Completada Hoy (' + currentUser.ultima_hora_salida + ')';
+        if (icon) icon.innerText = '✅';
+        btn.style.background = '#64748b';
+        btn.style.cursor = 'default';
+        btn.onclick = function() { switchTab('hours', document.getElementById('nav-btn-hours')); };
+      } else if (hasEntry) {
+        txt.innerText = '🚪 Escanear QR en Salida (Entrada: ' + currentUser.ultima_hora_entrada + ')';
+        if (icon) icon.innerText = '🚪';
+        btn.style.background = '#d97706';
+        btn.onclick = function() { openGateScannerModal('SALIDA'); };
+      } else {
+        txt.innerText = '📷 Escanear QR en Entrada';
+        if (icon) icon.innerText = '📷';
+        btn.style.background = '#10b981';
+        btn.onclick = function() { openGateScannerModal('ENTRADA'); };
+      }
+    }
 
     window.onGateScanConfirmSuccess = function() {
       window.closeGateScannerModal();
