@@ -2541,14 +2541,14 @@
             if (grp === userGroup) return false;
 
             // Si su grupo ya tiene a su propio líder en este turno, NO se incluye como apoyo
-            if (groupsWithOwnLeader.has(grp) && !(w.es_apoyo || (w.horas_extra_apoyo && w.horas_extra_apoyo > 0))) {
+            if (groupsWithOwnLeader.has(grp)) {
               return false;
             }
 
             const rec = attendanceRecordsMap[w.id];
             const hasScanned = rec && rec.horaEntrada && rec.status !== 'PENDIENTE';
 
-            return (w.es_apoyo || (w.horas_extra_apoyo && w.horas_extra_apoyo > 0) || hasScanned);
+            return Boolean(hasScanned);
           });
           support.sort((a, b) => {
             const timeA = (a.hora_inicio_turno || (a.horario_turno || '').split('-')[0] || '06:00').trim();
@@ -2565,16 +2565,17 @@
           allOtherPlantWorkers = all.filter(w => !isTestAccount(w) && !activeGroupMembers.some(m => m.id === w.id) && !activeSupportWorkers.some(s => s.id === w.id));
 
           // Contadores de miembros
+          const mainCount = activeGroupMembers.length;
           const totalCount = activeGroupMembers.length + activeSupportWorkers.length;
           const subTotal = document.getElementById('tab-group-total-workers-sub');
-          if (subTotal) subTotal.innerText = totalCount + ' ' + (dict.workers_count_word || 'trabajadores');
+          if (subTotal) subTotal.innerText = mainCount + ' ' + (dict.workers_count_word || 'trabajadores');
           const badgeMainCnt = document.getElementById('badge-main-group-count');
-          if (badgeMainCnt) badgeMainCnt.innerText = activeGroupMembers.length + ' ' + (dict.workers_count_word || 'trabajadores');
+          if (badgeMainCnt) badgeMainCnt.innerText = mainCount + ' ' + (dict.workers_count_word || 'trabajadores');
           const badgeSuppCnt = document.getElementById('badge-support-group-count');
           if (badgeSuppCnt) badgeSuppCnt.innerText = activeSupportWorkers.length + ' ' + (dict.workers_count_word || 'trabajadores');
 
           const cardCountBadge = document.getElementById('card-leader-group-count');
-          if (cardCountBadge) cardCountBadge.innerText = totalCount + ' ' + (dict.workers_count_word || 'trabajadores');
+          if (cardCountBadge) cardCountBadge.innerText = mainCount + ' ' + (dict.workers_count_word || 'trabajadores');
 
           renderAttendanceUI();
         }
