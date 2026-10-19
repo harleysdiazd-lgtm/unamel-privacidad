@@ -1,0 +1,10 @@
+{
+  "version": 1792450757347,
+  "buildDate": "2026-10-20 00:59:17",
+  "appName": "UNAMEL Coordinacion",
+  "features": [
+    "auto-update",
+    "continuous-chart-ndserwis",
+    "privileged-gps-bypass"
+  ]
+}
