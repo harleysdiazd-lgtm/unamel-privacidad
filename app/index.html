@@ -918,34 +918,39 @@
     });
   </script>
 
-  <!-- SISTEMA DE AUTO-ACTUALIZACIÓN AUTOMÁTICA Y CACHE BUSTING -->
+  <!-- SISTEMA DE ACTUALIZACIÓN CONTROLADA (SIN BUCLES NI RECARGAS INNECESARIAS) -->
   <script>
-    const APP_BUILD_TIMESTAMP = 1792450757347;
     function checkForAppUpdates() {
-      fetch('version.json?_t=' + Date.now(), { cache: 'no-store' })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data && data.version && data.version > APP_BUILD_TIMESTAMP) {
-            console.log("Nueva versión detectada en GitHub Pages:", data.version);
-            var toast = document.createElement('div');
-            toast.style.cssText = "position:fixed;top:14px;left:50%;transform:translateX(-50%);background:#1d4ed8;color:#fff;padding:10px 22px;border-radius:24px;font-weight:800;font-size:0.85rem;box-shadow:0 6px 20px rgba(0,0,0,0.4);z-index:999999;border:1px solid rgba(255,255,255,0.25);";
-            toast.innerHTML = "🔄 <span>Nueva versión disponible. Actualizando...</span>";
-            document.body.appendChild(toast);
-            setTimeout(function() {
-              window.location.replace(window.location.pathname + '?v=' + data.version);
-            }, 800);
-          }
-        })
-        .catch(function(e) {});
+      try {
+        var installedVer = localStorage.getItem('unamel_app_version');
+        fetch('version.json?_t=' + Date.now(), { cache: 'no-store' })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data && data.version) {
+              if (!installedVer) {
+                localStorage.setItem('unamel_app_version', String(data.version));
+                return;
+              }
+              if (parseInt(data.version, 10) > parseInt(installedVer, 10)) {
+                console.log("Nueva versión oficial disponible:", data.version);
+                localStorage.setItem('unamel_app_version', String(data.version));
+                var toast = document.createElement('div');
+                toast.style.cssText = "position:fixed;top:14px;left:50%;transform:translateX(-50%);background:#1d4ed8;color:#fff;padding:10px 22px;border-radius:24px;font-weight:800;font-size:0.85rem;box-shadow:0 6px 20px rgba(0,0,0,0.4);z-index:999999;border:1px solid rgba(255,255,255,0.25);";
+                toast.innerHTML = "🔄 <span>Nueva versión disponible. Actualizando...</span>";
+                document.body.appendChild(toast);
+                setTimeout(function() {
+                  window.location.replace(window.location.pathname + '?v=' + data.version);
+                }, 800);
+              }
+            }
+          })
+          .catch(function(e) {});
+      } catch (ex) {}
     }
-    window.addEventListener('load', checkForAppUpdates);
-    document.addEventListener('visibilitychange', function() {
-      if (document.visibilityState === 'visible') {
-        checkForAppUpdates();
-        if (typeof renderShiftTimelineLive === 'function') renderShiftTimelineLive();
-      }
+    // Solo verificar UNA VEZ en frío al cargar la app después de 3 segundos
+    window.addEventListener('load', function() {
+      setTimeout(checkForAppUpdates, 3000);
     });
-    setInterval(checkForAppUpdates, 180000);
   </script>
 
 </head>
@@ -4398,9 +4403,17 @@
       document.getElementById('login-pin').value = '';
     }
 
-    // Sincronización en tiempo real con Firestore de la asistencia de hoy
-    async function syncUserTodayAttendanceLive() {
+    let lastFirestoreSyncTimestamp = 0;
+
+    // Sincronización en tiempo real con Firestore protegida por Throttling (Ahorro estricto de Cuota)
+    async function syncUserTodayAttendanceLive(force = false) {
       if (!currentUser) return;
+      const now = Date.now();
+      // Throttling de 5 minutos (300,000 ms) para proteger cuota salvo petición forzada (ej. al abrir escáner)
+      if (!force && (now - lastFirestoreSyncTimestamp < 300000)) {
+        return;
+      }
+      lastFirestoreSyncTimestamp = now;
       try {
         const todayStr = new Date().toISOString().slice(0, 10);
         const candidates = [
@@ -4468,8 +4481,8 @@
       if (forcedMode) {
         gateScanCurrentMode = forcedMode;
       } else {
-        // Consultar Firestore en tiempo real para evitar duplicidades
-        await syncUserTodayAttendanceLive();
+        // Consultar Firestore en tiempo real bajo demanda (Just-in-Time)
+        await syncUserTodayAttendanceLive(true);
         const todayStr = new Date().toISOString().slice(0, 10);
         const hasEntryToday = (currentUser && currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_entrada);
         const hasExitToday = (currentUser && currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_salida && currentUser.ultima_hora_salida.trim().length > 0);
@@ -4916,19 +4929,7 @@
           cardHours.style.display = 'none';
           cardHours.innerHTML = '';
         }
-      }
     }
-
-    // Auto-sincronización proactiva periódica y al regresar a la pestaña o dar foco
-    setInterval(syncUserTodayAttendanceLive, 30000);
-    document.addEventListener('visibilitychange', function() {
-      if (document.visibilityState === 'visible') {
-        syncUserTodayAttendanceLive();
-      }
-    });
-    window.addEventListener('focus', function() {
-      syncUserTodayAttendanceLive();
-    });
 
     // ==========================================
     // NOTIFICACIONES EN VIVO DE SOLICITUDES DE APOYO PARA COORDINADOR
