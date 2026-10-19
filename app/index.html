@@ -1846,18 +1846,31 @@
                              (isAdmin && (pinInput === '2026' || pinInput === '1234'));
 
           if (pinMatches) {
-            // Cargar asistencia de Septiembre si no viene historial completo
+            if (!emp.historial_meses) emp.historial_meses = {};
+            // Sincronizar asistencia de Octubre y Septiembre en vivo desde Firestore
             try {
-              const attUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles/' + (emp.pesel || queryId) + '/asistencia/2026-09?key=' + FIRESTORE_API_KEY;
-              const attResp = await fetch(attUrl, { cache: 'no-cache' });
-              if (attResp.ok) {
-                const attData = await attResp.json();
-                const attObj = parseFirestoreDoc(attData.fields);
-                if (attObj && attObj.dias) {
-                  emp.dias_trabajados_detalle = attObj.dias;
-                  if (attObj.total_horas_mes !== undefined) emp.horas_mes_actual = attObj.total_horas_mes;
-                }
-              }
+              const fetchMonthDoc = async (mKey) => {
+                try {
+                  const u = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles/' + (emp.pesel || queryId) + '/asistencia/' + mKey + '?key=' + FIRESTORE_API_KEY;
+                  const r = await fetch(u, { cache: 'no-cache' });
+                  if (r.ok) {
+                    const d = await r.json();
+                    const o = parseFirestoreDoc(d.fields);
+                    if (o && (o.dias || o.total_horas_mes !== undefined)) {
+                      emp.historial_meses[mKey] = {
+                        total_horas: o.total_horas_mes !== undefined ? o.total_horas_mes : (o.total_horas || 0),
+                        total_horas_mes: o.total_horas_mes,
+                        dias: o.dias || []
+                      };
+                      if (mKey === '2026-10') {
+                        if (o.dias) emp.dias_trabajados_detalle = o.dias;
+                        if (o.total_horas_mes !== undefined) emp.horas_mes_actual = o.total_horas_mes;
+                      }
+                    }
+                  }
+                } catch(e) {}
+              };
+              await Promise.all([fetchMonthDoc('2026-10'), fetchMonthDoc('2026-09')]);
             } catch (attErr) {}
 
             errBox.style.display = 'none';
@@ -2037,8 +2050,35 @@
       const newIdx = selectedMonthIdx + delta;
       if (newIdx >= 0 && newIdx < AVAILABLE_MONTHS.length) {
         selectedMonthIdx = newIdx;
+        const monthKey = AVAILABLE_MONTHS[selectedMonthIdx];
         renderSelectedMonthHours();
+        fetchMonthAttendanceIfAvailable(monthKey);
       }
+    }
+
+    async function fetchMonthAttendanceIfAvailable(monthKey) {
+      if (!currentUser) return;
+      const id = currentUser.pesel || currentUser.id;
+      if (!id) return;
+      try {
+        const u = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles/' + id + '/asistencia/' + monthKey + '?key=' + FIRESTORE_API_KEY;
+        const r = await fetch(u, { cache: 'no-cache' });
+        if (r.ok) {
+          const d = await r.json();
+          const o = parseFirestoreDoc(d.fields);
+          if (o && (o.dias || o.total_horas_mes !== undefined)) {
+            if (!currentUser.historial_meses) currentUser.historial_meses = {};
+            currentUser.historial_meses[monthKey] = {
+              total_horas: o.total_horas_mes !== undefined ? o.total_horas_mes : (o.total_horas || 0),
+              total_horas_mes: o.total_horas_mes,
+              dias: o.dias || []
+            };
+            if (monthKey === AVAILABLE_MONTHS[selectedMonthIdx]) {
+              renderSelectedMonthHours();
+            }
+          }
+        }
+      } catch(e) {}
     }
 
     function renderSelectedMonthHours() {
@@ -4456,18 +4496,18 @@
       const hasExit = (currentUser && currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_salida);
 
       if (hasExit) {
-        txt.innerText = '✅ Jornada Completada Hoy (' + currentUser.ultima_hora_salida + ')';
+        txt.innerText = 'Jornada Completada Hoy (' + currentUser.ultima_hora_salida + ')';
         if (icon) icon.innerText = '✅';
         btn.style.background = '#64748b';
         btn.style.cursor = 'default';
         btn.onclick = function() { switchTab('hours', document.getElementById('nav-btn-hours')); };
       } else if (hasEntry) {
-        txt.innerText = '🚪 Escanear QR en Salida (Entrada: ' + currentUser.ultima_hora_entrada + ')';
+        txt.innerText = 'Escanear QR en Salida (Entrada: ' + currentUser.ultima_hora_entrada + ')';
         if (icon) icon.innerText = '🚪';
         btn.style.background = '#d97706';
         btn.onclick = function() { openGateScannerModal('SALIDA'); };
       } else {
-        txt.innerText = '📷 Escanear QR en Entrada';
+        txt.innerText = 'Escanear QR en Entrada';
         if (icon) icon.innerText = '📷';
         btn.style.background = '#10b981';
         btn.onclick = function() { openGateScannerModal('ENTRADA'); };
