@@ -4493,9 +4493,57 @@
 
       const todayStr = new Date().toISOString().slice(0, 10);
       const hasEntry = (currentUser && currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_entrada);
-      const hasExit = (currentUser && currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_salida);
+      let hasExit = (currentUser && currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_salida);
 
-      if (hasExit) {
+      // Regla de Negocio: Si no hay logout en 5 horas después del fin de turno, se hace automáticamente y se registran las horas de la programación
+      if (hasEntry && !hasExit) {
+        try {
+          const entryParts = (currentUser.ultima_hora_entrada || '06:00').split(':').map(Number);
+          const now = new Date();
+          const entryDate = new Date();
+          entryDate.setHours(entryParts[0], entryParts[1], 0, 0);
+
+          const baseH = Number(currentUser.horas_base_turno) || 8;
+          const diffHours = (now - entryDate) / (1000 * 60 * 60);
+
+          // Si han transcurrido más de (baseH + 5) horas desde la entrada sin marcar salida
+          if (diffHours >= (baseH + 5)) {
+            const autoExitDate = new Date(entryDate.getTime() + baseH * 60 * 60 * 1000);
+            const autoExitHH = String(autoExitDate.getHours()).padStart(2, '0');
+            const autoExitMM = String(autoExitDate.getMinutes()).padStart(2, '0');
+            const autoExitStr = autoExitHH + ':' + autoExitMM;
+
+            currentUser.ultima_hora_salida = autoExitStr;
+            currentUser.auto_cierre_5h = true;
+            hasExit = true;
+
+            const empId = String(currentUser.id || currentUser.pesel || '').trim();
+            const attDocUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + todayStr + '/registros/' + encodeURIComponent(empId) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=horaSalida&updateMask.fieldPaths=status&updateMask.fieldPaths=comentario&updateMask.fieldPaths=horasCalculadas';
+            const payload = {
+              fields: {
+                horaSalida: { stringValue: autoExitStr },
+                status: { stringValue: 'SALIDA_AUTOMATICA' },
+                horasCalculadas: { doubleValue: baseH },
+                comentario: { stringValue: 'Auto-cierre (+5h tras fin de turno: ' + baseH + 'h programadas)' }
+              }
+            };
+            fetch(attDocUrl, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            }).catch(function() {});
+          }
+        } catch(e) {}
+      }
+
+      if (currentUser && currentUser.auto_cierre_5h) {
+        const baseH = Number(currentUser.horas_base_turno) || 8;
+        txt.innerText = 'Jornada Cerrada Automáticamente (' + baseH + 'h programadas)';
+        if (icon) icon.innerText = '🔒';
+        btn.style.background = '#475569';
+        btn.style.cursor = 'default';
+        btn.onclick = function() { switchTab('hours', document.getElementById('nav-btn-hours')); };
+      } else if (hasExit) {
         txt.innerText = 'Jornada Completada Hoy (' + currentUser.ultima_hora_salida + ')';
         if (icon) icon.innerText = '✅';
         btn.style.background = '#64748b';
