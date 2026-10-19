@@ -26,6 +26,17 @@
       100% { transform: translateY(-70px); opacity: 0.3; }
     }
 
+    @keyframes liveShiftGlow {
+      0% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.35); border-color: #3b82f6; }
+      50% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.75); border-color: #60a5fa; }
+      100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.35); border-color: #3b82f6; }
+    }
+
+    @keyframes livePulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.35); opacity: 0.5; }
+    }
+
     :root {
       --primary: #0d47a1;
       --primary-light: #1976d2;
@@ -1000,6 +1011,12 @@
           </div>
         </div>
 
+        <!-- BANNER DE NOTIFICACIONES DE APOYO PARA COORDINADOR -->
+        <div id="box-coord-support-requests" class="hidden" style="margin-top:12px; margin-bottom:12px;"></div>
+
+        <!-- TARJETA ANIMADA DE TURNO EN VIVO (PARIDAD CON ANDROID) -->
+        <div id="box-live-shift-card" style="margin-top:12px; margin-bottom:14px;"></div>
+
         <!-- Ficha Personal y Contractual Desplegable -->
         <div id="personal-info-drawer" class="personal-drawer">
           <div class="drawer-title">
@@ -1126,6 +1143,9 @@
       <!-- PESTAÑA 2: CONTROL DE HORAS (MULTIMES + SWIPE) -->
       <div id="tab-hours" class="tab-pane hidden">
         
+        <!-- TARJETA ANIMADA DE TURNO EN VIVO (PARIDAD CON ANDROID) -->
+        <div id="box-live-shift-card-hours" style="margin-bottom:14px;"></div>
+
         <div class="hours-hero-card">
           <div class="month-selector-bar">
             <button type="button" class="btn-month-nav" onclick="navMonth(-1)" aria-label="Mes anterior">◀</button>
@@ -2043,6 +2063,7 @@
 
       fetchAndRenderLeaderGroup(emp);
       updateGateProfileButton();
+      startLiveShiftTracker();
       logWebAppAccess(emp);
     }
 
@@ -4457,6 +4478,8 @@
           if (!isExit) {
             currentUser.ultimo_acceso_fecha = todayYmd;
             currentUser.ultima_hora_entrada = timeStr;
+            currentUser.ultima_hora_salida = '';
+            currentUser.auto_cierre_5h = false;
           } else {
             currentUser.ultima_hora_salida = timeStr;
           }
@@ -4477,12 +4500,16 @@
       if (gateScanCurrentMode === 'SALIDA') {
         if (succTitle) succTitle.innerText = '¡SALIDA REGISTRADA!';
         if (succTime) succTime.innerText = 'Hora de salida: ' + timeStr + ' \u2022 Puerta ' + raw.slice(0, 16);
+      } else if (gateScanCurrentMode === 'ENTRADA_APOYO') {
+        if (succTitle) succTitle.innerText = '¡TURNO DE APOYO INICIADO!';
+        if (succTime) succTime.innerText = 'Hora de ingreso de apoyo: ' + timeStr + ' \u2022 Puerta ' + raw.slice(0, 16);
       } else {
         if (succTitle) succTitle.innerText = '¡ENTRADA REGISTRADA!';
         if (succTime) succTime.innerText = 'Hora de entrada: ' + timeStr + ' \u2022 Puerta ' + raw.slice(0, 16);
       }
 
       updateGateProfileButton();
+      updateLiveShiftCard();
     }
 
     function updateGateProfileButton() {
@@ -4493,7 +4520,16 @@
 
       const todayStr = new Date().toISOString().slice(0, 10);
       const hasEntry = (currentUser && currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_entrada);
-      let hasExit = (currentUser && currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_salida);
+      let hasExit = (currentUser && currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_salida && currentUser.ultima_hora_salida.trim().length > 0);
+
+      const isCoord = (currentUser && (
+        currentUser.rol === 'COORDINADOR' || 
+        currentUser.rol === 'ADMINISTRATIVO' || 
+        String(currentUser.id) === '0' || 
+        String(currentUser.id) === '95071616157' ||
+        (currentUser.nombre_completo && currentUser.nombre_completo.toLowerCase().includes('santiago')) ||
+        (currentUser.nombre && currentUser.nombre.toLowerCase().includes('santiago'))
+      ));
 
       // Regla de Negocio: Si no hay logout en 5 horas después del fin de turno, se hace automáticamente y se registran las horas de la programación
       if (hasEntry && !hasExit) {
@@ -4536,30 +4572,269 @@
         } catch(e) {}
       }
 
-      if (currentUser && currentUser.auto_cierre_5h) {
+      const nowH = new Date().getHours();
+      const isNightTurno3Starting = (currentUser && String(currentUser.turno_actual || currentUser.turno) === '3' && nowH >= 21);
+
+      if (isCoord) {
+        // COORDINADOR / SANTIAGO: NUNCA BLOQUEADO
+        if (hasEntry && !hasExit) {
+          txt.innerText = 'Escanear QR en Salida (Entrada: ' + currentUser.ultima_hora_entrada + ')';
+          if (icon) icon.innerText = '🚪';
+          btn.style.background = '#d97706';
+          btn.style.cursor = 'pointer';
+          btn.onclick = function() { openGateScannerModal('SALIDA'); };
+        } else {
+          txt.innerText = 'Iniciar Nueva Sesión / Supervisión en Planta' + (hasExit ? ' (Salida previa: ' + currentUser.ultima_hora_salida + ')' : '');
+          if (icon) icon.innerText = '📷';
+          btn.style.background = '#2563eb';
+          btn.style.cursor = 'pointer';
+          btn.onclick = function() { openGateScannerModal('ENTRADA'); };
+        }
+      } else if (isNightTurno3Starting && hasExit) {
+        // TURNO 3 NOCTURNO: Salida matutina fue del ciclo anterior; hoy inicia nuevo turno noche
+        txt.innerText = 'Escanear QR en Entrada (Turno 3 Noche)';
+        if (icon) icon.innerText = '📷';
+        btn.style.background = '#10b981';
+        btn.style.cursor = 'pointer';
+        btn.onclick = function() { openGateScannerModal('ENTRADA'); };
+      } else if (currentUser && currentUser.auto_cierre_5h) {
         const baseH = Number(currentUser.horas_base_turno) || 8;
-        txt.innerText = 'Jornada Cerrada Automáticamente (' + baseH + 'h programadas)';
-        if (icon) icon.innerText = '🔒';
-        btn.style.background = '#475569';
-        btn.style.cursor = 'default';
-        btn.onclick = function() { switchTab('hours', document.getElementById('nav-btn-hours')); };
+        txt.innerText = 'Jornada Cerrada (+5h Auto: ' + baseH + 'h) • Iniciar Turno de Apoyo';
+        if (icon) icon.innerText = '🤝';
+        btn.style.background = '#7c3aed';
+        btn.style.cursor = 'pointer';
+        btn.onclick = function() { openGateScannerModal('ENTRADA_APOYO'); };
       } else if (hasExit) {
-        txt.innerText = 'Jornada Completada Hoy (' + currentUser.ultima_hora_salida + ')';
-        if (icon) icon.innerText = '✅';
-        btn.style.background = '#64748b';
-        btn.style.cursor = 'default';
-        btn.onclick = function() { switchTab('hours', document.getElementById('nav-btn-hours')); };
+        txt.innerText = 'Jornada Completada (' + currentUser.ultima_hora_salida + ') • Iniciar Turno de Apoyo';
+        if (icon) icon.innerText = '🤝';
+        btn.style.background = '#7c3aed';
+        btn.style.cursor = 'pointer';
+        btn.onclick = function() { openGateScannerModal('ENTRADA_APOYO'); };
       } else if (hasEntry) {
         txt.innerText = 'Escanear QR en Salida (Entrada: ' + currentUser.ultima_hora_entrada + ')';
         if (icon) icon.innerText = '🚪';
         btn.style.background = '#d97706';
+        btn.style.cursor = 'pointer';
         btn.onclick = function() { openGateScannerModal('SALIDA'); };
       } else {
         txt.innerText = 'Escanear QR en Entrada';
         if (icon) icon.innerText = '📷';
         btn.style.background = '#10b981';
+        btn.style.cursor = 'pointer';
         btn.onclick = function() { openGateScannerModal('ENTRADA'); };
       }
+
+      updateLiveShiftCard();
+    }
+
+    // ==========================================
+    // CRONÓMETRO Y TARJETA ANIMADA DE HORAS EN VIVO (PARIDAD ANDROID)
+    // ==========================================
+    let liveShiftTimerInterval = null;
+
+    function startLiveShiftTracker() {
+      if (liveShiftTimerInterval) clearInterval(liveShiftTimerInterval);
+      updateLiveShiftCard();
+      liveShiftTimerInterval = setInterval(updateLiveShiftCard, 1000);
+      listenPendingSupportRequests();
+    }
+
+    function updateLiveShiftCard() {
+      const cardProfile = document.getElementById('box-live-shift-card');
+      const cardHours = document.getElementById('box-live-shift-card-hours');
+      if (!currentUser) return;
+
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const hasEntry = (currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_entrada);
+      const hasExit = (currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_salida && currentUser.ultima_hora_salida.trim().length > 0);
+      const isAutoClosed = currentUser.auto_cierre_5h;
+      const baseH = Number(currentUser.horas_base_turno) || 8;
+      const isCoord = (
+        currentUser.rol === 'COORDINADOR' || 
+        currentUser.rol === 'ADMINISTRATIVO' || 
+        String(currentUser.id) === '0' || 
+        String(currentUser.id) === '95071616157' ||
+        (currentUser.nombre_completo && currentUser.nombre_completo.toLowerCase().includes('santiago')) ||
+        (currentUser.nombre && currentUser.nombre.toLowerCase().includes('santiago'))
+      );
+
+      let elapsedSec = 0;
+      let statusPill = '⌛ EN ESPERA DE TURNO';
+      let statusColor = '#94a3b8';
+      let dotColor = '#64748b';
+      let subMsg = 'Escanee el código QR en la entrada para iniciar el cómputo oficial.';
+      let cardBorder = 'border:1px solid #334155;';
+      let bgGrad = 'background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%);';
+
+      if (hasEntry && !hasExit) {
+        const entryParts = (currentUser.ultima_hora_entrada || '06:00').split(':').map(Number);
+        const now = new Date();
+        const entryDate = new Date();
+        entryDate.setHours(entryParts[0], entryParts[1], 0, 0);
+
+        elapsedSec = Math.max(0, Math.floor((now.getTime() - entryDate.getTime()) / 1000));
+        statusPill = '🟢 CÓMPUTO EN TIEMPO REAL';
+        statusColor = '#4ade80';
+        dotColor = '#22c55e';
+        subMsg = 'Cómputo en curso • Entrada: ' + currentUser.ultima_hora_entrada + ' • Actualización segundo a segundo';
+        cardBorder = 'border:1.5px solid #3b82f6; box-shadow:0 8px 24px rgba(37,99,235,0.25); animation:liveShiftGlow 3s infinite ease-in-out;';
+        bgGrad = 'background:linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);';
+
+        // Auto-cierre de 5h
+        if (elapsedSec >= (baseH + 5) * 3600) {
+          statusPill = '🔒 JORNADA CERRADA (+5h TRAS FIN DE TURNO)';
+          statusColor = '#f59e0b';
+          dotColor = '#d97706';
+          subMsg = 'Auto-cierre activado: Se han asignado estrictamente las ' + baseH + '.0h programadas.';
+          cardBorder = 'border:1.5px solid #d97706;';
+          bgGrad = 'background:linear-gradient(135deg, #0f172a 0%, #78350f 100%);';
+          elapsedSec = baseH * 3600;
+        }
+      } else if (hasExit) {
+        statusPill = isAutoClosed ? '🔒 JORNADA CERRADA (+5h AUTO)' : '🏁 JORNADA DE HOY FINALIZADA';
+        statusColor = '#38bdf8';
+        dotColor = '#0284c7';
+        subMsg = isAutoClosed 
+          ? 'Auto-cierre activado (+5h tras fin de turno: ' + baseH + '.0h asignadas).'
+          : 'Entrada: ' + currentUser.ultima_hora_entrada + ' • Salida: ' + currentUser.ultima_hora_salida + ' • Jornada consolidada.';
+        cardBorder = 'border:1px solid #475569;';
+        bgGrad = 'background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%);';
+        elapsedSec = baseH * 3600;
+      }
+
+      const hh = String(Math.floor(elapsedSec / 3600)).padStart(2, '0');
+      const mm = String(Math.floor((elapsedSec % 3600) / 60)).padStart(2, '0');
+      const ss = String(elapsedSec % 60).padStart(2, '0');
+      const clockStr = (hasEntry || hasExit) ? (hh + ':' + mm + ':' + ss) : '--:--:--';
+      const liveHoursDecimal = ((hasEntry || hasExit) ? (elapsedSec / 3600) : 0.0).toFixed(1);
+      const pctProgress = Math.min(100, Math.max(0, (elapsedSec / (baseH * 3600)) * 100)).toFixed(1);
+
+      const htmlContent = `
+        <div style="${bgGrad} ${cardBorder} border-radius:18px; padding:16px 18px; color:#fff; position:relative; overflow:hidden;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${dotColor}; box-shadow:0 0 10px ${dotColor}; animation:livePulseDot 1.5s infinite;"></span>
+              <strong style="font-size:0.75rem; font-weight:800; letter-spacing:0.5px; color:${statusColor}; text-transform:uppercase;">${statusPill}</strong>
+            </div>
+            <span style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); padding:3px 9px; border-radius:8px; font-size:0.75rem; font-weight:800; color:#fde047;">${liveHoursDecimal} hrs</span>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;">
+            <div>
+              <div style="font-size:2.4rem; font-weight:900; font-family:SF Pro Display, -apple-system, Roboto Mono, monospace; letter-spacing:1px; line-height:1; color:#ffffff; text-shadow:0 2px 10px rgba(0,0,0,0.3);">${clockStr}</div>
+              <div style="font-size:0.75rem; color:#cbd5e1; margin-top:4px;">${subMsg}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:0.68rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Tope de Turno</div>
+              <strong style="font-size:0.95rem; color:#60a5fa;">${baseH}.0 hrs</strong>
+            </div>
+          </div>
+
+          <div style="width:100%; height:8px; background:rgba(255,255,255,0.15); border-radius:6px; overflow:hidden;">
+            <div style="width:${pctProgress}%; height:100%; background:linear-gradient(90deg, #3b82f6, #10b981); border-radius:6px; transition:width 0.4s ease;"></div>
+          </div>
+        </div>
+      `;
+
+      if (cardProfile) cardProfile.innerHTML = htmlContent;
+      if (cardHours) cardHours.innerHTML = htmlContent;
+    }
+
+    // ==========================================
+    // NOTIFICACIONES EN VIVO DE SOLICITUDES DE APOYO PARA COORDINADOR
+    // ==========================================
+    async function listenPendingSupportRequests() {
+      const isCoord = (currentUser && (
+        currentUser.rol === 'COORDINADOR' || 
+        currentUser.rol === 'ADMINISTRATIVO' || 
+        String(currentUser.id) === '0' || 
+        String(currentUser.id) === '95071616157' ||
+        (currentUser.nombre_completo && currentUser.nombre_completo.toLowerCase().includes('santiago')) ||
+        (currentUser.nombre && currentUser.nombre.toLowerCase().includes('santiago'))
+      ));
+      const box = document.getElementById('box-coord-support-requests');
+      if (!isCoord || !box) {
+        if (box) box.classList.add('hidden');
+        return;
+      }
+
+      try {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/solicitudes_acceso?key=' + FIRESTORE_API_KEY;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const data = await res.json();
+        const docs = data.documents || [];
+
+        const pending = [];
+        docs.forEach(doc => {
+          const f = parseFirestoreDoc(doc.fields);
+          if (f.status === 'PENDIENTE' && (f.fecha === todayStr || !f.fecha)) {
+            pending.push({
+              id: doc.name.split('/').pop(),
+              name: f.nombreCompleto || f.employeeId || 'Trabajador',
+              turno: f.turno || '1',
+              hora: f.horaSolicitud || '--:--',
+              motivo: f.motivo || 'Ingreso de Apoyo'
+            });
+          }
+        });
+
+        if (pending.length === 0) {
+          box.classList.add('hidden');
+          box.innerHTML = '';
+          return;
+        }
+
+        box.classList.remove('hidden');
+        let cardsHtml = `
+          <div style="background:#1e1b4b; border:1.5px solid #a855f7; border-radius:16px; padding:14px; color:#fff; box-shadow:0 4px 16px rgba(168,85,247,0.25);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <strong style="color:#f3e8ff; font-size:0.92rem; display:flex; align-items:center; gap:6px;">
+                <span>🔔</span> Solicitudes de Apoyo Pendientes (${pending.length})
+              </strong>
+            </div>
+        `;
+
+        pending.forEach(p => {
+          cardsHtml += `
+            <div style="background:rgba(49,46,129,0.7); border:1px solid rgba(99,102,241,0.5); border-radius:12px; padding:10px; margin-top:8px;">
+              <strong style="display:block; font-size:0.88rem; color:#fff;">${p.name}</strong>
+              <div style="font-size:0.75rem; color:#c7d2fe; margin-top:2px;">Turno ${p.turno} • Solicitud a las ${p.hora}</div>
+              <div style="display:flex; gap:8px; margin-top:8px;">
+                <button type="button" onclick="respondSupportRequest('${p.id}', true)" style="flex:1; padding:7px; border:none; border-radius:8px; background:#10b981; color:#fff; font-weight:800; font-size:0.8rem; cursor:pointer;">
+                  ✅ Autorizar
+                </button>
+                <button type="button" onclick="respondSupportRequest('${p.id}', false)" style="flex:1; padding:7px; border:none; border-radius:8px; background:#ef4444; color:#fff; font-weight:800; font-size:0.8rem; cursor:pointer;">
+                  ❌ Rechazar
+                </button>
+              </div>
+            </div>
+          `;
+        });
+
+        cardsHtml += `</div>`;
+        box.innerHTML = cardsHtml;
+      } catch (err) {}
+    }
+
+    async function respondSupportRequest(docId, approve) {
+      try {
+        const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/solicitudes_acceso/' + encodeURIComponent(docId) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=status&updateMask.fieldPaths=autorizadoPor';
+        const coordName = (currentUser && currentUser.nombre_completo) ? currentUser.nombre_completo : 'Coordinador';
+        const payload = {
+          fields: {
+            status: { stringValue: approve ? 'APROBADO' : 'RECHAZADO' },
+            autorizadoPor: { stringValue: coordName }
+          }
+        };
+        await fetch(url, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        listenPendingSupportRequests();
+      } catch (e) {}
     }
 
     window.onGateScanConfirmSuccess = function() {
@@ -4575,6 +4850,10 @@
       const target = document.getElementById('tab-' + tabKey);
       if (target) target.classList.remove('hidden');
       if (btn) btn.classList.add('active');
+
+      if (tabKey === 'shift' || tabKey === 'hours') {
+        updateLiveShiftCard();
+      }
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
