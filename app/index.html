@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+    <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Coordinación UNAMEL - Portal del Trabajador</title>
 
@@ -914,6 +917,37 @@
       }
     });
   </script>
+
+  <!-- SISTEMA DE AUTO-ACTUALIZACIÓN AUTOMÁTICA Y CACHE BUSTING -->
+  <script>
+    const APP_BUILD_TIMESTAMP = 1792450757347;
+    function checkForAppUpdates() {
+      fetch('version.json?_t=' + Date.now(), { cache: 'no-store' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data && data.version && data.version > APP_BUILD_TIMESTAMP) {
+            console.log("Nueva versión detectada en GitHub Pages:", data.version);
+            var toast = document.createElement('div');
+            toast.style.cssText = "position:fixed;top:14px;left:50%;transform:translateX(-50%);background:#1d4ed8;color:#fff;padding:10px 22px;border-radius:24px;font-weight:800;font-size:0.85rem;box-shadow:0 6px 20px rgba(0,0,0,0.4);z-index:999999;border:1px solid rgba(255,255,255,0.25);";
+            toast.innerHTML = "🔄 <span>Nueva versión disponible. Actualizando...</span>";
+            document.body.appendChild(toast);
+            setTimeout(function() {
+              window.location.replace(window.location.pathname + '?v=' + data.version);
+            }, 800);
+          }
+        })
+        .catch(function(e) {});
+    }
+    window.addEventListener('load', checkForAppUpdates);
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible') {
+        checkForAppUpdates();
+        if (typeof renderShiftTimelineLive === 'function') renderShiftTimelineLive();
+      }
+    });
+    setInterval(checkForAppUpdates, 180000);
+  </script>
+
 </head>
 <body>
 
@@ -3596,32 +3630,33 @@
       const dow = dt.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
       const h = dt.getHours();
 
-      // Sábado descanso
-      if (dow === 6) return { count: 0, desc: 'Fin de Semana (Descanso)' };
-
-      // Domingo descanso hasta las 22:00
-      if (dow === 0) {
-        if (h >= 21) {
-          const t3 = plantEmps.filter(e => String(e.turno_actual) === '3' || (e.grupo || '').toUpperCase() === 'C');
-          return { count: t3.length || 9, desc: 'Turno 3 (Noche · 22:00)' };
-        }
+      // Sábado descanso a partir de las 06:00
+      // (De 00:00 a 05:59 culmina el Turno 3 iniciado el viernes a las 22:00)
+      if (dow === 6) {
+        if (h === 0 || h === 1) return { count: 14, desc: 'Turno 3 (Noche · 22:00-06:00)' };
+        if (h === 2) return { count: 13, desc: 'Turno 3 (Noche · 22:00-06:00)' };
+        if (h >= 3 && h <= 5) return { count: 10, desc: 'Turno 3 (Noche · 22:00-06:00)' };
         return { count: 0, desc: 'Fin de Semana (Descanso)' };
       }
 
-      // Lunes a Viernes
-      if (h >= 5 && h <= 7) {
-        const t1 = plantEmps.filter(e => String(e.turno_actual) === '1' || (e.grupo || '').toUpperCase() === 'A');
-        return { count: t1.length || 10, desc: 'Turno 1 (Mañana · 06:00)' };
+      // Domingo descanso todo el día hasta las 22:00. A las 22:00 arranca el Turno 3
+      if (dow === 0) {
+        if (h >= 22) return { count: 18, desc: 'Turno 3 (Noche · 22:00-06:00)' };
+        return { count: 0, desc: 'Fin de Semana (Descanso)' };
       }
-      if (h >= 13 && h <= 15) {
-        const t2 = plantEmps.filter(e => String(e.turno_actual) === '2' || (e.grupo || '').toUpperCase() === 'B');
-        return { count: t2.length || 10, desc: 'Turno 2 (Tarde · 14:00)' };
-      }
-      if (h >= 21 && h <= 23) {
-        const t3 = plantEmps.filter(e => String(e.turno_actual) === '3' || (e.grupo || '').toUpperCase() === 'C');
-        return { count: t3.length || 9, desc: 'Turno 3 (Noche · 22:00)' };
-      }
-      return { count: 0, desc: 'Jornada en curso' };
+
+      // Lunes a Viernes: Jornada continua 24 Horas según tabla oficial NDSerwis (Excel Disponibilidad)
+      if (h === 6 || h === 7) return { count: 14, desc: 'Turno 1 (Mañana · 06:00-14:00)' };
+      if (h === 8 || h === 9) return { count: 10, desc: 'Turno 1 (Mañana · 06:00-14:00)' };
+      if (h >= 10 && h <= 13) return { count: 9, desc: 'Turno 1 (Mañana · 06:00-14:00)' };
+      if (h === 14 || h === 15) return { count: 19, desc: 'Turno 2 (Tarde · 14:00-22:00)' };
+      if (h === 16 || h === 17) return { count: 15, desc: 'Turno 2 (Tarde · 14:00-22:00)' };
+      if (h >= 18 && h <= 21) return { count: 11, desc: 'Turno 2 (Tarde · 14:00-22:00)' };
+      if (h === 22 || h === 23) return { count: 18, desc: 'Turno 3 (Noche · 22:00-06:00)' };
+      if (h === 0 || h === 1) return { count: 14, desc: 'Turno 3 (Noche · 22:00-06:00)' };
+      if (h === 2) return { count: 13, desc: 'Turno 3 (Noche · 22:00-06:00)' };
+      if (h >= 3 && h <= 5) return { count: 10, desc: 'Turno 3 (Noche · 22:00-06:00)' };
+      return { count: 10, desc: 'Turno 1 (Mañana · 06:00-14:00)' };
     }
 
     function renderTradingChart(dispList, attMap) {
@@ -3650,7 +3685,7 @@
         return days[d.getDay()] + ' ' + pad2(d.getDate());
       }
 
-      // Calcular escaneos reales para una fecha y ventana de horas
+      // Calcular operarios reales activos para una fecha y ventana de horas
       function getActualScans(targetYMD, startH, endH) {
         let c = 0;
         Object.values(attMap || {}).forEach(rec => {
@@ -3658,8 +3693,18 @@
           if (recDate === targetYMD) {
             const t = rec.horaEntrada || (rec.timestamp ? rec.timestamp.split('T')[1] : '');
             if (t && t.includes(':')) {
-              const h = parseInt(t.split(':')[0], 10);
-              if (h >= startH && h <= endH) c++;
+              const entryH = parseInt(t.split(':')[0], 10);
+              const tOut = rec.horaSalida || '';
+              const exitH = (tOut && tOut.includes(':')) ? parseInt(tOut.split(':')[0], 10) : null;
+              const isNight = (entryH >= 21);
+              let active = false;
+              if (isNight) {
+                active = (startH >= 21) || (exitH !== null && startH <= exitH);
+              } else {
+                const shiftEnd = (exitH !== null) ? exitH : (entryH + 8);
+                active = (startH >= entryH && startH <= shiftEnd) || (entryH >= startH && entryH <= endH);
+              }
+              if (active) c++;
             }
           }
         });
@@ -3669,7 +3714,15 @@
           plantEmps.forEach(emp => {
             if (emp.dias_trabajados_detalle) {
               const match = emp.dias_trabajados_detalle.some(d => d.dia === dNum && d.horasTrabajadas > 0);
-              if (match) c++;
+              if (match) {
+                const s = String(emp.turno_actual || (emp.grupo === 'A' ? '1' : (emp.grupo === 'B' ? '2' : '3')));
+                let covers = false;
+                if (s === '1') covers = (startH >= 6 && startH <= 13);
+                else if (s === '2') covers = (startH >= 14 && startH <= 21);
+                else if (s === '3') covers = (startH >= 22 || startH <= 5);
+                else covers = (startH >= 6 && startH <= 14);
+                if (covers) c++;
+              }
             }
           });
         }
@@ -3804,12 +3857,7 @@
       const totActPast = pastPoints.reduce((acc, p) => acc + p.actual, 0);
       const adhPct = totProgPast > 0 ? ((totActPast / totProgPast) * 100).toFixed(1) : '0.0';
 
-      const elProg = document.getElementById('chart-kpi-prog');
-      if (elProg) elProg.innerText = totProgPast;
-      const elScan = document.getElementById('chart-kpi-scan');
-      if (elScan) elScan.innerText = totActPast;
-      const elAdh = document.getElementById('chart-kpi-adh');
-      if (elAdh) elAdh.innerText = adhPct + '%';
+      // Las tarjetas inferiores se actualizan dinámicamente en updateHUD con la hora activa
 
       const lblStart = document.getElementById('chart-lbl-start');
       if (lblStart && pastPoints.length > 0) lblStart.innerText = pastPoints[0].timeLabel;
@@ -3858,6 +3906,21 @@
               hAdh.innerText = pAdh + '% Adh';
               hAdh.style.color = (Number(pAdh) >= 80) ? '#4ade80' : '#fbbf24';
             }
+          }
+        }
+
+        // Vincular tarjetas inferiores con la hora específica seleccionada
+        const elProg = document.getElementById('chart-kpi-prog');
+        if (elProg) elProg.innerText = pt.expected;
+        const elScan = document.getElementById('chart-kpi-scan');
+        if (elScan) elScan.innerText = pt.isFuture ? '-' : pt.actual;
+        const elAdh = document.getElementById('chart-kpi-adh');
+        if (elAdh) {
+          if (pt.isFuture) {
+            elAdh.innerText = '--';
+          } else {
+            const pAdhVal = pt.expected > 0 ? Math.min(100, (pt.actual / pt.expected) * 100).toFixed(1) : '100.0';
+            elAdh.innerText = pAdhVal + '%';
           }
         }
       }
