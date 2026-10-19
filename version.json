@@ -1,10 +1,11 @@
 {
-  "version": 1792450757347,
-  "buildDate": "2026-10-20 00:59:17",
+  "version": 1792453140000,
+  "buildDate": "2026-10-20 01:39:00",
   "appName": "UNAMEL Coordinacion",
   "features": [
-    "auto-update",
-    "continuous-chart-ndserwis",
-    "privileged-gps-bypass"
+    "unified-interactive-clock-card",
+    "firestore-live-attendance-sync",
+    "anti-duplicate-entry-detection",
+    "continuous-chart-ndserwis"
   ]
 }
