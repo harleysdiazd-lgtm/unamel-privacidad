@@ -4869,10 +4869,28 @@
           else { targetShift = '3'; shiftStartHour = 22; }
         }
 
-        // Extraer operarios de planta
+        function getEmpField(d, key) {
+          if (!d) return '';
+          if (d[key] !== undefined && d[key] !== null) return d[key];
+          if (d.fields && d.fields[key]) {
+            const f = d.fields[key];
+            return f.stringValue !== undefined ? f.stringValue : (f.integerValue !== undefined ? f.integerValue : f);
+          }
+          return '';
+        }
+
+        function getEmpId(d) {
+          if (!d) return '';
+          if (d.id) return String(d.id);
+          if (d.name) return String(d.name).split('/').pop();
+          return '';
+        }
+
+        // Extraer operarios de planta (Excluyendo cuentas administrativas y pruebas)
         const allEmps = (window.rawCoordDispDocs || []).filter(d => {
-          const id = d.name.split('/').pop();
-          return id !== '0' && id !== '2023' && !id.startsWith('900');
+          const id = getEmpId(d);
+          const nom = String(getEmpField(d, 'nombre_completo') || getEmpField(d, 'nombre') || '');
+          return id && id !== '0' && id !== '2023' && !id.startsWith('900') && !nom.toLowerCase().includes('harley');
         });
 
         const attDocs = window.rawCoordAttDocs || [];
@@ -4881,20 +4899,19 @@
 
         // Filtrar programados en este turno
         const scheduled = allEmps.filter(d => {
-          const f = d.fields || {};
-          const grp = (f.grupo ? f.grupo.stringValue : '').toUpperCase().trim();
-          let empShift = (f.turno_actual ? f.turno_actual.stringValue : '');
+          const grp = String(getEmpField(d, 'grupo') || '').toUpperCase().trim();
+          let empShift = String(getEmpField(d, 'turno_actual') || '');
           if (!empShift || empShift === '0') {
-            empShift = (grp === 'A') ? '1' : (grp === 'B' ? '2' : '3');
+            empShift = (grp === 'A') ? '1' : ((grp === 'B') ? '2' : '3');
           }
           return empShift === targetShift;
         });
 
         function evaluateStatus(empId, empName, rec, isFuture) {
-          if (rec && rec.fields) {
-            const hEnt = (rec.fields.hora_entrada ? rec.fields.hora_entrada.stringValue : '').trim();
-            const hSal = (rec.fields.hora_salida ? rec.fields.hora_salida.stringValue : '').trim();
-            const st = (rec.fields.status ? rec.fields.status.stringValue : '').toUpperCase();
+          if (rec) {
+            const hEnt = String(getEmpField(rec, 'hora_entrada') || '').trim();
+            const hSal = String(getEmpField(rec, 'hora_salida') || '').trim();
+            const st = String(getEmpField(rec, 'status') || '').toUpperCase();
 
             if (hEnt && hEnt.includes(':')) {
               const entH = parseInt(hEnt.split(':')[0], 10) || 0;
@@ -4928,7 +4945,6 @@
 
           // Sin escaneo
           const nowW = new Date();
-          // Hora en Varsovia aproximada
           const curH = nowW.getUTCHours() + 2;
           const curM = nowW.getUTCMinutes();
           const isPastShift = !isFuture && ((curH * 60 + curM) >= (shiftStartHour * 60 + 15));
@@ -4953,17 +4969,15 @@
         }
 
         scheduled.forEach(d => {
-          const empId = d.name.split('/').pop();
-          const f = d.fields || {};
-          const empName = f.nombre_completo ? f.nombre_completo.stringValue : (f.nombre ? f.nombre.stringValue : empId);
-          const grp = f.grupo ? f.grupo.stringValue : '-';
-          const tAct = f.turno_actual ? f.turno_actual.stringValue : targetShift;
+          const empId = getEmpId(d);
+          const empName = String(getEmpField(d, 'nombre_completo') || getEmpField(d, 'nombre') || empId);
+          const grp = String(getEmpField(d, 'grupo') || '-');
+          const tAct = String(getEmpField(d, 'turno_actual') || targetShift);
 
           processedIds.add(empId);
           const rec = attDocs.find(a => {
-            const af = a.fields || {};
-            const aid = af.id_empleado ? af.id_empleado.stringValue : a.name.split('/').pop();
-            const aname = af.nombre_empleado ? af.nombre_empleado.stringValue : '';
+            const aid = getEmpId(a) || String(getEmpField(a, 'id_empleado'));
+            const aname = String(getEmpField(a, 'nombre_empleado') || '');
             return aid === empId || (aname && aname.toLowerCase() === empName.toLowerCase());
           });
 
@@ -4979,10 +4993,13 @@
 
         // Operarios de apoyo / otros turnos que escanearon en este bloque
         attDocs.forEach(a => {
-          const af = a.fields || {};
-          const aid = af.id_empleado ? af.id_empleado.stringValue : a.name.split('/').pop();
-          const aname = af.nombre_empleado ? af.nombre_empleado.stringValue : aid;
-          const hEnt = (af.hora_entrada ? af.hora_entrada.stringValue : '').trim();
+          const aid = getEmpId(a) || String(getEmpField(a, 'id_empleado'));
+          const aname = String(getEmpField(a, 'nombre_empleado') || aid);
+          const hEnt = String(getEmpField(a, 'hora_entrada') || '').trim();
+
+          if (aid === '0' || aid === '2023' || aid.startsWith('900') || aname.toLowerCase().includes('harley')) {
+            return;
+          }
 
           if (!processedIds.has(aid) && hEnt && hEnt.includes(':')) {
             const entH = parseInt(hEnt.split(':')[0], 10);
@@ -4996,7 +5013,7 @@
               items.push({
                 id: aid,
                 name: aname,
-                group: af.grupo ? af.grupo.stringValue : 'Apoyo',
+                group: String(getEmpField(a, 'grupo') || 'Apoyo'),
                 shift: targetShift,
                 stInfo: stInfo
               });
@@ -5015,7 +5032,22 @@
 
         const totalCnt = items.length;
         const scanCnt = items.filter(x => x.stInfo.status === 'PRESENTE' || x.stInfo.status === 'RETARDO').length;
-        const absCnt = items.filter(x => x.stInfo.status === 'INASISTENCIA' || x.stInfo.status === 'PROGRAMADO').length;
+        const absCnt = Math.max(0, totalCnt - scanCnt);
+
+        // SINCRONIZAR TARJETAS KPI SUPERIORES CON LOS CONTEOS EXACTOS
+        const elProg = document.getElementById('chart-kpi-prog');
+        if (elProg) elProg.innerText = totalCnt;
+        const elScan = document.getElementById('chart-kpi-scan');
+        if (elScan) elScan.innerText = pt.isFuture ? '-' : scanCnt;
+        const elAdh = document.getElementById('chart-kpi-adh');
+        if (elAdh) {
+          if (pt.isFuture) {
+            elAdh.innerText = '--';
+          } else {
+            const pAdhVal = totalCnt > 0 ? Math.min(100, (scanCnt / totalCnt) * 100).toFixed(1) : '100.0';
+            elAdh.innerText = pAdhVal + '%';
+          }
+        }
 
         // Actualizar botones de pestaña
         const tabAll = document.getElementById('tb-tab-all');
@@ -5038,7 +5070,6 @@
           tabAbsent.innerText = `Inasistencias (${absCnt})`;
           tabAbsent.style.background = (window.tradingBreakdownTab === 2) ? '#450a0a' : 'transparent';
           tabAbsent.style.color = (window.tradingBreakdownTab === 2) ? '#f87171' : '#94a3b8';
-          tabAbsent.style.border = (window.tradingBreakdownTab === 2) ? '1px solid #ef4444' : '1px solid #334155';
         }
 
         // Filtrar según pestaña seleccionada
