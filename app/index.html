@@ -3187,13 +3187,31 @@
       if (tSupp) tSupp.innerText = '🤝 ' + (dict.support_workers_title || 'Personal de Apoyo');
 
       try {
-        const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles?pageSize=100&key=' + FIRESTORE_API_KEY;
-        const resp = await fetch(url, { cache: 'no-cache' });
-        if (resp.ok) {
-          const data = await resp.json();
-          const docs = data.documents || [];
-          const all = docs.map(d => parseFirestoreDoc(d.fields));
+        let all = (rawCoordDispDocs && rawCoordDispDocs.length > 0) ? rawCoordDispDocs : null;
+        if (!all) {
+          const cachedDispRaw = localStorage.getItem('unamel_web_cached_disponibles');
+          if (cachedDispRaw) {
+            try {
+              const parsed = JSON.parse(cachedDispRaw);
+              all = parsed.map(d => parseFirestoreDoc(d.fields));
+            } catch(e){}
+          }
+        }
+        if (!all) {
+          try {
+            const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles?pageSize=100&key=' + FIRESTORE_API_KEY;
+            const resp = await fetch(url);
+            if (resp.ok) {
+              const data = await resp.json();
+              const docs = data.documents || [];
+              try { localStorage.setItem('unamel_web_cached_disponibles', JSON.stringify(docs)); } catch(e){}
+              all = docs.map(d => parseFirestoreDoc(d.fields));
+            }
+          } catch (e) {}
+        }
+        if (!all) all = [];
 
+        if (all.length > 0) {
           const isTestAccount = (w) => {
             const wid = String(w.id || '');
             const wName = (w.nombre_completo || w.nombre || '').toLowerCase();
@@ -3215,8 +3233,6 @@
           activeGroupMembers = mainWorkers;
 
           // LÓGICA MULTI-LÍDER DINÁMICA (REGLA DE ORO DE COORDINACIÓN)
-          // Si otro líder del mismo turno está en turno, cada líder ve únicamente su grupo asignado.
-          // El grupo del otro líder NUNCA aparecerá en Personal de Apoyo a menos que ese líder NO esté en planta.
           const otherLeadersInShift = all.filter(w => 
             w.id !== emp.id && 
             (w.rol_app === 'LIDER_LINEA' || (w.posicion && w.posicion.toLowerCase().includes('lider'))) &&
@@ -3227,35 +3243,26 @@
           // Cargar registros de asistencia del día antes de calcular soporte
           const dateStr = formatYMD(currentAttendanceDate);
           attendanceRecordsMap = {};
-          try {
-            const attUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + dateStr + '/registros?key=' + FIRESTORE_API_KEY + '&pageSize=300';
-            const r = await fetch(attUrl, { cache: 'no-cache' });
-            if (r.ok) {
-              const d = await r.json();
-              (d.documents || []).forEach(doc => {
-                const f = parseFirestoreDoc(doc.fields);
-                const empId = f.employeeId || doc.name.split('/').pop();
-                attendanceRecordsMap[empId] = f;
-              });
-            }
-          } catch (e) {}
-
-          if (Object.keys(attendanceRecordsMap).length === 0) {
+          const isSameAsCoordDate = (dateStr === formatYMD(coordSelectedDate));
+          if (isSameAsCoordDate && rawCoordAttDocs && rawCoordAttDocs.length > 0) {
+            rawCoordAttDocs.forEach(doc => {
+              const f = parseFirestoreDoc(doc.fields);
+              const empId = f.employeeId || doc.name.split('/').pop();
+              attendanceRecordsMap[empId] = f;
+            });
+          } else {
             try {
-              const flatUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia?pageSize=300&key=' + FIRESTORE_API_KEY;
-              const rFlat = await fetch(flatUrl, { cache: 'no-cache' });
-              if (rFlat.ok) {
-                const dFlat = await rFlat.json();
-                (dFlat.documents || []).forEach(doc => {
-                  const docName = doc.name.split('/').pop();
-                  if (docName.startsWith(dateStr + '_')) {
-                    const f = parseFirestoreDoc(doc.fields);
-                    const empId = f.employeeId || docName.replace(dateStr + '_', '');
-                    attendanceRecordsMap[empId] = f;
-                  }
+              const attUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + dateStr + '/registros?key=' + FIRESTORE_API_KEY + '&pageSize=300';
+              const r = await fetch(attUrl);
+              if (r.ok) {
+                const d = await r.json();
+                (d.documents || []).forEach(doc => {
+                  const f = parseFirestoreDoc(doc.fields);
+                  const empId = f.employeeId || doc.name.split('/').pop();
+                  attendanceRecordsMap[empId] = f;
                 });
               }
-            } catch(ef) {}
+            } catch (e) {}
           }
 
           // 2. Personal de Apoyo (SOLO personas de otro grupo que hayan escaneado asistencia o tengan asignación explícita de apoyo)
@@ -3325,26 +3332,6 @@
         }
       } catch (e) {
         console.warn('Error fetching asistencia_diaria:', e);
-      }
-
-      if (Object.keys(attendanceRecordsMap).length === 0) {
-        try {
-          const flatUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia?pageSize=300&key=' + FIRESTORE_API_KEY;
-          const rFlat = await fetch(flatUrl, { cache: 'no-cache' });
-          if (rFlat.ok) {
-            const dFlat = await rFlat.json();
-            (dFlat.documents || []).forEach(doc => {
-              const docName = doc.name.split('/').pop();
-              if (docName.startsWith(dateStr + '_')) {
-                const f = parseFirestoreDoc(doc.fields);
-                const empId = f.employeeId || docName.replace(dateStr + '_', '');
-                attendanceRecordsMap[empId] = f;
-              }
-            });
-          }
-        } catch(ef) {
-          console.warn('Error fetching registro_asistencia fallback:', ef);
-        }
       }
 
       renderAttendanceUI();
@@ -3951,23 +3938,8 @@
       Promise.all([
         fetch(attUrl).then(r => r.ok ? r.json() : { documents: [] }).catch(() => ({ documents: [] })),
         dispFetchPromise
-      ]).then(async ([attRes, dispRes]) => {
+      ]).then(([attRes, dispRes]) => {
         let attDocs = attRes.documents || [];
-        if (attDocs.length === 0) {
-          try {
-            const flatUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia?pageSize=300&key=' + FIRESTORE_API_KEY;
-            const rFlat = await fetch(flatUrl, { cache: 'no-cache' });
-            if (rFlat.ok) {
-              const dFlat = await rFlat.json();
-              attDocs = (dFlat.documents || []).filter(doc => {
-                const docName = doc.name.split('/').pop();
-                return docName.startsWith(todayStr + '_');
-              });
-            }
-          } catch (eFlat) {
-            console.warn('Error fetching fallback registro_asistencia for coord:', eFlat);
-          }
-        }
         rawCoordAttDocs = attDocs;
         rawCoordDispDocs = (dispRes.documents || []).map(doc => parseFirestoreDoc(doc.fields));
         
@@ -5171,6 +5143,9 @@
       try {
         const peselKey = (emp.pesel || emp.id || '').trim();
         if (!peselKey) return;
+        const lastLog = sessionStorage.getItem('unamel_last_login_logged');
+        if (lastLog && (Date.now() - Number(lastLog) < 900000)) return; // 15 min cooldown
+        sessionStorage.setItem('unamel_last_login_logged', String(Date.now()));
         const now = new Date();
         const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles/' + encodeURIComponent(peselKey) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=ultima_conexion&updateMask.fieldPaths=ultima_conexion_timestamp&updateMask.fieldPaths=ultima_conexion_accion&updateMask.fieldPaths=ultima_conexion_plataforma';
         const payload = {
@@ -5918,13 +5893,36 @@
         return;
       }
 
+      const nowTs = Date.now();
+      if (!force && window._lastSupportRequestsFetch && (nowTs - window._lastSupportRequestsFetch < 60000)) {
+        return;
+      }
+      window._lastSupportRequestsFetch = nowTs;
+
       try {
         const todayStr = new Date().toISOString().slice(0, 10);
-        const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/solicitudes_acceso?key=' + FIRESTORE_API_KEY;
-        const res = await fetch(url);
+        const queryUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents:runQuery?key=' + FIRESTORE_API_KEY;
+        const queryBody = {
+          structuredQuery: {
+            from: [{ collectionId: 'solicitudes_acceso' }],
+            where: {
+              fieldFilter: {
+                field: { fieldPath: 'status' },
+                op: 'EQUAL',
+                value: { stringValue: 'PENDIENTE' }
+              }
+            },
+            limit: 20
+          }
+        };
+        const res = await fetch(queryUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(queryBody)
+        });
         if (!res.ok) return;
-        const data = await res.json();
-        const docs = data.documents || [];
+        const dataArr = await res.json();
+        const docs = (Array.isArray(dataArr) ? dataArr : []).filter(item => item.document).map(item => item.document);
 
         const pending = [];
         docs.forEach(doc => {
