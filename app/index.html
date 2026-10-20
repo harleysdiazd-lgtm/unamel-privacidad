@@ -1562,73 +1562,84 @@
           </div>
         </div>
 
-        <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:8px; margin-bottom:12px;">
-          <button type="button" class="coord-filter-btn active" onclick="filterCoordList('ALL', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--primary); color:#fff; cursor:pointer;">Todos</button>
-          <button type="button" class="coord-filter-btn" onclick="filterCoordList('GA', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">Grupo A</button>
-          <button type="button" class="coord-filter-btn" onclick="filterCoordList('GB', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">Grupo B</button>
-          <button type="button" class="coord-filter-btn" onclick="filterCoordList('GC', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">Grupo C</button>
+        <!-- BOTÓN OPCIONAL PARA COORDINADOR (TOTALMENTE OCULTO EN VISOR 24H) -->
+        <div id="btn-toggle-coord-extras-wrap" style="text-align:center; margin:14px 0 16px 0; display:none;">
+          <button type="button" id="btn-toggle-coord-extras" onclick="toggleCoordAdminExtras()" style="background:#1e293b; color:#94a3b8; border:1px solid #334155; border-radius:10px; padding:8px 16px; font-size:0.75rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+            <span>📋</span> Ver Planilla Excel y Listado de Personal (Opcional)
+          </button>
         </div>
 
-        <!-- PLANILLA CONSOLIDADA DE HORAS MENSUAL ESTILO EXCEL (FÁBRICA UNAMEL) -->
-        <div class="card" style="padding:14px; margin-bottom:14px; background:#ffffff; border:1px solid #cbd5e1; border-radius:14px; overflow:hidden;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:1.25rem;">📊</span>
-              <div>
-                <h4 style="font-size:0.95rem; font-weight:800; color:#0f172a; margin:0;">
-                  Planilla de Horas Consolidada (Formato Excel)
-                </h4>
-                <div id="excel-matrix-subtitle" style="font-size:0.72rem; color:#64748b;">
-                  Octubre 2026 · Registro oficial fábrica UNAMEL
+        <div id="coord-admin-extra-sections" style="display:none;">
+
+          <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:8px; margin-bottom:12px;">
+            <button type="button" class="coord-filter-btn active" onclick="filterCoordList('ALL', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--primary); color:#fff; cursor:pointer;">Todos</button>
+            <button type="button" class="coord-filter-btn" onclick="filterCoordList('GA', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">Grupo A</button>
+            <button type="button" class="coord-filter-btn" onclick="filterCoordList('GB', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">Grupo B</button>
+            <button type="button" class="coord-filter-btn" onclick="filterCoordList('GC', this)" style="padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;">Grupo C</button>
+          </div>
+
+          <!-- PLANILLA CONSOLIDADA DE HORAS MENSUAL ESTILO EXCEL (FÁBRICA UNAMEL) -->
+          <div class="card" style="padding:14px; margin-bottom:14px; background:#ffffff; border:1px solid #cbd5e1; border-radius:14px; overflow:hidden;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:1.25rem;">📊</span>
+                <div>
+                  <h4 style="font-size:0.95rem; font-weight:800; color:#0f172a; margin:0;">
+                    Planilla de Horas Consolidada (Formato Excel)
+                  </h4>
+                  <div id="excel-matrix-subtitle" style="font-size:0.72rem; color:#64748b;">
+                    Octubre 2026 · Registro oficial fábrica UNAMEL
+                  </div>
                 </div>
               </div>
+              <button type="button" onclick="refreshCoordExcelMatrix(true)" style="background:#059669; color:#fff; border:none; border-radius:8px; padding:6px 12px; font-weight:700; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 2px 6px rgba(5,150,105,0.3);">
+                <span>🔄</span> Actualizar Planilla
+              </button>
             </div>
-            <button type="button" onclick="refreshCoordExcelMatrix(true)" style="background:#059669; color:#fff; border:none; border-radius:8px; padding:6px 12px; font-weight:700; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 2px 6px rgba(5,150,105,0.3);">
-              <span>🔄</span> Actualizar Planilla
-            </button>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span id="excel-cache-tag" style="font-size:0.7rem; color:#059669; font-weight:700; background:#ecfdf5; padding:3px 8px; border-radius:6px; border:1px solid #a7f3d0;">
+                ⚡ Planilla cargada de memoria local (0 consumo de cuota)
+              </span>
+              <input type="text" id="excel-search-input" oninput="filterExcelMatrixTable(this.value)" placeholder="Buscar colaborador..." style="padding:4px 8px; font-size:0.75rem; border:1px solid #cbd5e1; border-radius:6px; outline:none; max-width:160px;">
+            </div>
+
+            <!-- Tabla horizontal estilo Excel con cabecera y columna fija -->
+            <div style="overflow-x:auto; max-width:100%; border:1px solid #e2e8f0; border-radius:8px; max-height:480px; position:relative;">
+              <table id="coord-excel-table" style="width:100%; border-collapse:collapse; font-size:0.72rem; text-align:center; min-width:980px; background:#fff;">
+                <thead id="coord-excel-thead" style="background:#0f172a; color:#fff; position:sticky; top:0; z-index:2;">
+                  <!-- Columnas dinámicas generadas en JS -->
+                </thead>
+                <tbody id="coord-excel-tbody">
+                  <tr><td colspan="36" style="padding:20px; color:#64748b;">Cargando planilla consolidada...</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.68rem; color:#64748b; margin-top:8px; flex-wrap:wrap; gap:4px;">
+              <span>🟢 Normal (8-12h) &bull; ⚪ Descanso (D) &bull; 🔵 Médica (M) &bull; 🟠 Retardo (R) &bull; 🔴 Falta (F)</span>
+              <span id="excel-total-workers-lbl" style="font-weight:700; color:#0f172a;">34 Colaboradores</span>
+            </div>
           </div>
 
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span id="excel-cache-tag" style="font-size:0.7rem; color:#059669; font-weight:700; background:#ecfdf5; padding:3px 8px; border-radius:6px; border:1px solid #a7f3d0;">
-              ⚡ Planilla cargada de memoria local (0 consumo de cuota)
-            </span>
-            <input type="text" id="excel-search-input" oninput="filterExcelMatrixTable(this.value)" placeholder="Buscar colaborador..." style="padding:4px 8px; font-size:0.75rem; border:1px solid #cbd5e1; border-radius:6px; outline:none; max-width:160px;">
+          <div class="card" style="padding:14px; margin-bottom:14px;">
+            <h4 style="font-size:0.9rem; font-weight:700; color:var(--primary); margin-bottom:10px;">
+              👥 Estado de Personal y Llamado a Lista
+            </h4>
+            <div id="coord-attendance-list">
+              <div style="color:var(--text-muted); text-align:center; padding:12px;">Cargando datos de asistencia en vivo...</div>
+            </div>
           </div>
 
-          <!-- Tabla horizontal estilo Excel con cabecera y columna fija -->
-          <div style="overflow-x:auto; max-width:100%; border:1px solid #e2e8f0; border-radius:8px; max-height:480px; position:relative;">
-            <table id="coord-excel-table" style="width:100%; border-collapse:collapse; font-size:0.72rem; text-align:center; min-width:980px; background:#fff;">
-              <thead id="coord-excel-thead" style="background:#0f172a; color:#fff; position:sticky; top:0; z-index:2;">
-                <!-- Columnas dinámicas generadas en JS -->
-              </thead>
-              <tbody id="coord-excel-tbody">
-                <tr><td colspan="36" style="padding:20px; color:#64748b;">Cargando planilla consolidada...</td></tr>
-              </tbody>
-            </table>
+          <div class="card" style="padding:14px;">
+            <h4 style="font-size:0.9rem; font-weight:700; color:var(--primary); margin-bottom:10px;">
+              📜 Registro de Inicios de Sesión (Android y Web)
+            </h4>
+            <div id="coord-audit-logs">
+              <div style="color:var(--text-muted); text-align:center; padding:12px;">Cargando registro de accesos...</div>
+            </div>
           </div>
 
-          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.68rem; color:#64748b; margin-top:8px; flex-wrap:wrap; gap:4px;">
-            <span>🟢 Normal (8-12h) &bull; ⚪ Descanso (D) &bull; 🔵 Médica (M) &bull; 🟠 Retardo (R) &bull; 🔴 Falta (F)</span>
-            <span id="excel-total-workers-lbl" style="font-weight:700; color:#0f172a;">34 Colaboradores</span>
-          </div>
-        </div>
-
-        <div class="card" style="padding:14px; margin-bottom:14px;">
-          <h4 style="font-size:0.9rem; font-weight:700; color:var(--primary); margin-bottom:10px;">
-            👥 Estado de Personal y Llamado a Lista
-          </h4>
-          <div id="coord-attendance-list">
-            <div style="color:var(--text-muted); text-align:center; padding:12px;">Cargando datos de asistencia en vivo...</div>
-          </div>
-        </div>
-
-        <div class="card" style="padding:14px;">
-          <h4 style="font-size:0.9rem; font-weight:700; color:var(--primary); margin-bottom:10px;">
-            📜 Registro de Inicios de Sesión (Android y Web)
-          </h4>
-          <div id="coord-audit-logs">
-            <div style="color:var(--text-muted); text-align:center; padding:12px;">Cargando registro de accesos...</div>
-          </div>
         </div>
 
       </div>
@@ -2458,6 +2469,10 @@
       if (emp.rol_app === 'MONITOR_24H') {
         const bNav = document.getElementById('bottom-nav');
         if (bNav) bNav.classList.add('hidden');
+        const extraSec = document.getElementById('coord-admin-extra-sections');
+        if (extraSec) extraSec.style.display = 'none';
+        const toggleWrap = document.getElementById('btn-toggle-coord-extras-wrap');
+        if (toggleWrap) toggleWrap.style.display = 'none';
         switchTab('coord', null);
         loadCoordData();
         return;
@@ -2470,8 +2485,13 @@
       document.getElementById('user-id-pos').innerText = 'ID: ' + emp.id + ' \u2022 ' + (emp.nacionalidad || 'Polonia') + ' \u2022 ' + (emp.posicion || 'Operario de Planta');
 
       const isLeader = (emp.rol_app === 'LIDER_LINEA' || (emp.posicion && emp.posicion.toLowerCase().includes('lider')));
-      const isCoord = (emp.rol_app === 'COORDINADOR' || (emp.nombre_completo && emp.nombre_completo.includes('Harley')));
+      const isCoord = (emp.rol_app === 'COORDINADOR' || (emp.nombre_completo && emp.nombre_completo.includes('Harley')) || String(emp.id) === '0' || String(emp.id) === '95071616157');
       const isAdmin = (emp.rol_app === 'ADMINISTRATIVO' || String(emp.id) === '2023');
+
+      const toggleWrap = document.getElementById('btn-toggle-coord-extras-wrap');
+      if (toggleWrap) {
+        toggleWrap.style.display = (isCoord || isAdmin) ? 'block' : 'none';
+      }
 
       const badge = document.getElementById('user-role-badge');
       if (isLeader) badge.innerText = dict.role_leader;
@@ -3950,10 +3970,36 @@
         }
         rawCoordAttDocs = attDocs;
         rawCoordDispDocs = (dispRes.documents || []).map(doc => parseFirestoreDoc(doc.fields));
-        renderCoordAttendance(rawCoordAttDocs, rawCoordDispDocs);
-        renderCoordAuditLogs(dispRes.documents || []);
-        renderCoordExcelMatrix(rawCoordDispDocs, true);
+        
+        // En el Visor 24h omitimos completamente el renderizado pesado de listas y Excel para que la vista sea limpia e instantánea
+        const isMonitor = (currentUser && currentUser.rol_app === 'MONITOR_24H');
+        if (!isMonitor) {
+          const extraSec = document.getElementById('coord-admin-extra-sections');
+          if (extraSec && extraSec.style.display !== 'none') {
+            renderCoordAttendance(rawCoordAttDocs, rawCoordDispDocs);
+            renderCoordAuditLogs(dispRes.documents || []);
+            renderCoordExcelMatrix(rawCoordDispDocs, true);
+          }
+        }
       });
+    }
+
+    function toggleCoordAdminExtras() {
+      const el = document.getElementById('coord-admin-extra-sections');
+      const btn = document.getElementById('btn-toggle-coord-extras');
+      if (!el) return;
+      if (el.style.display === 'none' || el.classList.contains('hidden')) {
+        el.style.display = 'block';
+        el.classList.remove('hidden');
+        if (btn) btn.innerHTML = '<span>🔼</span> Ocultar Planilla Excel y Listado de Personal';
+        if (rawCoordDispDocs && rawCoordDispDocs.length > 0) {
+          renderCoordAttendance(rawCoordAttDocs, rawCoordDispDocs);
+          renderCoordExcelMatrix(rawCoordDispDocs, false);
+        }
+      } else {
+        el.style.display = 'none';
+        if (btn) btn.innerHTML = '<span>📋</span> Ver Planilla Excel y Listado de Personal (Opcional)';
+      }
     }
 
     let cachedExcelMatrixData = null;
