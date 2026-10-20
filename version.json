@@ -1,11 +1,11 @@
 {
-  "version": 1792455500000,
-  "buildDate": "2026-10-20 02:15:00",
+  "version": 1792456000000,
+  "buildDate": "2026-10-20 02:48:00",
   "appName": "UNAMEL Coordinacion",
   "features": [
-    "offline-quota-safe-sync-and-session-protection",
-    "instant-login-resilience",
-    "unified-interactive-clock-card",
-    "firestore-live-attendance-sync"
+    "granular-pesel-versions-clean-labels",
+    "coordinator-excel-matrix-zero-quota",
+    "last-active-user-strict-emergency-login",
+    "offline-quota-safe-sync-and-session-protection"
   ]
 }
