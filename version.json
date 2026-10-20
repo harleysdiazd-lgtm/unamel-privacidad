@@ -1,11 +1,11 @@
 {
-  "version": 1792453140000,
-  "buildDate": "2026-10-20 01:39:00",
+  "version": 1792455500000,
+  "buildDate": "2026-10-20 02:15:00",
   "appName": "UNAMEL Coordinacion",
   "features": [
+    "offline-quota-safe-sync-and-session-protection",
+    "instant-login-resilience",
     "unified-interactive-clock-card",
-    "firestore-live-attendance-sync",
-    "anti-duplicate-entry-detection",
-    "continuous-chart-ndserwis"
+    "firestore-live-attendance-sync"
   ]
 }
