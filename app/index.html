@@ -3966,12 +3966,46 @@
             return res;
           }).catch(() => ({ documents: [] }));
 
+      const attFetchPromise = fetch(attUrl)
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null)
+        .then(res => {
+          if (res && res.documents && res.documents.length > 0) {
+            return res.documents;
+          }
+          // Fallback a registro_asistencia (100% autorizado y activo en Firestore)
+          const runQueryUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents:runQuery?key=' + FIRESTORE_API_KEY;
+          const body = {
+            structuredQuery: {
+              from: [{ collectionId: 'registro_asistencia' }],
+              where: {
+                fieldFilter: {
+                  field: { fieldPath: 'fecha' },
+                  op: 'EQUAL',
+                  value: { stringValue: todayStr }
+                }
+              }
+            }
+          };
+          return fetch(runQueryUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          }).then(qr => qr.ok ? qr.json() : [])
+            .then(qRes => {
+              const docs = [];
+              (qRes || []).forEach(item => {
+                if (item.document) docs.push(item.document);
+              });
+              return docs;
+            }).catch(() => []);
+        });
+
       Promise.all([
-        fetch(attUrl).then(r => r.ok ? r.json() : { documents: [] }).catch(() => ({ documents: [] })),
+        attFetchPromise,
         dispFetchPromise
-      ]).then(([attRes, dispRes]) => {
-        let attDocs = attRes.documents || [];
-        rawCoordAttDocs = attDocs;
+      ]).then(([attDocs, dispRes]) => {
+        rawCoordAttDocs = attDocs || [];
         rawCoordDispDocs = (dispRes.documents || []).map(doc => parseFirestoreDoc(doc.fields));
         
         // SIEMPRE actualizamos el gráfico de trading 24h y los contadores de asistencia (tanto en visor como en coord)
@@ -4525,7 +4559,14 @@
       // Calcular operarios reales activos para una fecha y ventana de horas
       function getActualScans(targetYMD, startH, endH) {
         let c = 0;
+        const seen = new Set();
         Object.values(attMap || {}).forEach(rec => {
+          const uKey = String(rec.pesel || rec.employeeId || rec.empId || rec.name || '');
+          if (!uKey || seen.has(uKey)) return;
+          seen.add(uKey);
+          const rName = (rec.name || '').toLowerCase();
+          if (uKey === '0' || uKey === '2023' || uKey.startsWith('900') || rName.includes('harley')) return;
+
           const recDate = rec.fecha || (rec.timestamp ? rec.timestamp.split('T')[0] : '');
           if (recDate === targetYMD) {
             const t = rec.horaEntrada || (rec.timestamp ? rec.timestamp.split('T')[1] : '');
@@ -4725,6 +4766,31 @@
         const hShift = document.getElementById('chart-hud-shift');
         if (hShift) hShift.innerText = pt.shift || '';
 
+        let targetShift = '2';
+        const sLower = (pt.shift || '').toLowerCase();
+        if (sLower.includes('turno 1') || sLower.includes('mañana')) targetShift = '1';
+        else if (sLower.includes('turno 2') || sLower.includes('tarde')) targetShift = '2';
+        else if (sLower.includes('turno 3') || sLower.includes('noche')) targetShift = '3';
+
+        const shiftEmps = (plantEmps || []).filter(e => {
+          const empId = String(e.id || '');
+          const empName = (e.nombre_completo || e.nombre || '').toLowerCase();
+          if (empId === '0' || empId === '2023' || empId.startsWith('900') || empName.includes('harley')) return false;
+          const s = String(e.turno_actual || (e.grupo === 'A' ? '1' : (e.grupo === 'B' ? '2' : '3')));
+          return s === targetShift;
+        });
+
+        let shiftScanCount = 0;
+        shiftEmps.forEach(emp => {
+          const r = (attMap && (attMap[String(emp.id)] || (emp.pesel && attMap[String(emp.pesel)]))) || null;
+          if (r && (r.horaEntrada || (r.status && ['ASISTIO', 'A_TIEMPO', 'PRESENTES', 'PRESENTE', 'NORMAL', 'RETARDO', 'SALIDA_TEMPRANA'].includes(r.status.toUpperCase())))) {
+            shiftScanCount++;
+          }
+        });
+
+        const totalProg = shiftEmps.length > 0 ? shiftEmps.length : pt.expected;
+        const totalScan = pt.isFuture ? 0 : (idx === nowIndex ? shiftScanCount : pt.actual);
+
         const hActTitle = document.getElementById('chart-hud-scan-title');
         const hAct = document.getElementById('chart-hud-actual');
         const hAdh = document.getElementById('chart-hud-adh');
@@ -4736,10 +4802,10 @@
             if (hAdh) hAdh.innerText = 'PROYECCIÓN';
           } else {
             if (hActTitle) { hActTitle.innerText = '🟢 ESCANEADOS'; hActTitle.style.color = '#10b981'; }
-            hAct.innerText = pt.actual + ' escaneos';
+            hAct.innerText = totalScan + ' escaneos';
             hAct.style.color = '#34d399';
             if (hAdh) {
-              const pAdh = pt.expected > 0 ? Math.min(100, (pt.actual / pt.expected) * 100).toFixed(0) : '0';
+              const pAdh = totalProg > 0 ? Math.min(100, (totalScan / totalProg) * 100).toFixed(0) : '0';
               hAdh.innerText = pAdh + '% Adh';
               hAdh.style.color = (Number(pAdh) >= 80) ? '#4ade80' : '#fbbf24';
             }
@@ -4748,15 +4814,17 @@
 
         // Vincular tarjetas inferiores con la hora específica seleccionada
         const elProg = document.getElementById('chart-kpi-prog');
-        if (elProg) elProg.innerText = pt.expected;
+        if (elProg) elProg.innerText = totalProg;
         const elScan = document.getElementById('chart-kpi-scan');
-        if (elScan) elScan.innerText = pt.isFuture ? '-' : pt.actual;
+        if (elScan) elScan.innerText = pt.isFuture ? '-' : totalScan;
         const elAdh = document.getElementById('chart-kpi-adh');
         if (elAdh) {
           if (pt.isFuture) {
             elAdh.innerText = '--';
           } else {
-            const pAdhVal = pt.expected > 0 ? Math.min(100, (pt.actual / pt.expected) * 100).toFixed(1) : '100.0';
+            const numProg = Number(totalProg) || 1;
+            const numScan = Number(totalScan) || 0;
+            const pAdhVal = Math.min(100, (numScan / numProg) * 100).toFixed(1);
             elAdh.innerText = pAdhVal + '%';
           }
         }
