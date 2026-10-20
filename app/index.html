@@ -1887,6 +1887,107 @@
     const FIRESTORE_PROJECT_ID = 'ndserwis-unamel';
     const FIRESTORE_API_KEY = 'AIzaSyA0bSZqx9gqRNZYpMBkKlz7M0FUq74FSso';
 
+    // ==========================================
+    // AUDITORÍA Y TELEMETRÍA DE CONSUMO FIRESTORE (WEB)
+    // ==========================================
+    window._firestoreAudit = {
+      reads: 0,
+      writes: 0
+    };
+
+    function updateFirestoreWebBadge() {
+      let badge = document.getElementById('firestore-audit-badge');
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'firestore-audit-badge';
+        badge.style.cssText = 'position:fixed; top:12px; right:12px; z-index:99999; background:rgba(15,23,42,0.88); backdrop-filter:blur(6px); color:#38bdf8; border:1px solid #0284c7; border-radius:14px; padding:4px 10px; font-size:0.75rem; font-weight:700; font-family:monospace; box-shadow:0 4px 12px rgba(0,0,0,0.3); pointer-events:none;';
+        document.body.appendChild(badge);
+      }
+      badge.innerText = '📡 R: ' + window._firestoreAudit.reads + ' | W: ' + window._firestoreAudit.writes;
+    }
+
+    const _originalFetch = window.fetch;
+    window.fetch = async function(...args) {
+      const url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url ? args[0].url : '');
+      const options = args[1] || {};
+      const method = (options.method || 'GET').toUpperCase();
+      const isFirestore = typeof url === 'string' && url.includes('firestore.googleapis.com');
+
+      if (isFirestore) {
+        if (method === 'PATCH' || method === 'POST' || method === 'PUT' || method === 'DELETE') {
+          window._firestoreAudit.writes += 1;
+          updateFirestoreWebBadge();
+          console.log('%c📡 [Firestore WRITE +1]', 'color:#f43f5e; font-weight:bold;', method, url);
+        }
+      }
+
+      const response = await _originalFetch.apply(this, args);
+
+      if (isFirestore && method === 'GET') {
+        try {
+          const clone = response.clone();
+          clone.json().then(data => {
+            let count = 1;
+            if (data && Array.isArray(data.documents)) {
+              count = data.documents.length;
+            }
+            window._firestoreAudit.reads += count;
+            updateFirestoreWebBadge();
+            console.log('%c📡 [Firestore READ +' + count + ']', 'color:#10b981; font-weight:bold;', url);
+          }).catch(() => {
+            window._firestoreAudit.reads += 1;
+            updateFirestoreWebBadge();
+          });
+        } catch (e) {
+          window._firestoreAudit.reads += 1;
+          updateFirestoreWebBadge();
+        }
+      }
+
+      return response;
+    };
+
+    // ==========================================
+    // CONTROL DE BANDERÍN DE SINCRONIZACIÓN (CADA 5 MINUTOS)
+    // ==========================================
+    let _lastSyncControlWebCheck = 0;
+    const SYNC_CONTROL_INTERVAL_MS = 300000; // 5 minutos (300.000 ms)
+
+    async function checkSyncControlFlagWeb(forced) {
+      const now = Date.now();
+      if (!forced && (now - _lastSyncControlWebCheck) < SYNC_CONTROL_INTERVAL_MS) {
+        return;
+      }
+      _lastSyncControlWebCheck = now;
+
+      try {
+        const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/configuracion/sync_control?key=' + FIRESTORE_API_KEY;
+        const res = await _originalFetch(url);
+        if (!res.ok) return;
+        const doc = await res.json();
+        const data = parseFirestoreDoc(doc.fields);
+        if (!data) return;
+
+        const remoteVer = Number(data.version_datos) || 0;
+        const localVer = Number(localStorage.getItem('unamel_web_data_version') || '0');
+
+        if (remoteVer > localVer) {
+          console.log('🔔 [SyncControl] Nueva versión detectada en planta:', remoteVer, 'Local:', localVer);
+          localStorage.setItem('unamel_web_data_version', String(remoteVer));
+          localStorage.removeItem('unamel_web_cached_disponibles');
+          if (currentUser && (currentUser.rol === 'COORDINADOR' || currentUser.rol === 'ADMINISTRATIVO')) {
+            loadCoordData(true);
+          }
+        }
+      } catch (err) {
+        console.warn('Sync control check error:', err);
+      }
+    }
+
+    setInterval(function() {
+      checkSyncControlFlagWeb(false);
+    }, SYNC_CONTROL_INTERVAL_MS);
+
     function parseFirestoreDoc(fields) {
       if (!fields) return {};
       const res = {};
@@ -3768,7 +3869,10 @@
       loadCoordData();
     }
 
-    function loadCoordData() {
+    function loadCoordData(force) {
+      if (force) {
+        localStorage.removeItem('unamel_web_cached_disponibles');
+      }
       const d = coordSelectedDate;
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -3789,9 +3893,25 @@
       const attUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + todayStr + '/registros?key=' + FIRESTORE_API_KEY + '&pageSize=300';
       const dispUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles?key=' + FIRESTORE_API_KEY + '&pageSize=100';
 
+      // Uso inteligente de caché local para disponibles (35 colaboradores)
+      const cachedDispRaw = localStorage.getItem('unamel_web_cached_disponibles');
+      let cachedDispDocs = null;
+      if (!force && cachedDispRaw) {
+        try { cachedDispDocs = JSON.parse(cachedDispRaw); } catch(e){}
+      }
+
+      const dispFetchPromise = (cachedDispDocs && cachedDispDocs.length > 0)
+        ? Promise.resolve({ documents: cachedDispDocs, fromCache: true })
+        : fetch(dispUrl).then(r => r.ok ? r.json() : { documents: [] }).then(res => {
+            if (res.documents && res.documents.length > 0) {
+              try { localStorage.setItem('unamel_web_cached_disponibles', JSON.stringify(res.documents)); } catch(e){}
+            }
+            return res;
+          }).catch(() => ({ documents: [] }));
+
       Promise.all([
         fetch(attUrl).then(r => r.ok ? r.json() : { documents: [] }).catch(() => ({ documents: [] })),
-        fetch(dispUrl).then(r => r.ok ? r.json() : { documents: [] }).catch(() => ({ documents: [] }))
+        dispFetchPromise
       ]).then(async ([attRes, dispRes]) => {
         let attDocs = attRes.documents || [];
         if (attDocs.length === 0) {
