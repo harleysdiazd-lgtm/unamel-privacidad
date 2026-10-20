@@ -1896,13 +1896,31 @@
     };
 
     function updateFirestoreWebBadge() {
+      const isCoord = (currentUser && (
+        currentUser.rol === 'COORDINADOR' || 
+        currentUser.rol === 'ADMINISTRATIVO' || 
+        currentUser.rol_app === 'COORDINADOR' || 
+        currentUser.rol_app === 'ADMINISTRATIVO' || 
+        String(currentUser.id) === '0' || 
+        String(currentUser.id) === '95071616157' ||
+        String(currentUser.id) === '2023' ||
+        (currentUser.nombre_completo && (currentUser.nombre_completo.toLowerCase().includes('santiago') || currentUser.nombre_completo.toLowerCase().includes('harley'))) ||
+        (currentUser.nombre && currentUser.nombre.toLowerCase().includes('santiago'))
+      ));
+
       let badge = document.getElementById('firestore-audit-badge');
+      if (!isCoord) {
+        if (badge) badge.style.display = 'none';
+        return;
+      }
+
       if (!badge) {
         badge = document.createElement('div');
         badge.id = 'firestore-audit-badge';
         badge.style.cssText = 'position:fixed; top:12px; right:12px; z-index:99999; background:rgba(15,23,42,0.88); backdrop-filter:blur(6px); color:#38bdf8; border:1px solid #0284c7; border-radius:14px; padding:4px 10px; font-size:0.75rem; font-weight:700; font-family:monospace; box-shadow:0 4px 12px rgba(0,0,0,0.3); pointer-events:none;';
         document.body.appendChild(badge);
       }
+      badge.style.display = 'block';
       badge.innerText = '📡 R: ' + window._firestoreAudit.reads + ' | W: ' + window._firestoreAudit.writes;
     }
 
@@ -2426,6 +2444,7 @@
 
     function renderUserProfile(emp) {
       currentUser = emp;
+      updateFirestoreWebBadge();
       checkEmployeeBanderines(emp);
       try {
         localStorage.setItem('unamel_user_session', JSON.stringify(emp));
@@ -5105,6 +5124,7 @@
 
     function logout() {
       currentUser = null;
+      updateFirestoreWebBadge();
       localStorage.removeItem('unamel_cached_id');
       localStorage.removeItem('unamel_cached_pin');
       localStorage.removeItem('unamel_user_session');
@@ -5287,6 +5307,36 @@
       if (m) m.classList.add('hidden');
     };
 
+    async function notifyWebLateExit(empId, exitTimeStr, deltaMinutes) {
+      try {
+        const now = new Date();
+        const todayYmd = now.toISOString().slice(0, 10);
+        const extraHours = Math.round((deltaMinutes / 60.0) * 10) / 10;
+        const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/solicitudes_acceso?key=' + FIRESTORE_API_KEY;
+        const payload = {
+          fields: {
+            employeeId: { stringValue: empId },
+            pesel: { stringValue: (currentUser && currentUser.pesel) ? currentUser.pesel : empId },
+            nombreCompleto: { stringValue: (currentUser && currentUser.nombre_completo) ? currentUser.nombre_completo : '' },
+            grupo: { stringValue: (currentUser && currentUser.grupo) ? currentUser.grupo : 'A' },
+            turno: { stringValue: String((currentUser && currentUser.turno_actual) ? currentUser.turno_actual : '1') },
+            fecha: { stringValue: todayYmd },
+            horaSolicitud: { stringValue: exitTimeStr },
+            horasExtra: { doubleValue: extraHours },
+            motivo: { stringValue: 'Salida tarde (+' + deltaMinutes + ' min tras fin de turno sin pre-autorización)' },
+            status: { stringValue: 'PENDIENTE' },
+            autorizadoPor: { stringValue: '' },
+            timestamp: { integerValue: String(Date.now()) }
+          }
+        };
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
     async function onGateQrCodeScanned(decodedText) {
       if (gateIsProcessingCode) return;
       
@@ -5359,11 +5409,22 @@
             const [eH, eM] = timeStr.split(':').map(Number);
             let diffMins = (eH * 60 + eM) - (sH * 60 + sM);
             if (diffMins < 0) diffMins += 24 * 60;
-            const rawHours = diffMins / 60.0;
             const baseH = Number(currentUser.horas_base_turno) || 8;
             const extraH = Number(currentUser.horas_extra_autorizadas) || 0;
-            const maxAllowed = baseH + extraH;
-            finalCalcHours = Math.round(Math.min(rawHours, maxAllowed) * 10) / 10;
+            const allowedMins = (baseH + extraH) * 60;
+            const deltaPastShiftMins = diffMins - allowedMins;
+
+            if (deltaPastShiftMins <= 15) {
+              // Tolerancia hasta 10-15 min: no se informa a coordinación y los minutos se descartan
+              finalCalcHours = baseH + extraH;
+            } else {
+              if (extraH > 0) {
+                finalCalcHours = Math.round(Math.min(diffMins / 60.0, baseH + extraH) * 10) / 10;
+              } else {
+                finalCalcHours = baseH;
+                notifyWebLateExit(empId, timeStr, deltaPastShiftMins);
+              }
+            }
             currentUser.horas_calculadas_hoy = finalCalcHours;
           }
 
