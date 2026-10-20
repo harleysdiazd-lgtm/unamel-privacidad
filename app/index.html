@@ -1522,23 +1522,54 @@
             <canvas id="trading-chart-canvas" width="600" height="310" style="width:100%; height:190px; display:block; touch-action:none;"></canvas>
           </div>
 
-          <!-- KPIs Resumen Trading -->
+          <!-- KPIs Resumen Trading (Interactivos) -->
           <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-top:4px;">
-            <div style="background:#0f172a; padding:6px 8px; border-radius:8px; border:1px solid #1e293b;">
-              <div style="font-size:0.65rem; font-weight:700; color:#94a3b8;">PROGRAMADOS</div>
+            <div id="chart-kpi-prog-card" onclick="toggleTradingBreakdown('PROGRAMADOS')" style="background:#0f172a; padding:6px 8px; border-radius:8px; border:1px solid #1e293b; cursor:pointer; transition:all 0.2s;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div id="chart-kpi-prog-lbl" style="font-size:0.65rem; font-weight:700; color:#94a3b8;">PROGRAMADOS</div>
+                <span id="chart-kpi-prog-icon" style="font-size:0.6rem; color:#64748b;">▼</span>
+              </div>
               <div id="chart-kpi-prog" style="font-size:0.95rem; font-weight:800; color:#fff;">0</div>
+              <div id="chart-kpi-prog-hint" style="font-size:0.55rem; color:#64748b; font-weight:600;">Ver lista</div>
             </div>
-            <div style="background:#0f172a; padding:6px 8px; border-radius:8px; border:1px solid #1e293b;">
-              <div style="font-size:0.65rem; font-weight:700; color:#10b981;">ESCANEADOS</div>
+            <div id="chart-kpi-scan-card" onclick="toggleTradingBreakdown('ESCANEADOS')" style="background:#0f172a; padding:6px 8px; border-radius:8px; border:1px solid #1e293b; cursor:pointer; transition:all 0.2s;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div id="chart-kpi-scan-lbl" style="font-size:0.65rem; font-weight:700; color:#10b981;">ESCANEADOS</div>
+                <span id="chart-kpi-scan-icon" style="font-size:0.6rem; color:#10b981;">▼</span>
+              </div>
               <div id="chart-kpi-scan" style="font-size:0.95rem; font-weight:800; color:#34d399;">0</div>
+              <div id="chart-kpi-scan-hint" style="font-size:0.55rem; color:#10b981; font-weight:600;">Ver lista</div>
             </div>
             <div style="background:#0f172a; padding:6px 8px; border-radius:8px; border:1px solid #1e293b;">
               <div style="font-size:0.65rem; font-weight:700; color:#38bdf8;">ADHERENCIA</div>
               <div id="chart-kpi-adh" style="font-size:0.95rem; font-weight:800; color:#38bdf8;">0.0%</div>
+              <div style="font-size:0.55rem; color:#64748b; font-weight:600;">Meta &gt; 80%</div>
+            </div>
+          </div>
+
+          <!-- Panel Desplegable Nominal de Trabajadores (Programados / Escaneados) -->
+          <div id="trading-breakdown-panel" style="display:none; background:#0b132b; border:1px solid #334155; border-radius:10px; padding:10px; margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <div>
+                <div id="trading-breakdown-title" style="font-size:0.8rem; font-weight:800; color:#ffffff;">📋 Personal Programado</div>
+                <div id="trading-breakdown-subtitle" style="font-size:0.65rem; color:#94a3b8;">Horario</div>
+              </div>
+              <button type="button" onclick="closeTradingBreakdown()" style="background:#1e293b; border:none; color:#94a3b8; border-radius:6px; font-size:0.75rem; width:24px; height:24px; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
+            </div>
+
+            <!-- Selector de Filtros Rápidos -->
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-bottom:8px;">
+              <button type="button" id="tb-tab-all" onclick="filterTradingBreakdown(0)" style="background:#1e293b; color:#38bdf8; border:1px solid #38bdf8; border-radius:6px; font-size:0.65rem; font-weight:700; padding:4px 2px; cursor:pointer;">Todos (0)</button>
+              <button type="button" id="tb-tab-scanned" onclick="filterTradingBreakdown(1)" style="background:transparent; color:#94a3b8; border:1px solid #334155; border-radius:6px; font-size:0.65rem; font-weight:700; padding:4px 2px; cursor:pointer;">Presentes (0)</button>
+              <button type="button" id="tb-tab-absent" onclick="filterTradingBreakdown(2)" style="background:transparent; color:#94a3b8; border:1px solid #334155; border-radius:6px; font-size:0.65rem; font-weight:700; padding:4px 2px; cursor:pointer;">Inasistencias (0)</button>
+            </div>
+
+            <!-- Contenedor scrollable de trabajadores -->
+            <div id="trading-breakdown-list" style="max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
             </div>
           </div>
           <div style="text-align:center; font-size:0.65rem; color:#64748b; margin-top:8px;">
-            👆 Arrastra horizontalmente para explorar el tiempo · Toca para inspeccionar
+            👆 Arrastra horizontalmente para explorar el tiempo · Toca PROGRAMADOS o ESCANEADOS para ver quiénes son
           </div>
         </div>
 
@@ -4729,7 +4760,332 @@
             elAdh.innerText = pAdhVal + '%';
           }
         }
+
+        // Si el panel de desglose nominal está visible, actualizarlo automáticamente con el punto seleccionado
+        const panel = document.getElementById('trading-breakdown-panel');
+        if (panel && panel.style.display !== 'none') {
+          renderTradingBreakdown(pt);
+        }
       }
+
+      window.tradingBreakdownMode = null; // 'PROGRAMADOS' | 'ESCANEADOS' | null
+      window.tradingBreakdownTab = 0; // 0: Todos, 1: Presentes, 2: Inasistencias
+
+      window.toggleTradingBreakdown = function(mode) {
+        const panel = document.getElementById('trading-breakdown-panel');
+        if (!panel) return;
+        if (window.tradingBreakdownMode === mode && panel.style.display !== 'none') {
+          closeTradingBreakdown();
+          return;
+        }
+        window.tradingBreakdownMode = mode;
+        window.tradingBreakdownTab = (mode === 'ESCANEADOS') ? 1 : 0;
+        panel.style.display = 'block';
+
+        // Actualizar estados visuales de las tarjetas
+        const progCard = document.getElementById('chart-kpi-prog-card');
+        const scanCard = document.getElementById('chart-kpi-scan-card');
+        const progIcon = document.getElementById('chart-kpi-prog-icon');
+        const scanIcon = document.getElementById('chart-kpi-scan-icon');
+        const progHint = document.getElementById('chart-kpi-prog-hint');
+        const scanHint = document.getElementById('chart-kpi-scan-hint');
+
+        if (mode === 'PROGRAMADOS') {
+          if (progCard) progCard.style.border = '1.5px solid #38bdf8';
+          if (scanCard) scanCard.style.border = '1px solid #1e293b';
+          if (progIcon) progIcon.innerText = '▲';
+          if (scanIcon) scanIcon.innerText = '▼';
+          if (progHint) { progHint.innerText = 'Ocultar'; progHint.style.color = '#38bdf8'; }
+          if (scanHint) { scanHint.innerText = 'Ver lista'; scanHint.style.color = '#10b981'; }
+        } else {
+          if (scanCard) scanCard.style.border = '1.5px solid #10b981';
+          if (progCard) progCard.style.border = '1px solid #1e293b';
+          if (scanIcon) scanIcon.innerText = '▲';
+          if (progIcon) progIcon.innerText = '▼';
+          if (scanHint) { scanHint.innerText = 'Ocultar'; scanHint.style.color = '#34d399'; }
+          if (progHint) { progHint.innerText = 'Ver lista'; progHint.style.color = '#64748b'; }
+        }
+
+        const pts = window.cachedTradingPoints || [];
+        const pt = pts[tradingChartSelectedIdx] || pts[nowIndex] || {};
+        renderTradingBreakdown(pt);
+      };
+
+      window.closeTradingBreakdown = function() {
+        const panel = document.getElementById('trading-breakdown-panel');
+        if (panel) panel.style.display = 'none';
+        window.tradingBreakdownMode = null;
+
+        const progCard = document.getElementById('chart-kpi-prog-card');
+        const scanCard = document.getElementById('chart-kpi-scan-card');
+        const progIcon = document.getElementById('chart-kpi-prog-icon');
+        const scanIcon = document.getElementById('chart-kpi-scan-icon');
+        const progHint = document.getElementById('chart-kpi-prog-hint');
+        const scanHint = document.getElementById('chart-kpi-scan-hint');
+
+        if (progCard) progCard.style.border = '1px solid #1e293b';
+        if (scanCard) scanCard.style.border = '1px solid #1e293b';
+        if (progIcon) progIcon.innerText = '▼';
+        if (scanIcon) scanIcon.innerText = '▼';
+        if (progHint) { progHint.innerText = 'Ver lista'; progHint.style.color = '#64748b'; }
+        if (scanHint) { scanHint.innerText = 'Ver lista'; scanHint.style.color = '#10b981'; }
+      };
+
+      window.filterTradingBreakdown = function(tabIndex) {
+        window.tradingBreakdownTab = tabIndex;
+        const pts = window.cachedTradingPoints || [];
+        const pt = pts[tradingChartSelectedIdx] || pts[nowIndex] || {};
+        renderTradingBreakdown(pt);
+      };
+
+      window.renderTradingBreakdown = function(pt) {
+        if (!pt) return;
+        const titleEl = document.getElementById('trading-breakdown-title');
+        const subEl = document.getElementById('trading-breakdown-subtitle');
+        const listEl = document.getElementById('trading-breakdown-list');
+        if (!listEl) return;
+
+        if (titleEl) {
+          titleEl.innerText = (window.tradingBreakdownMode === 'ESCANEADOS') ? '👥 Personal Escaneado en Vivo' : '📋 Personal Programado en Turno';
+        }
+        if (subEl) {
+          subEl.innerText = pt.shift ? pt.shift : ('Horario: ' + (pt.timeLabel || ''));
+        }
+
+        // Determinar turno de la hora inspeccionada
+        let targetShift = '1';
+        let shiftStartHour = 6;
+        const s = (pt.shift || '').toLowerCase();
+        if (s.includes('turno 1')) {
+          targetShift = '1'; shiftStartHour = 6;
+        } else if (s.includes('turno 2')) {
+          targetShift = '2'; shiftStartHour = 14;
+        } else if (s.includes('turno 3')) {
+          targetShift = '3'; shiftStartHour = 22;
+        } else {
+          const h = (pt.timeLabel ? parseInt(pt.timeLabel.split(':')[0], 10) : 6);
+          if (h >= 6 && h <= 13) { targetShift = '1'; shiftStartHour = 6; }
+          else if (h >= 14 && h <= 21) { targetShift = '2'; shiftStartHour = 14; }
+          else { targetShift = '3'; shiftStartHour = 22; }
+        }
+
+        // Extraer operarios de planta
+        const allEmps = (window.rawCoordDispDocs || []).filter(d => {
+          const id = d.name.split('/').pop();
+          return id !== '0' && id !== '2023' && !id.startsWith('900');
+        });
+
+        const attDocs = window.rawCoordAttDocs || [];
+        const processedIds = new Set();
+        const items = [];
+
+        // Filtrar programados en este turno
+        const scheduled = allEmps.filter(d => {
+          const f = d.fields || {};
+          const grp = (f.grupo ? f.grupo.stringValue : '').toUpperCase().trim();
+          let empShift = (f.turno_actual ? f.turno_actual.stringValue : '');
+          if (!empShift || empShift === '0') {
+            empShift = (grp === 'A') ? '1' : (grp === 'B' ? '2' : '3');
+          }
+          return empShift === targetShift;
+        });
+
+        function evaluateStatus(empId, empName, rec, isFuture) {
+          if (rec && rec.fields) {
+            const hEnt = (rec.fields.hora_entrada ? rec.fields.hora_entrada.stringValue : '').trim();
+            const hSal = (rec.fields.hora_salida ? rec.fields.hora_salida.stringValue : '').trim();
+            const st = (rec.fields.status ? rec.fields.status.stringValue : '').toUpperCase();
+
+            if (hEnt && hEnt.includes(':')) {
+              const entH = parseInt(hEnt.split(':')[0], 10) || 0;
+              const entM = parseInt(hEnt.split(':')[1], 10) || 0;
+              const isTurno3 = (targetShift === '3' || shiftStartHour >= 21);
+              const schedMins = isTurno3 ? 22 * 60 : shiftStartHour * 60;
+              const actMins = (isTurno3 && entH >= 0 && entH <= 12) ? (entH + 24) * 60 + entM : entH * 60 + entM;
+              const diffMins = actMins - schedMins;
+              const isLate = diffMins > 10 || st.includes('RETARDO');
+
+              return {
+                status: isLate ? 'RETARDO' : 'PRESENTE',
+                label: isLate ? '⏱️ RETARDO' : '✅ PRESENTE',
+                timeDetail: 'Entrada: ' + hEnt + (diffMins > 0 ? (' (+' + diffMins + 'm)') : ''),
+                exitDetail: hSal ? ('Salida: ' + hSal) : '',
+                bg: isLate ? '#451a03' : '#064e3b',
+                border: isLate ? '#f59e0b' : '#10b981',
+                color: isLate ? '#fbbf24' : '#34d399'
+              };
+            }
+            if (st.includes('NO_ASISTIO') || st.includes('FALTA')) {
+              return {
+                status: 'INASISTENCIA',
+                label: '❌ INASISTENCIA',
+                timeDetail: 'Marcado No Asistió',
+                exitDetail: '',
+                bg: '#450a0a', border: '#ef4444', color: '#f87171'
+              };
+            }
+          }
+
+          // Sin escaneo
+          const nowW = new Date();
+          // Hora en Varsovia aproximada
+          const curH = nowW.getUTCHours() + 2;
+          const curM = nowW.getUTCMinutes();
+          const isPastShift = !isFuture && ((curH * 60 + curM) >= (shiftStartHour * 60 + 15));
+
+          if (isPastShift) {
+            return {
+              status: 'INASISTENCIA',
+              label: '❌ INASISTENCIA',
+              timeDetail: 'Sin escaneo registrado',
+              exitDetail: '',
+              bg: '#450a0a', border: '#ef4444', color: '#f87171'
+            };
+          } else {
+            return {
+              status: 'PROGRAMADO',
+              label: '⏳ PROGRAMADO',
+              timeDetail: 'En espera de escaneo',
+              exitDetail: '',
+              bg: '#1e293b', border: '#475569', color: '#94a3b8'
+            };
+          }
+        }
+
+        scheduled.forEach(d => {
+          const empId = d.name.split('/').pop();
+          const f = d.fields || {};
+          const empName = f.nombre_completo ? f.nombre_completo.stringValue : (f.nombre ? f.nombre.stringValue : empId);
+          const grp = f.grupo ? f.grupo.stringValue : '-';
+          const tAct = f.turno_actual ? f.turno_actual.stringValue : targetShift;
+
+          processedIds.add(empId);
+          const rec = attDocs.find(a => {
+            const af = a.fields || {};
+            const aid = af.id_empleado ? af.id_empleado.stringValue : a.name.split('/').pop();
+            const aname = af.nombre_empleado ? af.nombre_empleado.stringValue : '';
+            return aid === empId || (aname && aname.toLowerCase() === empName.toLowerCase());
+          });
+
+          const stInfo = evaluateStatus(empId, empName, rec, pt.isFuture);
+          items.push({
+            id: empId,
+            name: empName,
+            group: grp,
+            shift: tAct,
+            stInfo: stInfo
+          });
+        });
+
+        // Operarios de apoyo / otros turnos que escanearon en este bloque
+        attDocs.forEach(a => {
+          const af = a.fields || {};
+          const aid = af.id_empleado ? af.id_empleado.stringValue : a.name.split('/').pop();
+          const aname = af.nombre_empleado ? af.nombre_empleado.stringValue : aid;
+          const hEnt = (af.hora_entrada ? af.hora_entrada.stringValue : '').trim();
+
+          if (!processedIds.has(aid) && hEnt && hEnt.includes(':')) {
+            const entH = parseInt(hEnt.split(':')[0], 10);
+            let matches = false;
+            if (targetShift === '1' && entH >= 5 && entH <= 13) matches = true;
+            if (targetShift === '2' && entH >= 13 && entH <= 21) matches = true;
+            if (targetShift === '3' && (entH >= 21 || entH <= 5)) matches = true;
+
+            if (matches) {
+              const stInfo = evaluateStatus(aid, aname, a, false);
+              items.push({
+                id: aid,
+                name: aname,
+                group: af.grupo ? af.grupo.stringValue : 'Apoyo',
+                shift: targetShift,
+                stInfo: stInfo
+              });
+            }
+          }
+        });
+
+        // Ordenar: Presentes y Retardos primero, luego Inasistencias, luego Programados
+        items.sort((a, b) => {
+          const rank = { 'PRESENTE': 1, 'RETARDO': 2, 'INASISTENCIA': 3, 'PROGRAMADO': 4 };
+          const ra = rank[a.stInfo.status] || 5;
+          const rb = rank[b.stInfo.status] || 5;
+          if (ra !== rb) return ra - rb;
+          return a.name.localeCompare(b.name);
+        });
+
+        const totalCnt = items.length;
+        const scanCnt = items.filter(x => x.stInfo.status === 'PRESENTE' || x.stInfo.status === 'RETARDO').length;
+        const absCnt = items.filter(x => x.stInfo.status === 'INASISTENCIA' || x.stInfo.status === 'PROGRAMADO').length;
+
+        // Actualizar botones de pestaña
+        const tabAll = document.getElementById('tb-tab-all');
+        const tabScanned = document.getElementById('tb-tab-scanned');
+        const tabAbsent = document.getElementById('tb-tab-absent');
+
+        if (tabAll) {
+          tabAll.innerText = `Todos (${totalCnt})`;
+          tabAll.style.background = (window.tradingBreakdownTab === 0) ? '#1e293b' : 'transparent';
+          tabAll.style.color = (window.tradingBreakdownTab === 0) ? '#38bdf8' : '#94a3b8';
+          tabAll.style.border = (window.tradingBreakdownTab === 0) ? '1px solid #38bdf8' : '1px solid #334155';
+        }
+        if (tabScanned) {
+          tabScanned.innerText = `Presentes (${scanCnt})`;
+          tabScanned.style.background = (window.tradingBreakdownTab === 1) ? '#064e3b' : 'transparent';
+          tabScanned.style.color = (window.tradingBreakdownTab === 1) ? '#34d399' : '#94a3b8';
+          tabScanned.style.border = (window.tradingBreakdownTab === 1) ? '1px solid #10b981' : '1px solid #334155';
+        }
+        if (tabAbsent) {
+          tabAbsent.innerText = `Inasistencias (${absCnt})`;
+          tabAbsent.style.background = (window.tradingBreakdownTab === 2) ? '#450a0a' : 'transparent';
+          tabAbsent.style.color = (window.tradingBreakdownTab === 2) ? '#f87171' : '#94a3b8';
+          tabAbsent.style.border = (window.tradingBreakdownTab === 2) ? '1px solid #ef4444' : '1px solid #334155';
+        }
+
+        // Filtrar según pestaña seleccionada
+        let displayList = items;
+        if (window.tradingBreakdownTab === 1) {
+          displayList = items.filter(x => x.stInfo.status === 'PRESENTE' || x.stInfo.status === 'RETARDO');
+        } else if (window.tradingBreakdownTab === 2) {
+          displayList = items.filter(x => x.stInfo.status === 'INASISTENCIA' || x.stInfo.status === 'PROGRAMADO');
+        }
+
+        if (displayList.length === 0) {
+          listEl.innerHTML = '<div style="color:#64748b; text-align:center; padding:16px; font-size:0.75rem;">No hay registros para esta categoría</div>';
+          return;
+        }
+
+        let html = '';
+        displayList.forEach(item => {
+          const init = item.name.charAt(0).toUpperCase() || '?';
+          html += `
+            <div style="background:#090e1a; border:1px solid #1e293b; border-radius:8px; padding:7px 9px; display:flex; justify-content:space-between; align-items:center;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div style="width:28px; height:28px; border-radius:50%; background:#1e293b; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:800; color:#94a3b8;">
+                  ${init}
+                </div>
+                <div>
+                  <div style="font-size:0.78rem; font-weight:700; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px;">
+                    ${item.name}
+                  </div>
+                  <div style="font-size:0.62rem; color:#64748b;">
+                    ID: ${item.id} · Grp: ${item.group} · T${item.shift}
+                  </div>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <div style="display:inline-block; background:${item.stInfo.bg}; border:1px solid ${item.stInfo.border}; color:${item.stInfo.color}; font-size:0.62rem; font-weight:800; border-radius:4px; padding:2px 6px;">
+                  ${item.stInfo.label}
+                </div>
+                <div style="font-size:0.58rem; color:#94a3b8; margin-top:2px;">
+                  ${item.stInfo.timeDetail}
+                </div>
+                ${item.stInfo.exitDetail ? `<div style="font-size:0.55rem; color:#64748b;">${item.stInfo.exitDetail}</div>` : ''}
+              </div>
+            </div>
+          `;
+        });
+        listEl.innerHTML = html;
+      };
 
       updateHUD(tradingChartSelectedIdx);
 
