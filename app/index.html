@@ -5347,18 +5347,43 @@
           const isExit = (gateScanCurrentMode === 'SALIDA');
           const statusField = isExit ? 'horaSalida' : 'horaEntrada';
 
-          const attDocUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + todayYmd + '/registros/' + encodeURIComponent(empId) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=' + statusField + '&updateMask.fieldPaths=status&updateMask.fieldPaths=employeeName&updateMask.fieldPaths=grupo&updateMask.fieldPaths=turno&updateMask.fieldPaths=qrGate';
+          const schedStart = currentUser.horario_inicio || (String(currentUser.turno_actual || currentUser.turno) === '2' ? '14:00' : (String(currentUser.turno_actual || currentUser.turno) === '3' ? '22:00' : '06:00'));
+          const isLate = (!isExit && timeStr > schedStart);
+          const statusVal = isExit ? 'CONFIRMADO_SALIDA' : (isLate ? 'RETARDO' : 'A_TIEMPO');
+          const horaInicioEfec = isLate ? timeStr : schedStart;
+
+          let finalCalcHours = 0.0;
+          if (isExit) {
+            const startComp = currentUser.ultima_hora_entrada || schedStart;
+            const [sH, sM] = startComp.split(':').map(Number);
+            const [eH, eM] = timeStr.split(':').map(Number);
+            let diffMins = (eH * 60 + eM) - (sH * 60 + sM);
+            if (diffMins < 0) diffMins += 24 * 60;
+            const rawHours = diffMins / 60.0;
+            const baseH = Number(currentUser.horas_base_turno) || 8;
+            const extraH = Number(currentUser.horas_extra_autorizadas) || 0;
+            const maxAllowed = baseH + extraH;
+            finalCalcHours = Math.round(Math.min(rawHours, maxAllowed) * 10) / 10;
+            currentUser.horas_calculadas_hoy = finalCalcHours;
+          }
+
+          const attDocUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + todayYmd + '/registros/' + encodeURIComponent(empId) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=' + statusField + '&updateMask.fieldPaths=status&updateMask.fieldPaths=employeeName&updateMask.fieldPaths=grupo&updateMask.fieldPaths=turno&updateMask.fieldPaths=qrGate&updateMask.fieldPaths=horaInicioEfectiva' + (isExit ? '&updateMask.fieldPaths=horasCalculadas' : '');
           
-          const payload = {
-            fields: {
-              [statusField]: { stringValue: timeStr },
-              status: { stringValue: 'A_TIEMPO' },
-              employeeName: { stringValue: currentUser.nombre_completo || '' },
-              grupo: { stringValue: currentUser.grupo || 'A' },
-              turno: { stringValue: String(currentUser.turno_actual || '1') },
-              qrGate: { stringValue: raw.slice(0, 30) }
-            }
+          const payloadFields = {
+            [statusField]: { stringValue: timeStr },
+            status: { stringValue: statusVal },
+            employeeName: { stringValue: currentUser.nombre_completo || '' },
+            grupo: { stringValue: currentUser.grupo || 'A' },
+            turno: { stringValue: String(currentUser.turno_actual || '1') },
+            qrGate: { stringValue: raw.slice(0, 30) },
+            horaInicioEfectiva: { stringValue: horaInicioEfec }
           };
+
+          if (isExit) {
+            payloadFields.horasCalculadas = { doubleValue: finalCalcHours };
+          }
+
+          const payload = { fields: payloadFields };
 
           if (!isExit) {
             currentUser.ultimo_acceso_fecha = todayYmd;
@@ -5677,6 +5702,16 @@
           <div style="width:100%; height:8px; background:rgba(255,255,255,0.15); border-radius:6px; overflow:hidden;">
             <div style="width:${pctProgress}%; height:100%; background:linear-gradient(90deg, #3b82f6, #10b981); border-radius:6px; transition:width 0.4s ease;"></div>
           </div>
+
+          ${(hasEntry && !hasExit && currentUser.horas_extra_autorizadas > 0) ? `
+            <div style="margin-top:10px; background:#065f46; border:1px solid #10b981; border-radius:10px; padding:6px 10px; font-size:0.75rem; font-weight:700; color:#fff; display:flex; align-items:center; gap:6px;">
+              <span>⭐</span> HORAS EXTRA AUTORIZADAS: +${currentUser.horas_extra_autorizadas}h (Salida extendida permitida)
+            </div>
+          ` : (hasEntry && !hasExit && !isCoord) ? `
+            <button type="button" onclick="requestWebOvertime()" style="margin-top:10px; width:100%; background:rgba(245,158,11,0.12); border:1px solid #f59e0b; border-radius:10px; padding:7px 10px; font-size:0.75rem; font-weight:800; color:#f59e0b; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+              <span>🤝</span> Solicitar Extensión de Turno / Horas Extra
+            </button>
+          ` : ''}
         </div>
       `;
 
@@ -5690,6 +5725,50 @@
           cardHours.style.display = 'none';
           cardHours.innerHTML = '';
         }
+      }
+    }
+
+    async function requestWebOvertime() {
+      if (!currentUser) return;
+      const hoursStr = prompt("Ingrese la cantidad de horas extra a solicitar a Coordinación (ej. 1, 2 o 4):", "2");
+      if (!hoursStr) return;
+      const hNum = parseFloat(hoursStr) || 2.0;
+      const motivo = prompt("Motivo o área (ej. Autoclave, Etiquetado, Empaque):", "Operación en planta") || "Operación en planta";
+
+      const now = new Date();
+      const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      const todayYmd = now.toISOString().slice(0, 10);
+      const empId = String(currentUser.id || currentUser.pesel || '').trim();
+
+      const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/solicitudes_acceso?key=' + FIRESTORE_API_KEY;
+      const payload = {
+        fields: {
+          employeeId: { stringValue: empId },
+          pesel: { stringValue: currentUser.pesel || empId },
+          nombreCompleto: { stringValue: currentUser.nombre_completo || '' },
+          grupo: { stringValue: currentUser.grupo || 'A' },
+          turno: { stringValue: String(currentUser.turno_actual || '1') },
+          fecha: { stringValue: todayYmd },
+          horaSolicitud: { stringValue: timeStr },
+          horasExtra: { doubleValue: hNum },
+          motivo: { stringValue: "Extensión (+" + hNum + "h): " + motivo },
+          status: { stringValue: 'PENDIENTE' },
+          autorizadoPor: { stringValue: '' },
+          timestamp: { integerValue: String(Date.now()) }
+        }
+      };
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          alert("✅ Solicitud enviada a Coordinación. Cuando sea aprobada, podrás escanear tu salida más tarde reconociendo tu tiempo extra.");
+        }
+      } catch (e) {
+        alert("Error al enviar solicitud. Intente nuevamente.");
       }
     }
 
@@ -5725,10 +5804,12 @@
           if (f.status === 'PENDIENTE' && (f.fecha === todayStr || !f.fecha)) {
             pending.push({
               id: doc.name.split('/').pop(),
+              empId: f.employeeId || f.pesel || '',
               name: f.nombreCompleto || f.employeeId || 'Trabajador',
               turno: f.turno || '1',
               hora: f.horaSolicitud || '--:--',
-              motivo: f.motivo || 'Ingreso de Apoyo'
+              horasExtra: Number(f.horasExtra) || 2.0,
+              motivo: f.motivo || 'Ingreso de Apoyo / Horas Extra'
             });
           }
         });
@@ -5744,7 +5825,7 @@
           <div style="background:#1e1b4b; border:1.5px solid #a855f7; border-radius:16px; padding:14px; color:#fff; box-shadow:0 4px 16px rgba(168,85,247,0.25);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
               <strong style="color:#f3e8ff; font-size:0.92rem; display:flex; align-items:center; gap:6px;">
-                <span>🔔</span> Solicitudes de Apoyo Pendientes (${pending.length})
+                <span>🔔</span> Solicitudes de Horas Extra / Apoyo Pendientes (${pending.length})
               </strong>
             </div>
         `;
@@ -5752,13 +5833,16 @@
         pending.forEach(p => {
           cardsHtml += `
             <div style="background:rgba(49,46,129,0.7); border:1px solid rgba(99,102,241,0.5); border-radius:12px; padding:10px; margin-top:8px;">
-              <strong style="display:block; font-size:0.88rem; color:#fff;">${p.name}</strong>
-              <div style="font-size:0.75rem; color:#c7d2fe; margin-top:2px;">Turno ${p.turno} • Solicitud a las ${p.hora}</div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong style="font-size:0.88rem; color:#fff;">${p.name}</strong>
+                <span style="background:#7c3aed; color:#fff; font-size:0.72rem; font-weight:800; padding:2px 8px; border-radius:6px;">+${p.horasExtra}h Extra</span>
+              </div>
+              <div style="font-size:0.75rem; color:#c7d2fe; margin-top:2px;">Turno ${p.turno} • Solicitud a las ${p.hora} • ${p.motivo}</div>
               <div style="display:flex; gap:8px; margin-top:8px;">
-                <button type="button" onclick="respondSupportRequest('${p.id}', true)" style="flex:1; padding:7px; border:none; border-radius:8px; background:#10b981; color:#fff; font-weight:800; font-size:0.8rem; cursor:pointer;">
-                  ✅ Autorizar
+                <button type="button" onclick="respondSupportRequest('${p.id}', true, '${p.empId}', ${p.horasExtra})" style="flex:1; padding:7px; border:none; border-radius:8px; background:#10b981; color:#fff; font-weight:800; font-size:0.8rem; cursor:pointer;">
+                  ✅ Autorizar (+${p.horasExtra}h)
                 </button>
-                <button type="button" onclick="respondSupportRequest('${p.id}', false)" style="flex:1; padding:7px; border:none; border-radius:8px; background:#ef4444; color:#fff; font-weight:800; font-size:0.8rem; cursor:pointer;">
+                <button type="button" onclick="respondSupportRequest('${p.id}', false, '${p.empId}', 0)" style="flex:1; padding:7px; border:none; border-radius:8px; background:#ef4444; color:#fff; font-weight:800; font-size:0.8rem; cursor:pointer;">
                   ❌ Rechazar
                 </button>
               </div>
@@ -5771,14 +5855,15 @@
       } catch (err) {}
     }
 
-    async function respondSupportRequest(docId, approve) {
+    async function respondSupportRequest(docId, approve, reqEmpId, horasExtra = 2.0) {
       try {
-        const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/solicitudes_acceso/' + encodeURIComponent(docId) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=status&updateMask.fieldPaths=autorizadoPor';
+        const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/solicitudes_acceso/' + encodeURIComponent(docId) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=status&updateMask.fieldPaths=autorizadoPor&updateMask.fieldPaths=horasExtra';
         const coordName = (currentUser && currentUser.nombre_completo) ? currentUser.nombre_completo : 'Coordinador';
         const payload = {
           fields: {
             status: { stringValue: approve ? 'APROBADO' : 'RECHAZADO' },
-            autorizadoPor: { stringValue: coordName }
+            autorizadoPor: { stringValue: coordName },
+            horasExtra: { doubleValue: horasExtra }
           }
         };
         await fetch(url, {
@@ -5786,6 +5871,23 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
+
+        // Si fue aprobado, actualizar directamente asistencia_diaria/{todayStr}/registros/{empId}
+        if (approve && reqEmpId) {
+          const todayYmd = new Date().toISOString().slice(0, 10);
+          const attUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + todayYmd + '/registros/' + encodeURIComponent(reqEmpId) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=horasExtraAutorizadas&updateMask.fieldPaths=requiereAutorizacionExtra&updateMask.fieldPaths=liderSalida';
+          await fetch(attUrl, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fields: {
+                horasExtraAutorizadas: { doubleValue: horasExtra },
+                requiereAutorizacionExtra: { booleanValue: false },
+                liderSalida: { stringValue: coordName }
+              }
+            })
+          });
+        }
         listenPendingSupportRequests();
       } catch (e) {}
     }
