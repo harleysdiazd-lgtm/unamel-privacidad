@@ -2735,6 +2735,17 @@
       };
 
       try {
+        const localCached = JSON.parse(localStorage.getItem('cached_surveys') || '[]');
+        localCached.unshift({
+          nombre_completo: String(currentUser.nombre_completo || 'Colaborador'),
+          calificacion: selectedSurveyRating,
+          comentarios: comment,
+          fecha: dateStr
+        });
+        localStorage.setItem('cached_surveys', JSON.stringify(localCached));
+      } catch (err) {}
+
+      try {
         const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/encuestas?key=' + FIRESTORE_API_KEY;
         await fetch(url, {
           method: 'POST',
@@ -2766,19 +2777,34 @@
       content.innerHTML = '<div style="text-align:center; padding:16px; color:var(--text-muted);">Cargando respuestas...</div>';
 
       const dict = I18N_DICT[currentLang] || I18N_DICT['es'];
+      const localCached = JSON.parse(localStorage.getItem('cached_surveys') || '[]');
+
       try {
         const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/encuestas?key=' + FIRESTORE_API_KEY + '&pageSize=100';
         const resp = await fetch(url, { cache: 'no-cache' });
         if (resp.ok) {
           const data = await resp.json();
           const docs = data.documents || [];
-          if (docs.length === 0) {
+          const remoteList = docs.map(d => {
+            const f = parseFirestoreDoc(d.fields);
+            return {
+              nombre_completo: f.nombre_completo || 'Colaborador',
+              calificacion: f.calificacion || 5,
+              comentarios: f.comentarios || '',
+              fecha: f.fecha || ''
+            };
+          });
+
+          const combined = [...remoteList, ...localCached].filter((v, idx, arr) => 
+            arr.findIndex(item => item.nombre_completo === v.nombre_completo && item.fecha === v.fecha) === idx
+          );
+
+          if (combined.length === 0) {
             content.innerHTML = '<div style="text-align:center; padding:16px; color:var(--text-muted);">' + (dict.survey_results_empty || 'No se han registrado respuestas de encuestas todavía.') + '</div>';
             return;
           }
           content.innerHTML = '';
-          docs.forEach(d => {
-            const f = parseFirestoreDoc(d.fields);
+          combined.forEach(f => {
             const stars = '⭐'.repeat(f.calificacion || 5);
             const card = document.createElement('div');
             card.style.cssText = 'background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:8px;';
@@ -2796,6 +2822,25 @@
         }
       } catch (e) {
         console.warn('Error fetching survey results:', e);
+      }
+
+      if (localCached.length > 0) {
+        content.innerHTML = '';
+        localCached.forEach(f => {
+          const stars = '⭐'.repeat(f.calificacion || 5);
+          const card = document.createElement('div');
+          card.style.cssText = 'background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:8px;';
+          card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <strong style="font-size:0.85rem; color:#0f172a;">${f.nombre_completo || 'Colaborador'}</strong>
+              <span style="font-size:0.75rem; color:#64748b;">${f.fecha || ''}</span>
+            </div>
+            <div style="font-size:0.78rem; color:#ca8a04; margin-bottom:4px;">${stars} (${f.calificacion}/5)</div>
+            ${f.comentarios ? '<div style="font-size:0.78rem; color:#334155; font-style:italic;">“' + f.comentarios + '”</div>' : ''}
+          `;
+          content.appendChild(card);
+        });
+        return;
       }
       content.innerHTML = '<div style="text-align:center; padding:16px; color:#ef4444;">Error al cargar respuestas.</div>';
     }
