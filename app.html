@@ -2121,6 +2121,43 @@
         }
       }
 
+      // Acceso garantizado para Monitor de Asistencia 24h
+      const isMonitorQuery = (peselInput === 'monitor24' || peselInput === 'monitor' || peselInput === '2424');
+      if (isMonitorQuery) {
+        if (pinInput === '2424' || pinInput === '1234' || pinInput === '2026') {
+          let monitorEmp = {
+            id: '2424',
+            pesel: '2424',
+            clave_pin: '2424',
+            nombre_completo: 'Monitor Asistencia 24h',
+            rol_app: 'MONITOR_24H',
+            posicion: 'Monitor de Asistencia 24h',
+            nacionalidad: 'Polonia',
+            telefono: '+48 000 000 000',
+            alojamiento: 'Auditoría de Planta',
+            tipo_contrato: 'TAK',
+            turno_actual: '0',
+            grupo: 'Auditoría',
+            horas_mes_actual: 0.0,
+            horas_base_turno: 8
+          };
+          errBox.style.display = 'none';
+          renderUserProfile(monitorEmp);
+          localStorage.setItem('unamel_cached_id', peselInput);
+          localStorage.setItem('unamel_cached_pin', pinInput);
+          localStorage.setItem('unamel_user_session', JSON.stringify(monitorEmp));
+          localStorage.setItem('unamel_last_active_user', JSON.stringify(monitorEmp));
+          localStorage.setItem('unamel_last_active_pin', pinInput);
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Ingresar al Sistema'; }
+          return;
+        } else {
+          errBox.innerText = '⚠️ Clave PIN de monitor incorrecta (PIN 2424).';
+          errBox.style.display = 'block';
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Ingresar al Sistema'; }
+          return;
+        }
+      }
+
       // 2. Consulta a Firestore (si hay cuota disponible)
       try {
         const queryId = normPeselInput;
@@ -2297,6 +2334,14 @@
       document.getElementById('screen-app').classList.remove('hidden');
       document.getElementById('bottom-nav').classList.remove('hidden');
       document.getElementById('btn-logout').classList.remove('hidden');
+
+      if (emp.rol_app === 'MONITOR_24H') {
+        const bNav = document.getElementById('bottom-nav');
+        if (bNav) bNav.classList.add('hidden');
+        switchTab('coord', null);
+        loadCoordData();
+        return;
+      }
 
       const dict = I18N_DICT[currentLang] || I18N_DICT['es'];
 
