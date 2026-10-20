@@ -3971,12 +3971,14 @@
         rawCoordAttDocs = attDocs;
         rawCoordDispDocs = (dispRes.documents || []).map(doc => parseFirestoreDoc(doc.fields));
         
-        // En el Visor 24h omitimos completamente el renderizado pesado de listas y Excel para que la vista sea limpia e instantánea
+        // SIEMPRE actualizamos el gráfico de trading 24h y los contadores de asistencia (tanto en visor como en coord)
+        renderCoordAttendance(rawCoordAttDocs, rawCoordDispDocs);
+
+        // Solo si no es el monitor y el panel extra está expandido, renderizamos Excel y auditoría
         const isMonitor = (currentUser && currentUser.rol_app === 'MONITOR_24H');
         if (!isMonitor) {
           const extraSec = document.getElementById('coord-admin-extra-sections');
           if (extraSec && extraSec.style.display !== 'none') {
-            renderCoordAttendance(rawCoordAttDocs, rawCoordDispDocs);
             renderCoordAuditLogs(dispRes.documents || []);
             renderCoordExcelMatrix(rawCoordDispDocs, true);
           }
@@ -4235,13 +4237,10 @@
     }
 
     function renderCoordAttendance(attDocs, dispList) {
-      const container = document.getElementById('coord-attendance-list');
-      if (!container) return;
-
       const attMap = {};
-      attDocs.forEach(d => {
+      (attDocs || []).forEach(d => {
         const fields = d.fields || {};
-        const docName = d.name.split('/').pop();
+        const docName = d.name ? d.name.split('/').pop() : '';
         const rawId = fields.employeeId ? (fields.employeeId.stringValue || fields.employeeId) : '';
         const idFromDoc = docName.includes('_') ? docName.split('_').slice(1).join('_').replace('_EXTRA', '') : docName;
         const empId = String(rawId || idFromDoc);
@@ -4253,14 +4252,17 @@
           grupo: fields.grupo ? (fields.grupo.stringValue || fields.grupo) : '',
           turno: fields.turno ? (fields.turno.stringValue || fields.turno) : '1',
           markedBy: fields.markedBy ? (fields.markedBy.stringValue || fields.markedBy) : '',
-          notes: fields.notes ? (fields.notes.stringValue || fields.notes) : ''
+          notes: fields.notes ? (fields.notes.stringValue || fields.notes) : '',
+          horaEntrada: fields.horaEntrada ? (fields.horaEntrada.stringValue || fields.horaEntrada) : '',
+          horaSalida: fields.horaSalida ? (fields.horaSalida.stringValue || fields.horaSalida) : '',
+          fecha: fields.fecha ? (fields.fecha.stringValue || fields.fecha) : ''
         };
         attMap[empId] = recordData;
         if (pesel) attMap[String(pesel)] = recordData;
       });
 
       let cntPresentes = 0, cntRetardos = 0, cntAusentes = 0;
-      const allActive = (dispList && dispList.length > 0) ? dispList : rawCoordDispDocs;
+      const allActive = (dispList && dispList.length > 0) ? dispList : (rawCoordDispDocs || []);
 
       const isTestAccount = (e) => {
         const eid = String(e.id || '');
@@ -4277,70 +4279,89 @@
         return true;
       });
 
-      container.innerHTML = '';
-      if (filtered.length === 0) {
-        container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:12px;">No se encontraron colaboradores en este grupo.</div>';
-        document.getElementById('cnt-presentes').innerText = 0;
-        document.getElementById('cnt-retardos').innerText = 0;
-        document.getElementById('cnt-ausentes').innerText = 0;
-        return;
-      }
-
       filtered.forEach(emp => {
         const rec = attMap[String(emp.id)] || (emp.pesel ? attMap[String(emp.pesel)] : null) || { status: 'PENDIENTE', notes: '' };
         const st = (rec.status || 'PENDIENTE').toUpperCase();
 
-        let badgeBg = '#f1f5f9';
-        let badgeColor = '#64748b';
-        let badgeText = 'PENDIENTE';
-        let iconPrefix = '⏳ ';
-
         if (st === 'ASISTIO' || st === 'A_TIEMPO' || st === 'PRESENTES' || st === 'NORMAL' || st === 'PRESENTE') {
           cntPresentes++;
-          badgeBg = '#dcfce7'; badgeColor = '#15803d'; badgeText = 'A TIEMPO'; iconPrefix = '🟢 ';
         } else if (st === 'RETARDO') {
           cntRetardos++;
-          badgeBg = '#ffedd5'; badgeColor = '#c2410c'; badgeText = 'RETARDO'; iconPrefix = '⏱️ ';
         } else if (st === 'NO_ASISTIO' || st === 'AUSENTE') {
           cntAusentes++;
-          badgeBg = '#fee2e2'; badgeColor = '#b91c1c'; badgeText = 'NO ASISTIÓ'; iconPrefix = '❌ ';
         } else if (st === 'SALIDA_TEMPRANA') {
           cntPresentes++;
-          badgeBg = '#f3e8ff'; badgeColor = '#7e22ce'; badgeText = 'SALIDA TEMPRANA'; iconPrefix = '🚪 ';
-        } else if (st === 'INCAPACIDAD_MEDICA' || st === 'INCAPACIDAD') {
-          badgeBg = '#e0f2fe'; badgeColor = '#0369a1'; badgeText = 'INCAPACIDAD'; iconPrefix = '🏥 ';
-        } else if (st === 'JUSTIFICADO' || st === 'PERMISO' || st === 'AUSENCIA_AUTORIZADA') {
-          badgeBg = '#f5f3ff'; badgeColor = '#6d28d9'; badgeText = 'PERMISO'; iconPrefix = '📋 ';
         }
-
-        const recNotes = (rec && typeof rec.notes === 'string') ? rec.notes.trim() : ((rec && rec.notes && typeof rec.notes.stringValue === 'string') ? rec.notes.stringValue.trim() : '');
-
-        const row = document.createElement('div');
-        row.className = 'hour-item-row';
-        row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #f1f5f9;';
-
-        row.innerHTML = `
-          <div style="width:65%;">
-            <strong style="font-size:0.88rem; color:#0f172a;">${emp.nombre_completo}</strong>
-            <div style="font-size:0.75rem; color:#64748b;">
-              Turno ${emp.turno_actual || '1'} &bull; Grupo ${emp.grupo || 'Flexible'} &bull; ${emp.posicion || 'produkcja'}
-            </div>
-            ${recNotes ? '<div style="font-size:0.72rem; color:#d97706; margin-top:2px;">📝 ' + recNotes + '</div>' : ''}
-          </div>
-          <div style="width:35%; text-align:right;">
-            <span class="hour-pill" style="background:${badgeBg}; color:${badgeColor}; font-size:0.72rem; font-weight:700; padding:4px 8px; border-radius:6px;">
-              ${iconPrefix}${badgeText}
-            </span>
-          </div>
-        `;
-        container.appendChild(row);
       });
 
-      document.getElementById('cnt-presentes').innerText = cntPresentes;
-      document.getElementById('cnt-retardos').innerText = cntRetardos;
-      document.getElementById('cnt-ausentes').innerText = cntAusentes;
+      const elP = document.getElementById('cnt-presentes');
+      if (elP) elP.innerText = cntPresentes;
+      const elR = document.getElementById('cnt-retardos');
+      if (elR) elR.innerText = cntRetardos;
+      const elA = document.getElementById('cnt-ausentes');
+      if (elA) elA.innerText = cntAusentes;
 
-      renderTradingChart(rawCoordDispDocs, attMap);
+      // 1. SIEMPRE DIBUJAR LA GRÁFICA DE TRADING 24H (NÚCLEO DEL VISOR Y COORDINACIÓN)
+      renderTradingChart(allActive, attMap);
+
+      // 2. RENDERIZAR LISTADO DE PERSONAL SOLO SI EL CONTENEDOR ESTÁ DISPONIBLE, VISIBLE Y NO ES MONITOR
+      const isMonitor = (currentUser && currentUser.rol_app === 'MONITOR_24H');
+      const container = document.getElementById('coord-attendance-list');
+      const extraSec = document.getElementById('coord-admin-extra-sections');
+
+      if (!isMonitor && container && extraSec && extraSec.style.display !== 'none') {
+        container.innerHTML = '';
+        if (filtered.length === 0) {
+          container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:12px;">No se encontraron colaboradores en este grupo.</div>';
+          return;
+        }
+
+        filtered.forEach(emp => {
+          const rec = attMap[String(emp.id)] || (emp.pesel ? attMap[String(emp.pesel)] : null) || { status: 'PENDIENTE', notes: '' };
+          const st = (rec.status || 'PENDIENTE').toUpperCase();
+
+          let badgeBg = '#f1f5f9';
+          let badgeColor = '#64748b';
+          let badgeText = 'PENDIENTE';
+          let iconPrefix = '⏳ ';
+
+          if (st === 'ASISTIO' || st === 'A_TIEMPO' || st === 'PRESENTES' || st === 'NORMAL' || st === 'PRESENTE') {
+            badgeBg = '#dcfce7'; badgeColor = '#15803d'; badgeText = 'A TIEMPO'; iconPrefix = '🟢 ';
+          } else if (st === 'RETARDO') {
+            badgeBg = '#ffedd5'; badgeColor = '#c2410c'; badgeText = 'RETARDO'; iconPrefix = '⏱️ ';
+          } else if (st === 'NO_ASISTIO' || st === 'AUSENTE') {
+            badgeBg = '#fee2e2'; badgeColor = '#b91c1c'; badgeText = 'NO ASISTIÓ'; iconPrefix = '❌ ';
+          } else if (st === 'SALIDA_TEMPRANA') {
+            badgeBg = '#f3e8ff'; badgeColor = '#7e22ce'; badgeText = 'SALIDA TEMPRANA'; iconPrefix = '🚪 ';
+          } else if (st === 'INCAPACIDAD_MEDICA' || st === 'INCAPACIDAD') {
+            badgeBg = '#e0f2fe'; badgeColor = '#0369a1'; badgeText = 'INCAPACIDAD'; iconPrefix = '🏥 ';
+          } else if (st === 'JUSTIFICADO' || st === 'PERMISO' || st === 'AUSENCIA_AUTORIZADA') {
+            badgeBg = '#f5f3ff'; badgeColor = '#6d28d9'; badgeText = 'PERMISO'; iconPrefix = '📋 ';
+          }
+
+          const recNotes = (rec && typeof rec.notes === 'string') ? rec.notes.trim() : ((rec && rec.notes && typeof rec.notes.stringValue === 'string') ? rec.notes.stringValue.trim() : '');
+
+          const row = document.createElement('div');
+          row.className = 'hour-item-row';
+          row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #f1f5f9;';
+
+          row.innerHTML = `
+            <div style="width:65%;">
+              <strong style="font-size:0.88rem; color:#0f172a;">${emp.nombre_completo}</strong>
+              <div style="font-size:0.75rem; color:#64748b;">
+                Turno ${emp.turno_actual || '1'} &bull; Grupo ${emp.grupo || 'Flexible'} &bull; ${emp.posicion || 'produkcja'}
+              </div>
+              ${recNotes ? '<div style="font-size:0.72rem; color:#d97706; margin-top:2px;">📝 ' + recNotes + '</div>' : ''}
+            </div>
+            <div style="width:35%; text-align:right;">
+              <span class="hour-pill" style="background:${badgeBg}; color:${badgeColor}; font-size:0.72rem; font-weight:700; padding:4px 8px; border-radius:6px;">
+                ${iconPrefix}${badgeText}
+              </span>
+            </div>
+          `;
+          container.appendChild(row);
+        });
+      }
     }
 
     let tradingChartInitialized = false;
