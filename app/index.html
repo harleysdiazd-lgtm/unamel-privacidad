@@ -3926,9 +3926,44 @@
       loadCoordData();
     }
 
+    function normalizeAttRecord(d) {
+      if (!d) return null;
+      const docName = d.name ? d.name.split('/').pop() : (d.docId || '');
+      const fields = d.fields ? parseFirestoreDoc(d.fields) : d;
+      
+      const docDate = (docName.includes('_') ? docName.split('_')[0] : '');
+      const docEmpKey = (docName.includes('_') ? docName.split('_').slice(1).join('_').replace('_EXTRA', '') : docName);
+      
+      const fDate = fields.fecha || docDate;
+      const fEmpId = String(fields.employeeId || fields.id || fields.empId || docEmpKey || '');
+      const fPesel = String(fields.pesel || fEmpId);
+      const fName = String(fields.employeeName || fields.nombre_completo || fields.nombre_empleado || fields.nombre || '');
+      const fHoraEnt = String(fields.horaEntrada || fields.hora_entrada || fields.hora || '').trim();
+      const fHoraSal = String(fields.horaSalida || fields.hora_salida || '').trim();
+      const fStatus = String(fields.status || fields.estado || 'PENDIENTE').toUpperCase();
+      const fGrupo = String(fields.grupo || '');
+      const fTurno = String(fields.turno || fields.turno_actual || '1');
+      const fNotes = String(fields.notes || '');
+
+      return {
+        docId: docName,
+        fecha: fDate,
+        employeeId: fEmpId,
+        pesel: fPesel,
+        name: fName,
+        horaEntrada: fHoraEnt,
+        horaSalida: fHoraSal,
+        status: fStatus,
+        grupo: fGrupo,
+        turno: fTurno,
+        notes: fNotes
+      };
+    }
+
     function loadCoordData(force) {
       if (force) {
         localStorage.removeItem('unamel_web_cached_disponibles');
+        localStorage.removeItem('unamel_web_cached_all_month_attendance');
       }
       const d = coordSelectedDate;
       const y = d.getFullYear();
@@ -3947,17 +3982,32 @@
       const lblDate = document.getElementById('coord-selected-date-lbl');
       if (lblDate) lblDate.innerText = (isToday ? 'Hoy (' : 'Día (') + dmyStr + ')';
 
-      const attUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + todayStr + '/registros?key=' + FIRESTORE_API_KEY + '&pageSize=300';
-      const dispUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles?key=' + FIRESTORE_API_KEY + '&pageSize=100';
-
-      // Uso inteligente de caché local para disponibles (35 colaboradores)
+      // 1. Caché local instantáneo para respuesta en 0ms
       const cachedDispRaw = localStorage.getItem('unamel_web_cached_disponibles');
       let cachedDispDocs = null;
       if (!force && cachedDispRaw) {
         try { cachedDispDocs = JSON.parse(cachedDispRaw); } catch(e){}
       }
 
-      const dispFetchPromise = (cachedDispDocs && cachedDispDocs.length > 0)
+      const cachedMonthAttRaw = localStorage.getItem('unamel_web_cached_all_month_attendance');
+      let cachedMonthAttDocs = null;
+      if (!force && cachedMonthAttRaw) {
+        try { cachedMonthAttDocs = JSON.parse(cachedMonthAttRaw); } catch(e){}
+      }
+
+      // Si tenemos datos en caché, renderizar de inmediato (sin pantalla negra ni --:00)
+      if (cachedDispDocs && cachedDispDocs.length > 0) {
+        const initDisp = cachedDispDocs.map(doc => doc.fields ? parseFirestoreDoc(doc.fields) : doc);
+        rawCoordDispDocs = initDisp;
+        if (cachedMonthAttDocs && cachedMonthAttDocs.length > 0) {
+          rawCoordAttDocs = cachedMonthAttDocs;
+          renderCoordAttendance(rawCoordAttDocs, rawCoordDispDocs);
+        }
+      }
+
+      // 2. Fetch Disponibles (35 colaboradores)
+      const dispUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles?key=' + FIRESTORE_API_KEY + '&pageSize=100';
+      const dispFetchPromise = (cachedDispDocs && cachedDispDocs.length > 0 && !force)
         ? Promise.resolve({ documents: cachedDispDocs, fromCache: true })
         : fetch(dispUrl).then(r => r.ok ? r.json() : { documents: [] }).then(res => {
             if (res.documents && res.documents.length > 0) {
@@ -3966,52 +4016,59 @@
             return res;
           }).catch(() => ({ documents: [] }));
 
-      const attFetchPromise = fetch(attUrl)
-        .then(r => r.ok ? r.json() : null)
-        .catch(() => null)
-        .then(res => {
-          if (res && res.documents && res.documents.length > 0) {
-            return res.documents;
-          }
-          // Fallback a registro_asistencia (100% autorizado y activo en Firestore)
-          const runQueryUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents:runQuery?key=' + FIRESTORE_API_KEY;
-          const body = {
-            structuredQuery: {
-              from: [{ collectionId: 'registro_asistencia' }],
-              where: {
-                fieldFilter: {
-                  field: { fieldPath: 'fecha' },
-                  op: 'EQUAL',
-                  value: { stringValue: todayStr }
-                }
-              }
+      // 3. Consulta Única Optimizada a registro_asistencia (Cero colapso de cuota: 1 solo llamado HTTP para todo el mes)
+      const monthStartStr = y + '-' + m + '-01';
+      const runQueryUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents:runQuery?key=' + FIRESTORE_API_KEY;
+      const attBody = {
+        structuredQuery: {
+          from: [{ collectionId: 'registro_asistencia' }],
+          where: {
+            fieldFilter: {
+              field: { fieldPath: 'fecha' },
+              op: 'GREATER_THAN_OR_EQUAL',
+              value: { stringValue: monthStartStr }
             }
-          };
-          return fetch(runQueryUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-          }).then(qr => qr.ok ? qr.json() : [])
-            .then(qRes => {
-              const docs = [];
-              (qRes || []).forEach(item => {
-                if (item.document) docs.push(item.document);
-              });
-              return docs;
-            }).catch(() => []);
+          }
+        }
+      };
+
+      const attFetchPromise = fetch(runQueryUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(attBody)
+      }).then(qr => qr.ok ? qr.json() : [])
+        .then(qRes => {
+          const docs = [];
+          (qRes || []).forEach(item => {
+            if (item.document) docs.push(item.document);
+          });
+          if (docs.length > 0) {
+            try { localStorage.setItem('unamel_web_cached_all_month_attendance', JSON.stringify(docs)); } catch(e){}
+          }
+          return docs;
+        }).catch(err => {
+          console.warn('Error fetching month attendance, using fallback:', err);
+          return cachedMonthAttDocs || [];
         });
 
       Promise.all([
         attFetchPromise,
         dispFetchPromise
       ]).then(([attDocs, dispRes]) => {
-        rawCoordAttDocs = attDocs || [];
-        rawCoordDispDocs = (dispRes.documents || []).map(doc => parseFirestoreDoc(doc.fields));
-        
-        // SIEMPRE actualizamos el gráfico de trading 24h y los contadores de asistencia (tanto en visor como en coord)
+        rawCoordAttDocs = (attDocs && attDocs.length > 0) ? attDocs : (cachedMonthAttDocs || []);
+        rawCoordDispDocs = (dispRes.documents || []).map(doc => {
+          if (doc.fields) {
+            const parsed = parseFirestoreDoc(doc.fields);
+            if (!parsed.id && doc.name) parsed.id = doc.name.split('/').pop();
+            return parsed;
+          }
+          return doc;
+        });
+
+        // Actualizar el gráfico de trading 24h y los contadores en memoria
         renderCoordAttendance(rawCoordAttDocs, rawCoordDispDocs);
 
-        // Solo si no es el monitor y el panel extra está expandido, renderizamos Excel y auditoría
+        // Panel extra admin si está expandido
         const isMonitor = (currentUser && currentUser.rol_app === 'MONITOR_24H');
         if (!isMonitor) {
           const extraSec = document.getElementById('coord-admin-extra-sections');
@@ -4020,6 +4077,8 @@
             renderCoordExcelMatrix(rawCoordDispDocs, true);
           }
         }
+      }).catch(err => {
+        console.error('loadCoordData Promise.all error:', err);
       });
     }
 
@@ -4274,28 +4333,22 @@
     }
 
     function renderCoordAttendance(attDocs, dispList) {
+      window.rawCoordAttDocs = attDocs || [];
+      window.rawCoordDispDocs = dispList || [];
+      window.allMonthAttendanceRecords = (attDocs || []).map(normalizeAttRecord).filter(Boolean);
+
+      const d = coordSelectedDate || new Date();
+      const selY = d.getFullYear();
+      const selM = String(d.getMonth() + 1).padStart(2, '0');
+      const selDay = String(d.getDate()).padStart(2, '0');
+      const targetDateYMD = selY + '-' + selM + '-' + selDay;
+
       const attMap = {};
-      (attDocs || []).forEach(d => {
-        const fields = d.fields || {};
-        const docName = d.name ? d.name.split('/').pop() : '';
-        const rawId = fields.employeeId ? (fields.employeeId.stringValue || fields.employeeId) : '';
-        const idFromDoc = docName.includes('_') ? docName.split('_').slice(1).join('_').replace('_EXTRA', '') : docName;
-        const empId = String(rawId || idFromDoc);
-        const pesel = fields.pesel ? (fields.pesel.stringValue || fields.pesel) : '';
-        const st = fields.status ? (fields.status.stringValue || fields.status) : (fields.estado ? (fields.estado.stringValue || fields.estado) : 'PENDIENTE');
-        const recordData = {
-          status: st,
-          name: fields.employeeName ? (fields.employeeName.stringValue || fields.employeeName) : '',
-          grupo: fields.grupo ? (fields.grupo.stringValue || fields.grupo) : '',
-          turno: fields.turno ? (fields.turno.stringValue || fields.turno) : '1',
-          markedBy: fields.markedBy ? (fields.markedBy.stringValue || fields.markedBy) : '',
-          notes: fields.notes ? (fields.notes.stringValue || fields.notes) : '',
-          horaEntrada: fields.horaEntrada ? (fields.horaEntrada.stringValue || fields.horaEntrada) : '',
-          horaSalida: fields.horaSalida ? (fields.horaSalida.stringValue || fields.horaSalida) : '',
-          fecha: fields.fecha ? (fields.fecha.stringValue || fields.fecha) : ''
-        };
-        attMap[empId] = recordData;
-        if (pesel) attMap[String(pesel)] = recordData;
+      const todayRecords = window.allMonthAttendanceRecords.filter(r => r.fecha === targetDateYMD);
+      todayRecords.forEach(rec => {
+        if (rec.employeeId) attMap[rec.employeeId] = rec;
+        if (rec.pesel) attMap[rec.pesel] = rec;
+        if (rec.name) attMap[rec.name.toLowerCase().trim()] = rec;
       });
 
       let cntPresentes = 0, cntRetardos = 0, cntAusentes = 0;
@@ -4560,30 +4613,35 @@
       function getActualScans(targetYMD, startH, endH) {
         let c = 0;
         const seen = new Set();
-        Object.values(attMap || {}).forEach(rec => {
+        const allRecs = (window.allMonthAttendanceRecords && window.allMonthAttendanceRecords.length > 0)
+          ? window.allMonthAttendanceRecords
+          : Object.values(attMap || {});
+
+        allRecs.forEach(rec => {
+          const recDate = rec.fecha || (rec.timestamp ? rec.timestamp.split('T')[0] : '');
+          if (recDate !== targetYMD) return;
+
           const uKey = String(rec.pesel || rec.employeeId || rec.empId || rec.name || '');
           if (!uKey || seen.has(uKey)) return;
           seen.add(uKey);
+
           const rName = (rec.name || '').toLowerCase();
           if (uKey === '0' || uKey === '2023' || uKey.startsWith('900') || rName.includes('harley')) return;
 
-          const recDate = rec.fecha || (rec.timestamp ? rec.timestamp.split('T')[0] : '');
-          if (recDate === targetYMD) {
-            const t = rec.horaEntrada || (rec.timestamp ? rec.timestamp.split('T')[1] : '');
-            if (t && t.includes(':')) {
-              const entryH = parseInt(t.split(':')[0], 10);
-              const tOut = rec.horaSalida || '';
-              const exitH = (tOut && tOut.includes(':')) ? parseInt(tOut.split(':')[0], 10) : null;
-              const isNight = (entryH >= 21);
-              let active = false;
-              if (isNight) {
-                active = (startH >= 21) || (exitH !== null && startH <= exitH);
-              } else {
-                const shiftEnd = (exitH !== null) ? exitH : (entryH + 8);
-                active = (startH >= entryH && startH <= shiftEnd) || (entryH >= startH && entryH <= endH);
-              }
-              if (active) c++;
+          const t = rec.horaEntrada || (rec.timestamp ? rec.timestamp.split('T')[1] : '');
+          if (t && t.includes(':')) {
+            const entryH = parseInt(t.split(':')[0], 10);
+            const tOut = rec.horaSalida || '';
+            const exitH = (tOut && tOut.includes(':')) ? parseInt(tOut.split(':')[0], 10) : null;
+            const isNight = (entryH >= 21);
+            let active = false;
+            if (isNight) {
+              active = (startH >= 21) || (exitH !== null && startH <= exitH);
+            } else {
+              const shiftEnd = (exitH !== null) ? exitH : (entryH + 8);
+              active = (startH >= entryH && startH <= shiftEnd) || (entryH >= startH && entryH <= endH);
             }
+            if (active) c++;
           }
         });
         // Historial en días trabajados detalle para fechas pasadas
@@ -4622,14 +4680,14 @@
           const act = getActualScans(ymd, d.getHours(), d.getHours());
           const h = d.getHours(), m = d.getMinutes();
           const axis = (h === 0 && m === 0) ? fmtDay(d) : ((h === 12 && m === 0) ? '12:00' : (i === 0 ? fmtHour(d) : ''));
-          pastPoints.push({ timeLabel: fmtHour(d), fullLabel: fmtDay(d) + ' · ' + fmtHour(d), expected: exp.count, actual: act, isFuture: false, shift: exp.desc, axisLabel: axis });
+          pastPoints.push({ timeLabel: fmtHour(d), fullLabel: fmtDay(d) + ' · ' + fmtHour(d), ymdDate: ymd, expected: exp.count, actual: act, isFuture: false, shift: exp.desc, axisLabel: axis });
         }
         for (let j = 1; j <= 336; j++) {
           const d = new Date(baseMs + j * 30 * 60 * 1000);
           const exp = getNoiseFreeExpected(d, plantEmps);
           const h = d.getHours(), m = d.getMinutes();
           const axis = (h === 0 && m === 0) ? fmtDay(d) : ((h === 12 && m === 0) ? '12:00' : '');
-          futurePoints.push({ timeLabel: fmtHour(d), fullLabel: fmtDay(d) + ' · ' + fmtHour(d), expected: exp.count, actual: 0, isFuture: true, shift: exp.desc, axisLabel: axis });
+          futurePoints.push({ timeLabel: fmtHour(d), fullLabel: fmtDay(d) + ' · ' + fmtHour(d), ymdDate: ymd, expected: exp.count, actual: 0, isFuture: true, shift: exp.desc, axisLabel: axis });
         }
       } else if (tf === '1h') {
         const roundedNow = new Date(now);
@@ -4643,14 +4701,14 @@
           const act = getActualScans(ymd, d.getHours(), d.getHours());
           const h = d.getHours();
           const axis = (h === 0) ? fmtDay(d) : ((h === 12) ? '12:00' : (i === 0 ? pad2(h) + ':00' : ''));
-          pastPoints.push({ timeLabel: pad2(h) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(h) + ':00', expected: exp.count, actual: act, isFuture: false, shift: exp.desc, axisLabel: axis });
+          pastPoints.push({ timeLabel: pad2(h) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(h) + ':00', ymdDate: ymd, expected: exp.count, actual: act, isFuture: false, shift: exp.desc, axisLabel: axis });
         }
         for (let j = 1; j <= 168; j++) {
           const d = new Date(baseMs + j * 60 * 60 * 1000);
           const exp = getNoiseFreeExpected(d, plantEmps);
           const h = d.getHours();
           const axis = (h === 0) ? fmtDay(d) : ((h === 12) ? '12:00' : '');
-          futurePoints.push({ timeLabel: pad2(h) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(h) + ':00', expected: exp.count, actual: 0, isFuture: true, shift: exp.desc, axisLabel: axis });
+          futurePoints.push({ timeLabel: pad2(h) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(h) + ':00', ymdDate: ymd, expected: exp.count, actual: 0, isFuture: true, shift: exp.desc, axisLabel: axis });
         }
       } else if (tf === '4h') {
         const roundedNow = new Date(now);
@@ -4665,14 +4723,14 @@
           const act = getActualScans(ymd, Math.max(0, d.getHours() - 1), Math.min(23, d.getHours() + 2));
           const h = d.getHours();
           const axis = (h === 0) ? fmtDay(d) : ((h === 12) ? '12:00' : (i === 0 ? pad2(h) + ':00' : ''));
-          pastPoints.push({ timeLabel: fmtDay(d) + ' ' + pad2(h) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(h) + ':00', expected: exp.count, actual: act, isFuture: false, shift: exp.desc, axisLabel: axis });
+          pastPoints.push({ timeLabel: fmtDay(d) + ' ' + pad2(h) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(h) + ':00', ymdDate: ymd, expected: exp.count, actual: act, isFuture: false, shift: exp.desc, axisLabel: axis });
         }
         for (let j = 1; j <= 42; j++) {
           const d = new Date(baseMs + j * 4 * 60 * 60 * 1000);
           const exp = getNoiseFreeExpected(d, plantEmps);
           const h = d.getHours();
           const axis = (h === 0) ? fmtDay(d) : ((h === 12) ? '12:00' : '');
-          futurePoints.push({ timeLabel: fmtDay(d) + ' ' + pad2(h) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(h) + ':00', expected: exp.count, actual: 0, isFuture: true, shift: exp.desc, axisLabel: axis });
+          futurePoints.push({ timeLabel: fmtDay(d) + ' ' + pad2(h) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(h) + ':00', ymdDate: ymd, expected: exp.count, actual: 0, isFuture: true, shift: exp.desc, axisLabel: axis });
         }
       } else if (tf === '1D') {
         for (let i = 7; i >= 0; i--) {
@@ -4682,7 +4740,7 @@
           const expTotal = dow === 6 ? 0 : (dow === 0 ? 9 : 29);
           const act = getActualScans(ymd, 0, 23);
           const axis = (i % 2 === 0 || i === 0) ? fmtDay(d) : '';
-          pastPoints.push({ timeLabel: fmtDay(d), fullLabel: ymd, expected: expTotal, actual: act, isFuture: false, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3'), axisLabel: axis });
+          pastPoints.push({ timeLabel: fmtDay(d), fullLabel: ymd, ymdDate: ymd, expected: expTotal, actual: act, isFuture: false, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3'), axisLabel: axis });
         }
         for (let j = 1; j <= 7; j++) {
           const d = new Date(now.getTime() + j * 24 * 60 * 60 * 1000);
@@ -4690,7 +4748,7 @@
           const dow = d.getDay();
           const expTotal = dow === 6 ? 0 : (dow === 0 ? 9 : 29);
           const axis = (j % 2 === 0) ? fmtDay(d) : '';
-          futurePoints.push({ timeLabel: fmtDay(d), fullLabel: ymd, expected: expTotal, actual: 0, isFuture: true, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3'), axisLabel: axis });
+          futurePoints.push({ timeLabel: fmtDay(d), fullLabel: ymd, ymdDate: ymd, expected: expTotal, actual: 0, isFuture: true, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3'), axisLabel: axis });
         }
       } else if (tf === '1M') {
         const cDay = now.getDate();
@@ -4701,7 +4759,7 @@
           const expTotal = dow === 6 ? 0 : (dow === 0 ? 9 : 29);
           const act = getActualScans(ymd, 0, 23);
           const axis = (d % 4 === 0 || d === cDay) ? (d + ' Oct') : '';
-          pastPoints.push({ timeLabel: d + ' Oct', fullLabel: d + ' de Octubre, 2026', expected: expTotal, actual: act, isFuture: false, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3'), axisLabel: axis });
+          pastPoints.push({ timeLabel: d + ' Oct', fullLabel: d + ' de Octubre, 2026', ymdDate: ymd, expected: expTotal, actual: act, isFuture: false, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3'), axisLabel: axis });
         }
         const endDay = Math.min(31, cDay + 7);
         for (let d = cDay + 1; d <= endDay; d++) {
@@ -4709,7 +4767,7 @@
           const dow = dt.getDay();
           const expTotal = dow === 6 ? 0 : (dow === 0 ? 9 : 29);
           const axis = (d % 4 === 0 || d === endDay) ? (d + ' Oct') : '';
-          futurePoints.push({ timeLabel: d + ' Oct', fullLabel: d + ' de Octubre, 2026', expected: expTotal, actual: 0, isFuture: true, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3'), axisLabel: axis });
+          futurePoints.push({ timeLabel: d + ' Oct', fullLabel: d + ' de Octubre, 2026', ymdDate: ymd, expected: expTotal, actual: 0, isFuture: true, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3'), axisLabel: axis });
         }
       }
 
@@ -4771,25 +4829,63 @@
         if (sLower.includes('turno 1') || sLower.includes('mañana')) targetShift = '1';
         else if (sLower.includes('turno 2') || sLower.includes('tarde')) targetShift = '2';
         else if (sLower.includes('turno 3') || sLower.includes('noche')) targetShift = '3';
+        else {
+          const hVal = (pt.timeLabel ? parseInt(pt.timeLabel.split(':')[0], 10) : 14);
+          if (hVal >= 6 && hVal <= 13) targetShift = '1';
+          else if (hVal >= 14 && hVal <= 21) targetShift = '2';
+          else targetShift = '3';
+        }
 
         const shiftEmps = (plantEmps || []).filter(e => {
           const empId = String(e.id || '');
           const empName = (e.nombre_completo || e.nombre || '').toLowerCase();
           if (empId === '0' || empId === '2023' || empId.startsWith('900') || empName.includes('harley')) return false;
-          const s = String(e.turno_actual || (e.grupo === 'A' ? '1' : (e.grupo === 'B' ? '2' : '3')));
+          let s = String(e.turno_actual || '');
+          if (!s || s === '0') {
+            s = (e.grupo === 'A' ? '1' : (e.grupo === 'B' ? '2' : '3'));
+          }
           return s === targetShift;
         });
 
+        // Contar escaneados reales para este turno / hora
+        const ptYmd = pt.ymdDate || (pt.fullLabel && pt.fullLabel.includes('-') ? pt.fullLabel.split(' · ')[0] : (new Date().toISOString().split('T')[0]));
+        const dateRecs = (window.allMonthAttendanceRecords || []).filter(r => r.fecha === ptYmd);
+        const processedEmpIds = new Set();
         let shiftScanCount = 0;
+
         shiftEmps.forEach(emp => {
-          const r = (attMap && (attMap[String(emp.id)] || (emp.pesel && attMap[String(emp.pesel)]))) || null;
+          const empId = String(emp.id || '');
+          const empPesel = String(emp.pesel || '');
+          const empName = String(emp.nombre_completo || emp.nombre || '').toLowerCase().trim();
+          processedEmpIds.add(empId);
+          if (empPesel) processedEmpIds.add(empPesel);
+
+          const r = dateRecs.find(a => a.employeeId === empId || (empPesel && a.pesel === empPesel) || (empName && a.name.toLowerCase() === empName))
+                    || (attMap && (attMap[empId] || (empPesel && attMap[empPesel]) || (empName && attMap[empName])));
           if (r && (r.horaEntrada || (r.status && ['ASISTIO', 'A_TIEMPO', 'PRESENTES', 'PRESENTE', 'NORMAL', 'RETARDO', 'SALIDA_TEMPRANA'].includes(r.status.toUpperCase())))) {
             shiftScanCount++;
           }
         });
 
-        const totalProg = shiftEmps.length > 0 ? shiftEmps.length : pt.expected;
-        const totalScan = pt.isFuture ? 0 : (idx === nowIndex ? shiftScanCount : pt.actual);
+        // Operarios de apoyo u otros turnos que escanearon durante este turno
+        dateRecs.forEach(r => {
+          if (r.employeeId === '0' || r.employeeId === '2023' || r.employeeId.startsWith('900') || (r.name || '').toLowerCase().includes('harley')) return;
+          if (!processedEmpIds.has(r.employeeId) && !processedEmpIds.has(r.pesel) && r.horaEntrada && r.horaEntrada.includes(':')) {
+            const entH = parseInt(r.horaEntrada.split(':')[0], 10);
+            let match = false;
+            if (targetShift === '1' && entH >= 5 && entH <= 13) match = true;
+            if (targetShift === '2' && entH >= 13 && entH <= 21) match = true;
+            if (targetShift === '3' && (entH >= 21 || entH <= 5)) match = true;
+            if (match) {
+              shiftScanCount++;
+              processedEmpIds.add(r.employeeId);
+              if (r.pesel) processedEmpIds.add(r.pesel);
+            }
+          }
+        });
+
+        const totalProg = shiftEmps.length > 0 ? shiftEmps.length : (pt.expected || 15);
+        const totalScan = pt.isFuture ? 0 : Math.max(shiftScanCount, pt.actual);
 
         const hActTitle = document.getElementById('chart-hud-scan-title');
         const hAct = document.getElementById('chart-hud-actual');
@@ -4961,7 +5057,8 @@
           return id && id !== '0' && id !== '2023' && !id.startsWith('900') && !nom.toLowerCase().includes('harley');
         });
 
-        const attDocs = window.rawCoordAttDocs || [];
+        const ptYmd = pt.ymdDate || (pt.fullLabel && pt.fullLabel.includes('-') ? pt.fullLabel.split(' · ')[0] : (new Date().toISOString().split('T')[0]));
+        const dateRecs = (window.allMonthAttendanceRecords || []).filter(r => r.fecha === ptYmd);
         const processedIds = new Set();
         const items = [];
 
@@ -4977,9 +5074,9 @@
 
         function evaluateStatus(empId, empName, rec, isFuture) {
           if (rec) {
-            const hEnt = String(getEmpField(rec, 'hora_entrada') || '').trim();
-            const hSal = String(getEmpField(rec, 'hora_salida') || '').trim();
-            const st = String(getEmpField(rec, 'status') || '').toUpperCase();
+            const hEnt = String(rec.horaEntrada || getEmpField(rec, 'horaEntrada') || getEmpField(rec, 'hora_entrada') || '').trim();
+            const hSal = String(rec.horaSalida || getEmpField(rec, 'horaSalida') || getEmpField(rec, 'hora_salida') || '').trim();
+            const st = String(rec.status || getEmpField(rec, 'status') || '').toUpperCase();
 
             if (hEnt && hEnt.includes(':')) {
               const entH = parseInt(hEnt.split(':')[0], 10) || 0;
@@ -5013,8 +5110,8 @@
 
           // Sin escaneo
           const nowW = new Date();
-          const curH = nowW.getUTCHours() + 2;
-          const curM = nowW.getUTCMinutes();
+          const curH = nowW.getHours();
+          const curM = nowW.getMinutes();
           const isPastShift = !isFuture && ((curH * 60 + curM) >= (shiftStartHour * 60 + 15));
 
           if (isPastShift) {
@@ -5038,16 +5135,15 @@
 
         scheduled.forEach(d => {
           const empId = getEmpId(d);
+          const empPesel = String(getEmpField(d, 'pesel') || empId);
           const empName = String(getEmpField(d, 'nombre_completo') || getEmpField(d, 'nombre') || empId);
           const grp = String(getEmpField(d, 'grupo') || '-');
           const tAct = String(getEmpField(d, 'turno_actual') || targetShift);
 
           processedIds.add(empId);
-          const rec = attDocs.find(a => {
-            const aid = getEmpId(a) || String(getEmpField(a, 'id_empleado'));
-            const aname = String(getEmpField(a, 'nombre_empleado') || '');
-            return aid === empId || (aname && aname.toLowerCase() === empName.toLowerCase());
-          });
+          if (empPesel) processedIds.add(empPesel);
+
+          const rec = dateRecs.find(a => a.employeeId === empId || a.pesel === empPesel || (a.name && a.name.toLowerCase() === empName.toLowerCase()));
 
           const stInfo = evaluateStatus(empId, empName, rec, pt.isFuture);
           items.push({
@@ -5060,16 +5156,16 @@
         });
 
         // Operarios de apoyo / otros turnos que escanearon en este bloque
-        attDocs.forEach(a => {
-          const aid = getEmpId(a) || String(getEmpField(a, 'id_empleado'));
-          const aname = String(getEmpField(a, 'nombre_empleado') || aid);
-          const hEnt = String(getEmpField(a, 'hora_entrada') || '').trim();
+        dateRecs.forEach(a => {
+          const aid = a.employeeId || a.pesel || '';
+          const aname = a.name || aid;
+          const hEnt = String(a.horaEntrada || '').trim();
 
           if (aid === '0' || aid === '2023' || aid.startsWith('900') || aname.toLowerCase().includes('harley')) {
             return;
           }
 
-          if (!processedIds.has(aid) && hEnt && hEnt.includes(':')) {
+          if (!processedIds.has(aid) && !processedIds.has(a.pesel) && hEnt && hEnt.includes(':')) {
             const entH = parseInt(hEnt.split(':')[0], 10);
             let matches = false;
             if (targetShift === '1' && entH >= 5 && entH <= 13) matches = true;
@@ -5081,10 +5177,12 @@
               items.push({
                 id: aid,
                 name: aname,
-                group: String(getEmpField(a, 'grupo') || 'Apoyo'),
+                group: String(a.grupo || 'Apoyo'),
                 shift: targetShift,
                 stInfo: stInfo
               });
+              processedIds.add(aid);
+              if (a.pesel) processedIds.add(a.pesel);
             }
           }
         });
@@ -6493,7 +6591,11 @@
       }
 
       if (tabKey === 'coord') {
-        renderCoordExcelMatrix(null, false);
+        initTradingCanvasSize();
+        if (window.lastCoordDispList && window.lastAttMap) {
+          renderTradingChart(window.lastCoordDispList, window.lastAttMap);
+        }
+        loadCoordData();
       }
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -6748,6 +6850,35 @@
         ind.style.top = '-60px';
       }
     }, { passive: true });
-  </script>
+  
+    function initTradingCanvasSize() {
+      const canvas = document.getElementById('trading-chart-canvas');
+      if (!canvas) return;
+      const parent = canvas.parentElement;
+      if (parent && parent.clientWidth > 0) {
+        canvas.width = parent.clientWidth;
+        canvas.height = 190;
+      }
+    }
+
+    window.addEventListener('resize', () => {
+      const tabCoord = document.getElementById('tab-coord');
+      if (tabCoord && !tabCoord.classList.contains('hidden') && window.lastCoordDispList && window.lastAttMap) {
+        initTradingCanvasSize();
+        renderTradingChart(window.lastCoordDispList, window.lastAttMap);
+      }
+    });
+
+    // Auto-actualización periódica en segundo plano (cada 30s si la pestaña está activa, cero cuota si está oculta)
+    setInterval(function() {
+      if (document.hidden) return;
+      const tabCoord = document.getElementById('tab-coord');
+      const isCoordVisible = tabCoord && !tabCoord.classList.contains('hidden');
+      const isMonitor = (currentUser && currentUser.rol_app === 'MONITOR_24H');
+      if (isCoordVisible || isMonitor) {
+        loadCoordData(false);
+      }
+    }, 30000);
+</script>
 </body>
 </html>
