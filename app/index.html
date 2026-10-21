@@ -4553,34 +4553,73 @@
     function getNoiseFreeExpected(dt, plantEmps) {
       const dow = dt.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
       const h = dt.getHours();
+      const ymd = dt.toISOString().split('T')[0];
 
-      // Sábado descanso a partir de las 06:00
-      // (De 00:00 a 05:59 culmina el Turno 3 iniciado el viernes a las 22:00)
+      // 1. Si existe historial de proyección guardado para esta fecha previa (Lunes o Martes congelados), preservarlo
+      if (window.historialProyecciones && window.historialProyecciones[ymd]) {
+        const dayRecord = window.historialProyecciones[ymd];
+        const hrs = dayRecord.horas || dayRecord.hourly || [];
+        if (hrs && hrs.length === 24 && hrs[h] !== undefined) {
+          const shiftDesc = (h >= 6 && h <= 13) ? 'Turno 1 (Mañana · 06:00-14:00)' :
+                            ((h >= 14 && h <= 21) ? 'Turno 2 (Tarde · 14:00-22:00)' :
+                            'Turno 3 (Noche · 22:00-06:00)');
+          return { count: hrs[h], desc: shiftDesc };
+        }
+      }
+
+      // 2. Sábado descanso a partir de las 06:00 (sólo remanente Turno 3 de 00:00 a 05:59)
       if (dow === 6) {
-        if (h === 0 || h === 1) return { count: 14, desc: 'Turno 3 (Noche · 22:00-06:00)' };
-        if (h === 2) return { count: 13, desc: 'Turno 3 (Noche · 22:00-06:00)' };
-        if (h >= 3 && h <= 5) return { count: 10, desc: 'Turno 3 (Noche · 22:00-06:00)' };
+        if (h >= 0 && h <= 5) {
+          const count = (plantEmps || []).filter(emp => {
+            const shift = String(emp.turno_actual || (emp.grupo === 'B' ? '3' : ''));
+            return shift === '3';
+          }).length;
+          return { count, desc: 'Turno 3 (Noche · 22:00-06:00)' };
+        }
         return { count: 0, desc: 'Fin de Semana (Descanso)' };
       }
 
-      // Domingo descanso todo el día hasta las 22:00. A las 22:00 arranca el Turno 3
+      // 3. Domingo descanso todo el día hasta las 22:00 (a las 22:00 arranca el Turno 3)
       if (dow === 0) {
-        if (h >= 22) return { count: 18, desc: 'Turno 3 (Noche · 22:00-06:00)' };
+        if (h >= 22) {
+          const count = (plantEmps || []).filter(emp => {
+            const shift = String(emp.turno_actual || (emp.grupo === 'B' ? '3' : ''));
+            return shift === '3';
+          }).length;
+          return { count, desc: 'Turno 3 (Noche · 22:00-06:00)' };
+        }
         return { count: 0, desc: 'Fin de Semana (Descanso)' };
       }
 
-      // Lunes a Viernes: Jornada continua 24 Horas según tabla oficial NDSerwis (Excel Disponibilidad)
-      if (h === 6 || h === 7) return { count: 14, desc: 'Turno 1 (Mañana · 06:00-14:00)' };
-      if (h === 8 || h === 9) return { count: 10, desc: 'Turno 1 (Mañana · 06:00-14:00)' };
-      if (h >= 10 && h <= 13) return { count: 9, desc: 'Turno 1 (Mañana · 06:00-14:00)' };
-      if (h === 14 || h === 15) return { count: 19, desc: 'Turno 2 (Tarde · 14:00-22:00)' };
-      if (h === 16 || h === 17) return { count: 15, desc: 'Turno 2 (Tarde · 14:00-22:00)' };
-      if (h >= 18 && h <= 21) return { count: 11, desc: 'Turno 2 (Tarde · 14:00-22:00)' };
-      if (h === 22 || h === 23) return { count: 18, desc: 'Turno 3 (Noche · 22:00-06:00)' };
-      if (h === 0 || h === 1) return { count: 14, desc: 'Turno 3 (Noche · 22:00-06:00)' };
-      if (h === 2) return { count: 13, desc: 'Turno 3 (Noche · 22:00-06:00)' };
-      if (h >= 3 && h <= 5) return { count: 10, desc: 'Turno 3 (Noche · 22:00-06:00)' };
-      return { count: 10, desc: 'Turno 1 (Mañana · 06:00-14:00)' };
+      // 4. Lunes a Viernes: cálculo dinámico exacto de cada trabajador según su hora_inicio_turno (Col H) y hora_fin_turno (Col I)
+      let count = 0;
+      (plantEmps || []).forEach(emp => {
+        let sH = 6;
+        let eH = 14;
+        const shift = String(emp.turno_actual || (emp.grupo === 'C' ? '1' : (emp.grupo === 'A' ? '2' : '3')));
+        if (shift === '2') { sH = 14; eH = 22; }
+        else if (shift === '3') { sH = 22; eH = 6; }
+
+        if (emp.hora_inicio_turno && emp.hora_inicio_turno.includes(':')) {
+          sH = parseInt(emp.hora_inicio_turno.split(':')[0], 10) || sH;
+        }
+        if (emp.hora_fin_turno && emp.hora_fin_turno.includes(':')) {
+          eH = parseInt(emp.hora_fin_turno.split(':')[0], 10) || eH;
+        }
+
+        let covers = false;
+        if (sH < eH) {
+          covers = (h >= sH && h < eH);
+        } else if (sH > eH) {
+          covers = (h >= sH || h < eH);
+        }
+        if (covers) count++;
+      });
+
+      const shiftDesc = (h >= 6 && h <= 13) ? 'Turno 1 (Mañana · 06:00-14:00)' :
+                        ((h >= 14 && h <= 21) ? 'Turno 2 (Tarde · 14:00-22:00)' :
+                        'Turno 3 (Noche · 22:00-06:00)');
+      return { count, desc: shiftDesc };
     }
 
     function renderTradingChart(dispList, attMap) {
@@ -5084,9 +5123,22 @@
           const grp = String(getEmpField(d, 'grupo') || '').toUpperCase().trim();
           let empShift = String(getEmpField(d, 'turno_actual') || '');
           if (!empShift || empShift === '0') {
-            empShift = (grp === 'A') ? '1' : ((grp === 'B') ? '2' : '3');
+            empShift = (grp === 'C') ? '1' : ((grp === 'A') ? '2' : ((grp === 'B') ? '3' : '1'));
           }
-          return empShift === targetShift;
+          if (empShift === targetShift) return true;
+
+          // Compatibilidad horaria dinámica: verificar si la hora de inicio y fin del operario cubre este turno
+          const hIni = String(getEmpField(d, 'hora_inicio_turno') || '');
+          const hFin = String(getEmpField(d, 'hora_fin_turno') || '');
+          if (hIni && hIni.includes(':')) {
+            const sH = parseInt(hIni.split(':')[0], 10);
+            const eH = hFin.includes(':') ? parseInt(hFin.split(':')[0], 10) : (sH + 8);
+            if (shiftStartHour !== undefined) {
+              if (sH < eH) return (shiftStartHour >= sH && shiftStartHour < eH);
+              if (sH > eH) return (shiftStartHour >= sH || shiftStartHour < eH);
+            }
+          }
+          return false;
         });
 
         function evaluateStatus(empId, empName, rec, isFuture, empShift) {
