@@ -4621,12 +4621,17 @@
           const recDate = rec.fecha || (rec.timestamp ? rec.timestamp.split('T')[0] : '');
           if (recDate !== targetYMD) return;
 
-          const uKey = String(rec.pesel || rec.employeeId || rec.empId || rec.name || '');
+          const rPesel = String(rec.pesel || '').trim();
+          const rEmpId = String(rec.employeeId || rec.empId || '').trim();
+          const rName = String(rec.name || rec.employeeName || '').toLowerCase().trim();
+
+          // Excluir cuentas administrativas / coordinación del conteo de planta
+          if (rEmpId === '0' || rEmpId === '2023' || rPesel === '95071616157' || rEmpId.startsWith('900') || rName.includes('harley') || rName.includes('santiago')) return;
+
+          // Clave de unicidad estricta para evitar contar 2 veces a la misma persona
+          const uKey = (rPesel && rPesel.length === 11) ? rPesel : (rEmpId || rName);
           if (!uKey || seen.has(uKey)) return;
           seen.add(uKey);
-
-          const rName = (rec.name || '').toLowerCase();
-          if (uKey === '0' || uKey === '2023' || uKey.startsWith('900') || rName.includes('harley')) return;
 
           const t = rec.horaEntrada || (rec.timestamp ? rec.timestamp.split('T')[1] : '');
           if (t && t.includes(':')) {
@@ -4824,22 +4829,26 @@
         const hShift = document.getElementById('chart-hud-shift');
         if (hShift) hShift.innerText = pt.shift || '';
 
-        let targetShift = '2';
+        let targetShift = 'ALL';
         const sLower = (pt.shift || '').toLowerCase();
-        if (sLower.includes('turno 1') || sLower.includes('mañana')) targetShift = '1';
-        else if (sLower.includes('turno 2') || sLower.includes('tarde')) targetShift = '2';
-        else if (sLower.includes('turno 3') || sLower.includes('noche')) targetShift = '3';
+        if (sLower.includes('turno 1') && !sLower.includes('turnos')) targetShift = '1';
+        else if (sLower.includes('turno 2') && !sLower.includes('turnos')) targetShift = '2';
+        else if (sLower.includes('turno 3') && !sLower.includes('turnos')) targetShift = '3';
+        else if (sLower.includes('turnos') || sLower.includes('1, 2 y 3') || (pt.expected && pt.expected >= 20)) targetShift = 'ALL';
         else {
           const hVal = (pt.timeLabel ? parseInt(pt.timeLabel.split(':')[0], 10) : 14);
-          if (hVal >= 6 && hVal <= 13) targetShift = '1';
-          else if (hVal >= 14 && hVal <= 21) targetShift = '2';
-          else targetShift = '3';
+          if (!isNaN(hVal) && hVal >= 6 && hVal <= 13) targetShift = '1';
+          else if (!isNaN(hVal) && hVal >= 14 && hVal <= 21) targetShift = '2';
+          else if (!isNaN(hVal) && (hVal >= 22 || hVal < 6)) targetShift = '3';
+          else targetShift = 'ALL';
         }
 
         const shiftEmps = (plantEmps || []).filter(e => {
           const empId = String(e.id || '');
+          const empPesel = String(e.pesel || '');
           const empName = (e.nombre_completo || e.nombre || '').toLowerCase();
-          if (empId === '0' || empId === '2023' || empId.startsWith('900') || empName.includes('harley')) return false;
+          if (empId === '0' || empId === '2023' || empPesel === '95071616157' || empId.startsWith('900') || empName.includes('harley') || empName.includes('santiago')) return false;
+          if (targetShift === 'ALL') return true;
           let s = String(e.turno_actual || '');
           if (!s || s === '0') {
             s = (e.grupo === 'A' ? '1' : (e.grupo === 'B' ? '2' : '3'));
@@ -4869,17 +4878,20 @@
 
         // Operarios de apoyo u otros turnos que escanearon durante este turno
         dateRecs.forEach(r => {
-          if (r.employeeId === '0' || r.employeeId === '2023' || r.employeeId.startsWith('900') || (r.name || '').toLowerCase().includes('harley')) return;
-          if (!processedEmpIds.has(r.employeeId) && !processedEmpIds.has(r.pesel) && r.horaEntrada && r.horaEntrada.includes(':')) {
+          const rPesel = String(r.pesel || '');
+          const rEmpId = String(r.employeeId || '');
+          const rName = (r.name || '').toLowerCase();
+          if (rEmpId === '0' || rEmpId === '2023' || rPesel === '95071616157' || rEmpId.startsWith('900') || rName.includes('harley') || rName.includes('santiago')) return;
+          if (!processedEmpIds.has(rEmpId) && !processedEmpIds.has(rPesel) && r.horaEntrada && r.horaEntrada.includes(':')) {
             const entH = parseInt(r.horaEntrada.split(':')[0], 10);
-            let match = false;
+            let match = (targetShift === 'ALL');
             if (targetShift === '1' && entH >= 5 && entH <= 13) match = true;
             if (targetShift === '2' && entH >= 13 && entH <= 21) match = true;
             if (targetShift === '3' && (entH >= 21 || entH <= 5)) match = true;
             if (match) {
               shiftScanCount++;
-              processedEmpIds.add(r.employeeId);
-              if (r.pesel) processedEmpIds.add(r.pesel);
+              processedEmpIds.add(rEmpId);
+              if (rPesel) processedEmpIds.add(rPesel);
             }
           }
         });
@@ -5017,20 +5029,23 @@
         }
 
         // Determinar turno de la hora inspeccionada
-        let targetShift = '1';
+        let targetShift = 'ALL';
         let shiftStartHour = 6;
         const s = (pt.shift || '').toLowerCase();
-        if (s.includes('turno 1')) {
+        if (s.includes('turno 1') && !s.includes('turnos')) {
           targetShift = '1'; shiftStartHour = 6;
-        } else if (s.includes('turno 2')) {
+        } else if (s.includes('turno 2') && !s.includes('turnos')) {
           targetShift = '2'; shiftStartHour = 14;
-        } else if (s.includes('turno 3')) {
+        } else if (s.includes('turno 3') && !s.includes('turnos')) {
           targetShift = '3'; shiftStartHour = 22;
+        } else if (s.includes('turnos') || s.includes('1, 2 y 3') || (pt.expected && pt.expected >= 20)) {
+          targetShift = 'ALL'; shiftStartHour = 6;
         } else {
           const h = (pt.timeLabel ? parseInt(pt.timeLabel.split(':')[0], 10) : 6);
-          if (h >= 6 && h <= 13) { targetShift = '1'; shiftStartHour = 6; }
-          else if (h >= 14 && h <= 21) { targetShift = '2'; shiftStartHour = 14; }
-          else { targetShift = '3'; shiftStartHour = 22; }
+          if (!isNaN(h) && h >= 6 && h <= 13) { targetShift = '1'; shiftStartHour = 6; }
+          else if (!isNaN(h) && h >= 14 && h <= 21) { targetShift = '2'; shiftStartHour = 14; }
+          else if (!isNaN(h) && (h >= 22 || h < 6)) { targetShift = '3'; shiftStartHour = 22; }
+          else { targetShift = 'ALL'; shiftStartHour = 6; }
         }
 
         function getEmpField(d, key) {
@@ -5053,8 +5068,9 @@
         // Extraer operarios de planta (Excluyendo cuentas administrativas y pruebas)
         const allEmps = (window.rawCoordDispDocs || []).filter(d => {
           const id = getEmpId(d);
+          const pesel = String(getEmpField(d, 'pesel') || '');
           const nom = String(getEmpField(d, 'nombre_completo') || getEmpField(d, 'nombre') || '');
-          return id && id !== '0' && id !== '2023' && !id.startsWith('900') && !nom.toLowerCase().includes('harley');
+          return id && id !== '0' && id !== '2023' && pesel !== '95071616157' && !id.startsWith('900') && !nom.toLowerCase().includes('harley') && !nom.toLowerCase().includes('santiago');
         });
 
         const ptYmd = pt.ymdDate || (pt.fullLabel && pt.fullLabel.includes('-') ? pt.fullLabel.split(' · ')[0] : (new Date().toISOString().split('T')[0]));
@@ -5064,6 +5080,7 @@
 
         // Filtrar programados en este turno
         const scheduled = allEmps.filter(d => {
+          if (targetShift === 'ALL') return true;
           const grp = String(getEmpField(d, 'grupo') || '').toUpperCase().trim();
           let empShift = String(getEmpField(d, 'turno_actual') || '');
           if (!empShift || empShift === '0') {
@@ -5072,7 +5089,12 @@
           return empShift === targetShift;
         });
 
-        function evaluateStatus(empId, empName, rec, isFuture) {
+        function evaluateStatus(empId, empName, rec, isFuture, empShift) {
+          const effShift = empShift || targetShift;
+          const isTurno3 = (effShift === '3');
+          const schedH = (effShift === '1' ? 6 : (effShift === '2' ? 14 : 22));
+          const schedMins = isTurno3 ? 22 * 60 : schedH * 60;
+
           if (rec) {
             const hEnt = String(rec.horaEntrada || getEmpField(rec, 'horaEntrada') || getEmpField(rec, 'hora_entrada') || '').trim();
             const hSal = String(rec.horaSalida || getEmpField(rec, 'horaSalida') || getEmpField(rec, 'hora_salida') || '').trim();
@@ -5081,8 +5103,6 @@
             if (hEnt && hEnt.includes(':')) {
               const entH = parseInt(hEnt.split(':')[0], 10) || 0;
               const entM = parseInt(hEnt.split(':')[1], 10) || 0;
-              const isTurno3 = (targetShift === '3' || shiftStartHour >= 21);
-              const schedMins = isTurno3 ? 22 * 60 : shiftStartHour * 60;
               const actMins = (isTurno3 && entH >= 0 && entH <= 12) ? (entH + 24) * 60 + entM : entH * 60 + entM;
               const diffMins = actMins - schedMins;
               const isLate = diffMins > 10 || st.includes('RETARDO');
@@ -5112,7 +5132,7 @@
           const nowW = new Date();
           const curH = nowW.getHours();
           const curM = nowW.getMinutes();
-          const isPastShift = !isFuture && ((curH * 60 + curM) >= (shiftStartHour * 60 + 15));
+          const isPastShift = !isFuture && ((curH * 60 + curM) >= (schedH * 60 + 15));
 
           if (isPastShift) {
             return {
@@ -5138,14 +5158,17 @@
           const empPesel = String(getEmpField(d, 'pesel') || empId);
           const empName = String(getEmpField(d, 'nombre_completo') || getEmpField(d, 'nombre') || empId);
           const grp = String(getEmpField(d, 'grupo') || '-');
-          const tAct = String(getEmpField(d, 'turno_actual') || targetShift);
+          let tAct = String(getEmpField(d, 'turno_actual') || '');
+          if (!tAct || tAct === '0') {
+            tAct = (grp === 'A') ? '1' : ((grp === 'B') ? '2' : '3');
+          }
 
           processedIds.add(empId);
           if (empPesel) processedIds.add(empPesel);
 
           const rec = dateRecs.find(a => a.employeeId === empId || a.pesel === empPesel || (a.name && a.name.toLowerCase() === empName.toLowerCase()));
 
-          const stInfo = evaluateStatus(empId, empName, rec, pt.isFuture);
+          const stInfo = evaluateStatus(empId, empName, rec, pt.isFuture, tAct);
           items.push({
             id: empId,
             name: empName,
@@ -5158,27 +5181,29 @@
         // Operarios de apoyo / otros turnos que escanearon en este bloque
         dateRecs.forEach(a => {
           const aid = a.employeeId || a.pesel || '';
+          const apesel = a.pesel || '';
           const aname = a.name || aid;
           const hEnt = String(a.horaEntrada || '').trim();
 
-          if (aid === '0' || aid === '2023' || aid.startsWith('900') || aname.toLowerCase().includes('harley')) {
+          if (aid === '0' || aid === '2023' || apesel === '95071616157' || aid.startsWith('900') || aname.toLowerCase().includes('harley') || aname.toLowerCase().includes('santiago')) {
             return;
           }
 
           if (!processedIds.has(aid) && !processedIds.has(a.pesel) && hEnt && hEnt.includes(':')) {
             const entH = parseInt(hEnt.split(':')[0], 10);
-            let matches = false;
+            let matches = (targetShift === 'ALL');
             if (targetShift === '1' && entH >= 5 && entH <= 13) matches = true;
             if (targetShift === '2' && entH >= 13 && entH <= 21) matches = true;
             if (targetShift === '3' && (entH >= 21 || entH <= 5)) matches = true;
 
             if (matches) {
-              const stInfo = evaluateStatus(aid, aname, a, false);
+              const matchedShift = (entH >= 5 && entH < 13) ? '1' : ((entH >= 13 && entH < 21) ? '2' : '3');
+              const stInfo = evaluateStatus(aid, aname, a, false, matchedShift);
               items.push({
                 id: aid,
                 name: aname,
                 group: String(a.grupo || 'Apoyo'),
-                shift: targetShift,
+                shift: matchedShift,
                 stInfo: stInfo
               });
               processedIds.add(aid);
