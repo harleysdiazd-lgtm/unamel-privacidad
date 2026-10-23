@@ -5822,9 +5822,7 @@
         const todayStr = new Date().toISOString().slice(0, 10);
         const candidates = [
           currentUser.pesel,
-          currentUser.id,
-          '95071616157',
-          '0'
+          currentUser.id
         ].filter(Boolean);
 
         let foundRecord = null;
@@ -5871,6 +5869,15 @@
 
           updateGateProfileButton();
           updateLiveShiftCard();
+        } else {
+          // Si no hay registro hoy en Firestore para este operario, asegurar que no queden datos de entrada falsos
+          if (currentUser.ultimo_acceso_fecha !== todayStr) {
+            currentUser.ultima_hora_entrada = '';
+            currentUser.ultima_hora_salida = '';
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            updateGateProfileButton();
+            updateLiveShiftCard();
+          }
         }
       } catch (e) {
         console.warn('syncUserTodayAttendanceLive aviso:', e);
