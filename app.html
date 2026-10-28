@@ -4588,10 +4588,18 @@
       }
     };
 
+    function formatYMD(d) {
+      if (!d) return '';
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + day;
+    }
+
     function getNoiseFreeExpected(dt, plantEmps) {
       const dow = dt.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
       const h = dt.getHours();
-      const ymd = dt.toISOString().split('T')[0];
+      const ymd = formatYMD(dt);
 
       // 1. Si existe historial de proyección guardado para esta fecha previa (Lunes o Martes congelados), preservarlo
       if (window.historialProyecciones && window.historialProyecciones[ymd]) {
@@ -4669,6 +4677,12 @@
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
+      const parent = canvas.parentElement;
+      if (parent && parent.clientWidth > 0) {
+        canvas.width = parent.clientWidth;
+        canvas.height = 190;
+      }
+
       const plantEmps = (dispList || []).filter(e => {
         const eid = String(e.id || '');
         const eName = (e.nombre_completo || e.nombre || '').toLowerCase();
@@ -4694,10 +4708,12 @@
           ? window.allMonthAttendanceRecords
           : Object.values(attMap || {});
 
+        const [ty, tm, td] = targetYMD.split('-').map(Number);
+        const prevD = new Date(ty, tm - 1, td - 1);
+        const prevYMD = formatYMD(prevD);
+
         allRecs.forEach(rec => {
           const recDate = rec.fecha || (rec.timestamp ? rec.timestamp.split('T')[0] : '');
-          if (recDate !== targetYMD) return;
-
           const rPesel = String(rec.pesel || '').trim();
           const rEmpId = String(rec.employeeId || rec.empId || '').trim();
           const rName = String(rec.name || rec.employeeName || '').toLowerCase().trim();
@@ -4708,24 +4724,36 @@
           // Clave de unicidad estricta para evitar contar 2 veces a la misma persona
           const uKey = (rPesel && rPesel.length === 11) ? rPesel : (rEmpId || rName);
           if (!uKey || seen.has(uKey)) return;
-          seen.add(uKey);
 
           const t = rec.horaEntrada || (rec.timestamp ? rec.timestamp.split('T')[1] : '');
           if (t && t.includes(':')) {
             const entryH = parseInt(t.split(':')[0], 10);
             const tOut = rec.horaSalida || '';
             const exitH = (tOut && tOut.includes(':')) ? parseInt(tOut.split(':')[0], 10) : null;
-            const isNight = (entryH >= 21);
             let active = false;
-            if (isNight) {
-              active = (startH >= 21) || (exitH !== null && startH <= exitH);
-            } else {
-              const shiftEnd = (exitH !== null) ? exitH : (entryH + 8);
-              active = (startH >= entryH && startH <= shiftEnd) || (entryH >= startH && entryH <= endH);
+
+            if (recDate === targetYMD) {
+              const isNight = (entryH >= 21 || entryH <= 5);
+              if (isNight) {
+                active = (startH >= 21 || startH <= 6) && (exitH === null || startH <= exitH);
+              } else {
+                const shiftEnd = (exitH !== null) ? exitH : (entryH + 8);
+                active = (startH >= entryH && startH <= shiftEnd) || (entryH >= startH && entryH <= endH);
+              }
+            } else if (recDate === prevYMD && startH <= 6) {
+              const isNight = (entryH >= 21);
+              if (isNight) {
+                active = (exitH === null || startH <= exitH || exitH <= 6);
+              }
             }
-            if (active) c++;
+
+            if (active) {
+              seen.add(uKey);
+              c++;
+            }
           }
         });
+
         // Historial en días trabajados detalle para fechas pasadas
         if (c === 0) {
           const dNum = parseInt(targetYMD.split('-')[2], 10);
@@ -4757,7 +4785,7 @@
 
         for (let i = 48; i >= 0; i--) {
           const d = new Date(baseMs - i * 30 * 60 * 1000);
-          const ymd = d.toISOString().split('T')[0];
+          const ymd = formatYMD(d);
           const exp = getNoiseFreeExpected(d, plantEmps);
           const act = getActualScans(ymd, d.getHours(), d.getHours());
           const h = d.getHours(), m = d.getMinutes();
@@ -4766,6 +4794,7 @@
         }
         for (let j = 1; j <= 336; j++) {
           const d = new Date(baseMs + j * 30 * 60 * 1000);
+          const ymd = formatYMD(d);
           const exp = getNoiseFreeExpected(d, plantEmps);
           const h = d.getHours(), m = d.getMinutes();
           const axis = (h === 0 && m === 0) ? fmtDay(d) : ((h === 12 && m === 0) ? '12:00' : '');
@@ -4778,7 +4807,7 @@
 
         for (let i = 48; i >= 0; i--) {
           const d = new Date(baseMs - i * 60 * 60 * 1000);
-          const ymd = d.toISOString().split('T')[0];
+          const ymd = formatYMD(d);
           const exp = getNoiseFreeExpected(d, plantEmps);
           const act = getActualScans(ymd, d.getHours(), d.getHours());
           const h = d.getHours();
@@ -4787,6 +4816,7 @@
         }
         for (let j = 1; j <= 168; j++) {
           const d = new Date(baseMs + j * 60 * 60 * 1000);
+          const ymd = formatYMD(d);
           const exp = getNoiseFreeExpected(d, plantEmps);
           const h = d.getHours();
           const axis = (h === 0) ? fmtDay(d) : ((h === 12) ? '12:00' : '');
@@ -4800,7 +4830,7 @@
 
         for (let i = 42; i >= 0; i--) {
           const d = new Date(baseMs - i * 4 * 60 * 60 * 1000);
-          const ymd = d.toISOString().split('T')[0];
+          const ymd = formatYMD(d);
           const exp = getNoiseFreeExpected(d, plantEmps);
           const act = getActualScans(ymd, Math.max(0, d.getHours() - 1), Math.min(23, d.getHours() + 2));
           const h = d.getHours();
@@ -4809,6 +4839,7 @@
         }
         for (let j = 1; j <= 42; j++) {
           const d = new Date(baseMs + j * 4 * 60 * 60 * 1000);
+          const ymd = formatYMD(d);
           const exp = getNoiseFreeExpected(d, plantEmps);
           const h = d.getHours();
           const axis = (h === 0) ? fmtDay(d) : ((h === 12) ? '12:00' : '');
@@ -4817,7 +4848,7 @@
       } else if (tf === '1D') {
         for (let i = 7; i >= 0; i--) {
           const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-          const ymd = d.toISOString().split('T')[0];
+          const ymd = formatYMD(d);
           const dow = d.getDay();
           const expTotal = dow === 6 ? 0 : (dow === 0 ? 9 : 29);
           const act = getActualScans(ymd, 0, 23);
@@ -4826,7 +4857,7 @@
         }
         for (let j = 1; j <= 7; j++) {
           const d = new Date(now.getTime() + j * 24 * 60 * 60 * 1000);
-          const ymd = d.toISOString().split('T')[0];
+          const ymd = formatYMD(d);
           const dow = d.getDay();
           const expTotal = dow === 6 ? 0 : (dow === 0 ? 9 : 29);
           const axis = (j % 2 === 0) ? fmtDay(d) : '';
@@ -4835,21 +4866,22 @@
       } else if (tf === '1M') {
         const cDay = now.getDate();
         for (let d = 1; d <= cDay; d++) {
-          const dt = new Date(now.getFullYear(), 9, d, 18, 0); // Octubre
-          const ymd = '2026-10-' + pad2(d);
+          const dt = new Date(now.getFullYear(), now.getMonth(), d, 18, 0);
+          const ymd = formatYMD(dt);
           const dow = dt.getDay();
           const expTotal = dow === 6 ? 0 : (dow === 0 ? 9 : 29);
           const act = getActualScans(ymd, 0, 23);
-          const axis = (d % 4 === 0 || d === cDay) ? (d + ' Oct') : '';
-          pastPoints.push({ timeLabel: d + ' Oct', fullLabel: d + ' de Octubre, 2026', ymdDate: ymd, expected: expTotal, actual: act, isFuture: false, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3'), axisLabel: axis });
+          const axis = (d % 4 === 0 || d === cDay) ? (d + ' ' + dt.toLocaleString('es-ES', { month: 'short' })) : '';
+          pastPoints.push({ timeLabel: d + ' ' + dt.toLocaleString('es-ES', { month: 'short' }), fullLabel: d + ' de ' + dt.toLocaleString('es-ES', { month: 'long' }) + ', ' + dt.getFullYear(), ymdDate: ymd, expected: expTotal, actual: act, isFuture: false, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3'), axisLabel: axis });
         }
         const endDay = Math.min(31, cDay + 7);
         for (let d = cDay + 1; d <= endDay; d++) {
-          const dt = new Date(now.getFullYear(), 9, d, 18, 0);
+          const dt = new Date(now.getFullYear(), now.getMonth(), d, 18, 0);
+          const ymd = formatYMD(dt);
           const dow = dt.getDay();
           const expTotal = dow === 6 ? 0 : (dow === 0 ? 9 : 29);
-          const axis = (d % 4 === 0 || d === endDay) ? (d + ' Oct') : '';
-          futurePoints.push({ timeLabel: d + ' Oct', fullLabel: d + ' de Octubre, 2026', ymdDate: ymd, expected: expTotal, actual: 0, isFuture: true, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3'), axisLabel: axis });
+          const axis = (d % 4 === 0 || d === endDay) ? (d + ' ' + dt.toLocaleString('es-ES', { month: 'short' })) : '';
+          futurePoints.push({ timeLabel: d + ' ' + dt.toLocaleString('es-ES', { month: 'short' }), fullLabel: d + ' de ' + dt.toLocaleString('es-ES', { month: 'long' }) + ', ' + dt.getFullYear(), ymdDate: ymd, expected: expTotal, actual: 0, isFuture: true, shift: dow === 0 ? 'Turno 3 Noche' : (dow === 6 ? 'Descanso' : 'Turnos 1, 2 y 3'), axisLabel: axis });
         }
       }
 
@@ -4934,8 +4966,13 @@
         });
 
         // Contar escaneados reales para este turno / hora
-        const ptYmd = pt.ymdDate || (pt.fullLabel && pt.fullLabel.includes('-') ? pt.fullLabel.split(' · ')[0] : (new Date().toISOString().split('T')[0]));
+        const ptYmd = pt.ymdDate || (pt.fullLabel && pt.fullLabel.includes('-') ? pt.fullLabel.split(' · ')[0] : formatYMD(new Date()));
+        const [py, pm, pd] = ptYmd.split('-').map(Number);
+        const prevD = new Date(py, pm - 1, pd - 1);
+        const prevYmd = formatYMD(prevD);
+
         const dateRecs = (window.allMonthAttendanceRecords || []).filter(r => r.fecha === ptYmd);
+        const prevDateRecs = (window.allMonthAttendanceRecords || []).filter(r => r.fecha === prevYmd);
         const processedEmpIds = new Set();
         let shiftScanCount = 0;
 
@@ -4947,6 +4984,7 @@
           if (empPesel) processedEmpIds.add(empPesel);
 
           const r = dateRecs.find(a => a.employeeId === empId || (empPesel && a.pesel === empPesel) || (empName && a.name.toLowerCase() === empName))
+                    || (targetShift === '3' ? prevDateRecs.find(a => a.employeeId === empId || (empPesel && a.pesel === empPesel) || (empName && a.name.toLowerCase() === empName)) : null)
                     || (attMap && (attMap[empId] || (empPesel && attMap[empPesel]) || (empName && attMap[empName])));
           if (r && (r.horaEntrada || (r.status && ['ASISTIO', 'A_TIEMPO', 'PRESENTES', 'PRESENTE', 'NORMAL', 'RETARDO', 'SALIDA_TEMPRANA'].includes(r.status.toUpperCase())))) {
             shiftScanCount++;
@@ -4954,7 +4992,8 @@
         });
 
         // Operarios de apoyo u otros turnos que escanearon durante este turno
-        dateRecs.forEach(r => {
+        const combinedScans = (targetShift === '3') ? dateRecs.concat(prevDateRecs) : dateRecs;
+        combinedScans.forEach(r => {
           const rPesel = String(r.pesel || '');
           const rEmpId = String(r.employeeId || '');
           const rName = (r.name || '').toLowerCase();
@@ -4962,9 +5001,12 @@
           if (!processedEmpIds.has(rEmpId) && !processedEmpIds.has(rPesel) && r.horaEntrada && r.horaEntrada.includes(':')) {
             const entH = parseInt(r.horaEntrada.split(':')[0], 10);
             let match = (targetShift === 'ALL');
-            if (targetShift === '1' && entH >= 5 && entH <= 13) match = true;
-            if (targetShift === '2' && entH >= 13 && entH <= 21) match = true;
-            if (targetShift === '3' && (entH >= 21 || entH <= 5)) match = true;
+            if (targetShift === '1' && entH >= 5 && entH <= 13 && r.fecha === ptYmd) match = true;
+            if (targetShift === '2' && entH >= 13 && entH <= 21 && r.fecha === ptYmd) match = true;
+            if (targetShift === '3') {
+              if (r.fecha === ptYmd && (entH >= 21 || entH <= 5)) match = true;
+              else if (r.fecha === prevYmd && entH >= 21) match = true;
+            }
             if (match) {
               shiftScanCount++;
               processedEmpIds.add(rEmpId);
@@ -5150,8 +5192,13 @@
           return id && id !== '0' && id !== '2023' && pesel !== '95071616157' && !id.startsWith('900') && !nom.toLowerCase().includes('harley') && !nom.toLowerCase().includes('santiago');
         });
 
-        const ptYmd = pt.ymdDate || (pt.fullLabel && pt.fullLabel.includes('-') ? pt.fullLabel.split(' · ')[0] : (new Date().toISOString().split('T')[0]));
+        const ptYmd = pt.ymdDate || (pt.fullLabel && pt.fullLabel.includes('-') ? pt.fullLabel.split(' · ')[0] : formatYMD(new Date()));
+        const [py, pm, pd] = ptYmd.split('-').map(Number);
+        const prevD = new Date(py, pm - 1, pd - 1);
+        const prevYmd = formatYMD(prevD);
+
         const dateRecs = (window.allMonthAttendanceRecords || []).filter(r => r.fecha === ptYmd);
+        const prevDateRecs = (window.allMonthAttendanceRecords || []).filter(r => r.fecha === prevYmd);
         const processedIds = new Set();
         const items = [];
 
@@ -5256,7 +5303,8 @@
           processedIds.add(empId);
           if (empPesel) processedIds.add(empPesel);
 
-          const rec = dateRecs.find(a => a.employeeId === empId || a.pesel === empPesel || (a.name && a.name.toLowerCase() === empName.toLowerCase()));
+          const rec = dateRecs.find(a => a.employeeId === empId || a.pesel === empPesel || (a.name && a.name.toLowerCase() === empName.toLowerCase()))
+                    || (targetShift === '3' ? prevDateRecs.find(a => a.employeeId === empId || a.pesel === empPesel || (a.name && a.name.toLowerCase() === empName.toLowerCase())) : null);
 
           const stInfo = evaluateStatus(empId, empName, rec, pt.isFuture, tAct);
           items.push({
@@ -5269,7 +5317,8 @@
         });
 
         // Operarios de apoyo / otros turnos que escanearon en este bloque
-        dateRecs.forEach(a => {
+        const allBreakdownRecs = (targetShift === '3') ? dateRecs.concat(prevDateRecs) : dateRecs;
+        allBreakdownRecs.forEach(a => {
           const aid = a.employeeId || a.pesel || '';
           const apesel = a.pesel || '';
           const aname = a.name || aid;
@@ -5282,9 +5331,12 @@
           if (!processedIds.has(aid) && !processedIds.has(a.pesel) && hEnt && hEnt.includes(':')) {
             const entH = parseInt(hEnt.split(':')[0], 10);
             let matches = (targetShift === 'ALL');
-            if (targetShift === '1' && entH >= 5 && entH <= 13) matches = true;
-            if (targetShift === '2' && entH >= 13 && entH <= 21) matches = true;
-            if (targetShift === '3' && (entH >= 21 || entH <= 5)) matches = true;
+            if (targetShift === '1' && entH >= 5 && entH <= 13 && a.fecha === ptYmd) matches = true;
+            if (targetShift === '2' && entH >= 13 && entH <= 21 && a.fecha === ptYmd) matches = true;
+            if (targetShift === '3') {
+              if (a.fecha === ptYmd && (entH >= 21 || entH <= 5)) matches = true;
+              else if (a.fecha === prevYmd && entH >= 21) matches = true;
+            }
 
             if (matches) {
               const matchedShift = (entH >= 5 && entH < 13) ? '1' : ((entH >= 13 && entH < 21) ? '2' : '3');
