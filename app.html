@@ -2048,6 +2048,34 @@
       checkSyncControlFlagWeb(false);
     }, SYNC_CONTROL_INTERVAL_MS);
 
+    // Incrementa atómicamente la variable de control 'version_asistencia' (+1) tras un escaneo real
+    async function incrementAttendanceSyncFlag() {
+      try {
+        const getUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/configuracion/sync_control?key=' + FIRESTORE_API_KEY;
+        const r = await _originalFetch(getUrl);
+        let curVer = 1;
+        if (r.ok) {
+          const d = await r.json();
+          curVer = parseInt(d.fields?.version_asistencia?.integerValue || d.fields?.version_datos?.integerValue || '1', 10);
+        }
+        const nextVer = curVer + 1;
+        const patchUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/configuracion/sync_control?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=version_asistencia&updateMask.fieldPaths=timestamp_actualizacion';
+        const payload = {
+          fields: {
+            version_asistencia: { integerValue: String(nextVer) },
+            timestamp_actualizacion: { integerValue: String(Date.now()) }
+          }
+        };
+        fetch(patchUrl, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).then(function() {
+          console.log('✅ [SyncControl] Banderín version_asistencia incrementado a v' + nextVer);
+        }).catch(function() {});
+      } catch(e) {}
+    }
+
     function parseFirestoreDoc(fields) {
       if (!fields) return {};
       const res = {};
@@ -4073,24 +4101,26 @@
         }
       };
 
-      const attFetchPromise = fetch(runQueryUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(attBody)
-      }).then(qr => qr.ok ? qr.json() : [])
-        .then(qRes => {
-          const docs = [];
-          (qRes || []).forEach(item => {
-            if (item.document) docs.push(item.document);
-          });
-          if (docs.length > 0) {
-            try { localStorage.setItem('unamel_web_cached_all_month_attendance', JSON.stringify(docs)); } catch(e){}
-          }
-          return docs;
-        }).catch(err => {
-          console.warn('Error fetching month attendance, using fallback:', err);
-          return cachedMonthAttDocs || [];
-        });
+      const attFetchPromise = (cachedMonthAttDocs && cachedMonthAttDocs.length > 0 && !force)
+        ? Promise.resolve(cachedMonthAttDocs)
+        : fetch(runQueryUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(attBody)
+          }).then(qr => qr.ok ? qr.json() : [])
+            .then(qRes => {
+              const docs = [];
+              (qRes || []).forEach(item => {
+                if (item.document) docs.push(item.document);
+              });
+              if (docs.length > 0) {
+                try { localStorage.setItem('unamel_web_cached_all_month_attendance', JSON.stringify(docs)); } catch(e){}
+              }
+              return docs;
+            }).catch(err => {
+              console.warn('Error fetching month attendance, using fallback:', err);
+              return cachedMonthAttDocs || [];
+            });
 
       Promise.all([
         attFetchPromise,
@@ -6397,8 +6427,11 @@
           }).then(function(res) {
             if (res.ok) {
               dequeuePendingSyncAction(actionId);
+              incrementAttendanceSyncFlag();
             }
-          }).catch(function() {});
+          }).catch(function() {
+            incrementAttendanceSyncFlag();
+          });
         }
       } catch (err) {
         console.error('Error al guardar asistencia:', err);
@@ -6515,8 +6548,13 @@
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(payload)
             }).then(function(res) {
-              if (res.ok) dequeuePendingSyncAction(autoActionId);
-            }).catch(function() {});
+              if (res.ok) {
+                dequeuePendingSyncAction(autoActionId);
+                incrementAttendanceSyncFlag();
+              }
+            }).catch(function() {
+              incrementAttendanceSyncFlag();
+            });
           }
         } catch(e) {}
       }
@@ -7206,16 +7244,49 @@
       }
     });
 
-    // Auto-actualización periódica en segundo plano (cada 30s si la pestaña está activa, cero cuota si está oculta)
+    // ==========================================
+    // CONTROL DE BANDERÍN DE ASISTENCIA PARA GRÁFICA (ESTRICTAMENTE CADA 60 SEGUNDOS = 1 LECTURA/MIN)
+    // ==========================================
+    let localChartAttendanceVersion = Number(localStorage.getItem('unamel_web_chart_attendance_version') || '0');
+    let _lastChartFlagCheck = 0;
+    const CHART_FLAG_CHECK_INTERVAL_MS = 60000; // 60 segundos (1 minuto exacto)
+
+    async function checkChartAttendanceFlag(forced = false) {
+      if (document.hidden && !forced) return;
+      const now = Date.now();
+      if (!forced && (now - _lastChartFlagCheck < CHART_FLAG_CHECK_INTERVAL_MS)) return;
+      _lastChartFlagCheck = now;
+
+      try {
+        const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/configuracion/sync_control?key=' + FIRESTORE_API_KEY;
+        const res = await _originalFetch(url);
+        if (!res.ok) return;
+        const doc = await res.json();
+        const remoteVer = parseInt(doc.fields?.version_asistencia?.integerValue || doc.fields?.version_datos?.integerValue || '0', 10);
+
+        if (remoteVer > localChartAttendanceVersion || forced) {
+          console.log('🔔 [Gráfica 24h] Nuevo escaneo en planta! Versión remota:', remoteVer, '> Local:', localChartAttendanceVersion);
+          localChartAttendanceVersion = remoteVer;
+          localStorage.setItem('unamel_web_chart_attendance_version', String(remoteVer));
+          // ÚNICAMENTE si hubo un nuevo escaneo comprobado se descargan los datos
+          loadCoordData(true);
+        } else {
+          // NO HUBO ESCANEOS: CERO LECTURAS A REGISTRO_ASISTENCIA (Se mantiene en memoria)
+        }
+      } catch (e) {
+        console.warn('Error verificando banderín de asistencia:', e);
+      }
+    }
+
+    // Temporizador estricto de 60 segundos (1 lectura por minuto únicamente si la pestaña está activa)
     setInterval(function() {
-      if (document.hidden) return;
       const tabCoord = document.getElementById('tab-coord');
       const isCoordVisible = tabCoord && !tabCoord.classList.contains('hidden');
       const isMonitor = (currentUser && currentUser.rol_app === 'MONITOR_24H');
       if (isCoordVisible || isMonitor) {
-        loadCoordData(false);
+        checkChartAttendanceFlag(false);
       }
-    }, 30000);
+    }, CHART_FLAG_CHECK_INTERVAL_MS);
 </script>
 </body>
 </html>
