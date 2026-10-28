@@ -2357,6 +2357,8 @@
             } catch(attErr) {}
 
             errBox.style.display = 'none';
+            // Consultar inmediatamente /registro_asistencia/ para poblar el estado de hoy antes de renderizar
+            await syncUserTodayAttendanceLive(true, emp);
             renderUserProfile(emp);
             localStorage.setItem('unamel_cached_id', peselInput);
             localStorage.setItem('unamel_cached_pin', pinInput);
@@ -2394,6 +2396,7 @@
 
             if (pinOk) {
               errBox.style.display = 'none';
+              await syncUserTodayAttendanceLive(true, lastUser);
               renderUserProfile(lastUser);
               localStorage.setItem('unamel_cached_id', peselInput);
               localStorage.setItem('unamel_cached_pin', pinInput);
@@ -5926,73 +5929,151 @@
 
     let lastFirestoreSyncTimestamp = 0;
 
+    // Helper para obtener fecha local en formato YYYY-MM-DD sin desfase UTC
+    function getLocalYmd(dateObj = new Date()) {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + d;
+    }
+
     // Obtiene la fecha oficial de inicio de turno (especialmente Turno 3: 22:00 a 06:00)
     function getShiftStartDate(worker, nowDate = new Date()) {
-      if (!worker) return nowDate.toISOString().slice(0, 10);
-      const ymd = nowDate.toISOString().slice(0, 10);
+      if (!worker) return getLocalYmd(nowDate);
+      const ymd = getLocalYmd(nowDate);
       const timeStr = String(nowDate.getHours()).padStart(2, '0') + ':' + String(nowDate.getMinutes()).padStart(2, '0');
       const shift = String(worker.turno_actual || worker.turno || '1');
       // Turno 3 (22:00 a 06:00): si se escanea antes de las 10:00 AM, el turno inició ayer a las 22:00
       if (shift === '3' && timeStr < '10:00') {
         const yest = new Date(nowDate.getTime() - 24 * 3600 * 1000);
-        return yest.toISOString().slice(0, 10);
+        return getLocalYmd(yest);
       }
       return ymd;
     }
 
-    // Sincronización en tiempo real exclusivamente desde /registro_asistencia/
-    async function syncUserTodayAttendanceLive(force = false) {
-      if (!currentUser) return;
+    // Sincronización en tiempo real y detección del último ingreso exclusivamente desde /registro_asistencia/
+    async function syncUserTodayAttendanceLive(force = false, targetEmp = null) {
+      const user = targetEmp || currentUser;
+      if (!user) return;
       const now = Date.now();
-      if (!force && (now - lastFirestoreSyncTimestamp < 300000)) {
+      if (!force && (now - lastFirestoreSyncTimestamp < 30000)) {
         return;
       }
       lastFirestoreSyncTimestamp = now;
       try {
-        const pesel = String(currentUser.pesel || currentUser.id || '').trim();
-        const shiftDate = getShiftStartDate(currentUser);
-        const candidates = [
-          shiftDate + '_' + pesel,
-          shiftDate + '_' + pesel + '-2',
-          shiftDate + '_' + (currentUser.id || '')
-        ].filter(Boolean);
+        const pesel = String(user.pesel || user.id || '').trim();
+        const empId = String(user.id || '').trim();
 
+        // Evaluar candidatos para HOY, FECHA DE TURNO y AYER (cubre Turno 3 y cruces de medianoche)
+        const nowDate = new Date();
+        const todayYmd = getLocalYmd(nowDate);
+        const yestDate = new Date(nowDate.getTime() - 24 * 3600 * 1000);
+        const yestYmd = getLocalYmd(yestDate);
+        const shiftYmd = getShiftStartDate(user, nowDate);
+
+        const dateCandidates = Array.from(new Set([todayYmd, shiftYmd, yestYmd])).filter(Boolean);
+
+        // 1. Revisión rápida en caché local de asistencia de todo el mes si está disponible
         let foundRecord = null;
-
-        for (const docId of candidates) {
-          const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia/' + encodeURIComponent(docId) + '?key=' + FIRESTORE_API_KEY;
-          const res = await fetch(url, { cache: 'no-cache' });
-          if (res.ok) {
-            const data = await res.json();
-            const fields = data.fields || {};
-            const hEntrada = fields.horaEntrada?.stringValue || fields.hora_entrada?.stringValue || '';
-            const hSalida = fields.horaSalida?.stringValue || fields.hora_salida?.stringValue || '';
-            const status = fields.status?.stringValue || '';
-            const hCalc = fields.horasCalculadas?.doubleValue ?? fields.horas_calculadas?.doubleValue ?? 0;
-            if (hEntrada) {
-              foundRecord = { horaEntrada: hEntrada, horaSalida: hSalida, status: status, horasCalculadas: hCalc, docId: docId };
-              // Si este registro aún no tiene salida, es el turno activo actual
-              if (!hSalida) break;
+        try {
+          const cachedAllAtt = JSON.parse(localStorage.getItem('unamel_web_cached_all_month_attendance') || '[]');
+          if (Array.isArray(cachedAllAtt) && cachedAllAtt.length > 0) {
+            for (const d of dateCandidates) {
+              const matched = cachedAllAtt.find(doc => {
+                const f = doc.fields || {};
+                const docFecha = f.fecha?.stringValue || '';
+                const docPesel = f.pesel?.stringValue || '';
+                const docEmpId = f.employeeId?.stringValue || '';
+                return (docFecha === d) && (docPesel === pesel || (empId && docEmpId === empId));
+              });
+              if (matched) {
+                const f = matched.fields || {};
+                const hEntrada = f.horaEntrada?.stringValue || f.hora_entrada?.stringValue || '';
+                const hSalida = f.horaSalida?.stringValue || f.hora_salida?.stringValue || '';
+                const status = f.status?.stringValue || '';
+                const hCalc = f.horasCalculadas?.doubleValue ?? f.horas_calculadas?.doubleValue ?? 0;
+                if (hEntrada) {
+                  foundRecord = { horaEntrada: hEntrada, horaSalida: hSalida, status: status, horasCalculadas: hCalc, fecha: d };
+                  if (!hSalida) break; // Turno activo sin salida tiene máxima prioridad
+                }
+              }
             }
+          }
+        } catch(cErr) {}
+
+        // Aplicar inmediatamente si se encontró en caché local para cero parpadeo
+        if (foundRecord && foundRecord.horaEntrada) {
+          user.ultimo_acceso_fecha = foundRecord.fecha;
+          user.ultima_hora_entrada = foundRecord.horaEntrada;
+          user.ultima_hora_salida = foundRecord.horaSalida || '';
+          if (foundRecord.horasCalculadas) user.horas_calculadas_hoy = foundRecord.horasCalculadas;
+          if (user === currentUser) {
+            updateGateProfileButton();
+            updateLiveShiftCard();
           }
         }
 
-        if (foundRecord && foundRecord.horaEntrada) {
-          currentUser.ultimo_acceso_fecha = shiftDate;
-          currentUser.ultima_hora_entrada = foundRecord.horaEntrada;
-          currentUser.ultima_hora_salida = foundRecord.horaSalida || '';
-          if (foundRecord.horasCalculadas) currentUser.horas_calculadas_hoy = foundRecord.horasCalculadas;
-          localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        // 2. Consulta en vivo a Firestore /registro_asistencia/
+        const idList = Array.from(new Set([pesel, empId])).filter(Boolean);
+        const docCandidates = [];
+        for (const d of dateCandidates) {
+          for (const id of idList) {
+            docCandidates.push({ docId: d + '_' + id, fecha: d });
+            docCandidates.push({ docId: d + '_' + id + '-2', fecha: d });
+          }
+        }
 
-          updateGateProfileButton();
-          updateLiveShiftCard();
-        } else {
-          if (currentUser.ultimo_acceso_fecha !== shiftDate) {
-            currentUser.ultima_hora_entrada = '';
-            currentUser.ultima_hora_salida = '';
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        let remoteRecord = null;
+        for (const item of docCandidates) {
+          try {
+            const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia/' + encodeURIComponent(item.docId) + '?key=' + FIRESTORE_API_KEY;
+            const res = await fetch(url, { cache: 'no-cache' });
+            if (res.ok) {
+              const data = await res.json();
+              const fields = data.fields || {};
+              const hEntrada = fields.horaEntrada?.stringValue || fields.hora_entrada?.stringValue || '';
+              const hSalida = fields.horaSalida?.stringValue || fields.hora_salida?.stringValue || '';
+              const status = fields.status?.stringValue || '';
+              const hCalc = fields.horasCalculadas?.doubleValue ?? fields.horas_calculadas?.doubleValue ?? 0;
+              const docFecha = fields.fecha?.stringValue || item.fecha;
+
+              if (hEntrada) {
+                const cand = { horaEntrada: hEntrada, horaSalida: hSalida, status: status, horasCalculadas: hCalc, docId: item.docId, fecha: docFecha };
+                // Prioridad absoluta a turno activo sin salida
+                if (!hSalida) {
+                  remoteRecord = cand;
+                  break;
+                } else if (!remoteRecord) {
+                  remoteRecord = cand;
+                }
+              }
+            }
+          } catch (fetchErr) {}
+        }
+
+        if (remoteRecord && remoteRecord.horaEntrada) {
+          user.ultimo_acceso_fecha = remoteRecord.fecha;
+          user.ultima_hora_entrada = remoteRecord.horaEntrada;
+          user.ultima_hora_salida = remoteRecord.horaSalida || '';
+          if (remoteRecord.horasCalculadas) user.horas_calculadas_hoy = remoteRecord.horasCalculadas;
+          localStorage.setItem('currentUser', JSON.stringify(user));
+          localStorage.setItem('unamel_user_session', JSON.stringify(user));
+
+          if (user === currentUser) {
             updateGateProfileButton();
             updateLiveShiftCard();
+          }
+        } else if (!foundRecord) {
+          // Si ni en remoto ni en caché hay registro reciente
+          if (user.ultimo_acceso_fecha && !dateCandidates.includes(user.ultimo_acceso_fecha)) {
+            user.ultima_hora_entrada = '';
+            user.ultima_hora_salida = '';
+            localStorage.setItem('currentUser', JSON.stringify(user));
+            localStorage.setItem('unamel_user_session', JSON.stringify(user));
+            if (user === currentUser) {
+              updateGateProfileButton();
+              updateLiveShiftCard();
+            }
           }
         }
       } catch (e) {
@@ -6005,13 +6086,20 @@
     let gateIsProcessingCode = false;
 
     window.openGateScannerModal = async function(forcedMode) {
-      if (forcedMode) {
+      await syncUserTodayAttendanceLive(true);
+      const nowDate = new Date();
+      const todayYmd = getLocalYmd(nowDate);
+      const yestYmd = getLocalYmd(new Date(nowDate.getTime() - 24 * 3600 * 1000));
+      const isRecent = Boolean(currentUser && (currentUser.ultimo_acceso_fecha === todayYmd || currentUser.ultimo_acceso_fecha === yestYmd));
+      const hasEntryToday = Boolean(isRecent && currentUser.ultima_hora_entrada && currentUser.ultima_hora_entrada.trim().length > 0);
+      const hasExitToday = Boolean(isRecent && currentUser.ultima_hora_salida && currentUser.ultima_hora_salida.trim().length > 0);
+
+      if (forcedMode === 'ENTRADA' && hasEntryToday && !hasExitToday) {
+        // BLINDAJE: Si ya ingresó a la fábrica y no ha salido, conmutar forzosamente a SALIDA
+        gateScanCurrentMode = 'SALIDA';
+      } else if (forcedMode) {
         gateScanCurrentMode = forcedMode;
       } else {
-        await syncUserTodayAttendanceLive(true);
-        const shiftDate = getShiftStartDate(currentUser);
-        const hasEntryToday = (currentUser && currentUser.ultimo_acceso_fecha === shiftDate && currentUser.ultima_hora_entrada && currentUser.ultima_hora_entrada.trim().length > 0);
-        const hasExitToday = (currentUser && currentUser.ultimo_acceso_fecha === shiftDate && currentUser.ultima_hora_salida && currentUser.ultima_hora_salida.trim().length > 0);
         if (hasEntryToday && !hasExitToday) {
           gateScanCurrentMode = 'SALIDA';
         } else if (hasExitToday) {
@@ -6189,8 +6277,22 @@
         if (currentUser) {
           const empId = String(currentUser.id || currentUser.pesel || '').trim();
           const pesel = String(currentUser.pesel || currentUser.id || '').trim();
-          const isExit = (gateScanCurrentMode === 'SALIDA');
+
+          const todayYmd = getLocalYmd(now);
+          const yestYmd = getLocalYmd(new Date(now.getTime() - 24 * 3600 * 1000));
+          const isRecent = Boolean(currentUser && (currentUser.ultimo_acceso_fecha === todayYmd || currentUser.ultimo_acceso_fecha === yestYmd));
+          const hasActiveEntry = Boolean(isRecent && currentUser.ultima_hora_entrada && (!currentUser.ultima_hora_salida || currentUser.ultima_hora_salida.trim().length === 0));
+
+          let isExit = (gateScanCurrentMode === 'SALIDA');
           const isApoyo = (gateScanCurrentMode === 'ENTRADA_APOYO' || !!currentUser.es_turno_apoyo);
+
+          // BLINDAJE ANTI-SOBRESCRITURA DE ENTRADA:
+          // Si el modo no es salida ni apoyo, pero el usuario ya tiene una entrada activa registrada, conmutar forzosamente a SALIDA
+          if (!isExit && !isApoyo && hasActiveEntry) {
+            console.warn('Blindaje Anti-Sobrescritura: Entrada previa existente a las ' + currentUser.ultima_hora_entrada + '. Conmutando escaneo automáticamente a SALIDA.');
+            isExit = true;
+          }
+
           const statusField = isExit ? 'horaSalida' : 'horaEntrada';
 
           // Comprobar programación y horario
@@ -6225,11 +6327,13 @@
           }
 
           // Formato estándar obligatorio: {fechaInicioTurno}_{PESEL} o {fechaInicioTurno}_{PESEL}-2
-          const targetDocId = isApoyo ? (shiftDate + '_' + pesel + '-2') : (shiftDate + '_' + pesel);
+          // Si es salida, vincularla al documento de la entrada original
+          const attDate = isExit ? (currentUser.ultimo_acceso_fecha || shiftDate) : shiftDate;
+          const targetDocId = isApoyo ? (attDate + '_' + pesel + '-2') : (attDate + '_' + pesel);
           const attDocUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia/' + encodeURIComponent(targetDocId) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=fecha&updateMask.fieldPaths=pesel&updateMask.fieldPaths=employeeId&updateMask.fieldPaths=employeeName&updateMask.fieldPaths=grupo&updateMask.fieldPaths=turno&updateMask.fieldPaths=status&updateMask.fieldPaths=metodoMarcacion&updateMask.fieldPaths=horaInicioEfectiva&updateMask.fieldPaths=qrGate&updateMask.fieldPaths=markedAt&updateMask.fieldPaths=markedBy&updateMask.fieldPaths=' + statusField + (isExit ? '&updateMask.fieldPaths=horasCalculadas' : '');
 
           const payloadFields = {
-            fecha: { stringValue: shiftDate },
+            fecha: { stringValue: attDate },
             pesel: { stringValue: pesel },
             employeeId: { stringValue: empId },
             employeeName: { stringValue: currentUser.nombre_completo || '' },
@@ -6251,7 +6355,7 @@
           const payload = { fields: payloadFields };
 
           if (!isExit) {
-            currentUser.ultimo_acceso_fecha = shiftDate;
+            currentUser.ultimo_acceso_fecha = attDate;
             currentUser.ultima_hora_entrada = timeStr;
             currentUser.ultima_hora_salida = '';
             currentUser.auto_cierre_5h = false;
@@ -6266,7 +6370,7 @@
             localStorage.setItem('unamel_user_session', JSON.stringify(currentUser));
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
             localStorage.setItem('unamel_today_attendance_' + pesel, JSON.stringify({
-              fecha: shiftDate,
+              fecha: attDate,
               horaEntrada: currentUser.ultima_hora_entrada,
               horaSalida: currentUser.ultima_hora_salida,
               horasCalculadas: currentUser.horas_calculadas_hoy || 0,
@@ -6274,7 +6378,7 @@
             }));
           } catch (e) {}
 
-          const actionId = 'att_' + shiftDate + '_' + pesel + '_' + (isExit ? 'SALIDA' : 'ENTRADA') + (isApoyo ? '_APOYO' : '');
+          const actionId = 'att_' + attDate + '_' + pesel + '_' + (isExit ? 'SALIDA' : 'ENTRADA') + (isApoyo ? '_APOYO' : '');
 
           // Encolar acción protegida
           enqueuePendingSyncAction({
@@ -6330,9 +6434,13 @@
       const icon = document.getElementById('btn-gate-scan-icon');
       if (!btn || !txt) return;
 
-      const shiftDate = getShiftStartDate(currentUser);
-      const hasEntry = (currentUser && currentUser.ultimo_acceso_fecha === shiftDate && currentUser.ultima_hora_entrada);
-      let hasExit = (currentUser && currentUser.ultimo_acceso_fecha === shiftDate && currentUser.ultima_hora_salida && currentUser.ultima_hora_salida.trim().length > 0);
+      const nowDate = new Date();
+      const todayYmd = getLocalYmd(nowDate);
+      const yestYmd = getLocalYmd(new Date(nowDate.getTime() - 24 * 3600 * 1000));
+      const isRecentAccess = Boolean(currentUser && (currentUser.ultimo_acceso_fecha === todayYmd || currentUser.ultimo_acceso_fecha === yestYmd));
+
+      const hasEntry = Boolean(isRecentAccess && currentUser.ultima_hora_entrada && currentUser.ultima_hora_entrada.trim().length > 0);
+      let hasExit = Boolean(isRecentAccess && currentUser.ultima_hora_salida && currentUser.ultima_hora_salida.trim().length > 0);
 
       const isCoord = (currentUser && (
         currentUser.rol === 'COORDINADOR' || 
@@ -6349,6 +6457,10 @@
           const entryParts = (currentUser.ultima_hora_entrada || '06:00').split(':').map(Number);
           const now = new Date();
           const entryDate = new Date();
+          if (currentUser.ultimo_acceso_fecha) {
+            const [eY, eM, eD] = currentUser.ultimo_acceso_fecha.split('-').map(Number);
+            entryDate.setFullYear(eY, eM - 1, eD);
+          }
           entryDate.setHours(entryParts[0], entryParts[1], 0, 0);
 
           const baseH = Number(currentUser.horas_base_turno) || 8;
@@ -6485,9 +6597,13 @@
       const cardHours = document.getElementById('box-live-shift-card-hours');
       if (!currentUser) return;
 
-      const todayStr = getShiftStartDate(currentUser);
-      const hasEntry = (currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_entrada);
-      const hasExit = (currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_salida && currentUser.ultima_hora_salida.trim().length > 0);
+      const nowDate = new Date();
+      const todayYmd = getLocalYmd(nowDate);
+      const yestYmd = getLocalYmd(new Date(nowDate.getTime() - 24 * 3600 * 1000));
+      const isRecentAccess = Boolean(currentUser && (currentUser.ultimo_acceso_fecha === todayYmd || currentUser.ultimo_acceso_fecha === yestYmd));
+
+      const hasEntry = Boolean(isRecentAccess && currentUser.ultima_hora_entrada && currentUser.ultima_hora_entrada.trim().length > 0);
+      const hasExit = Boolean(isRecentAccess && currentUser.ultima_hora_salida && currentUser.ultima_hora_salida.trim().length > 0);
       const isAutoClosed = currentUser.auto_cierre_5h;
       const baseH = Number(currentUser.horas_base_turno) || 8;
       const isCoord = (
@@ -6509,11 +6625,14 @@
 
       if (hasEntry && !hasExit) {
         const entryParts = (currentUser.ultima_hora_entrada || '06:00').split(':').map(Number);
-        const now = new Date();
         const entryDate = new Date();
+        if (currentUser.ultimo_acceso_fecha) {
+          const [eY, eM, eD] = currentUser.ultimo_acceso_fecha.split('-').map(Number);
+          entryDate.setFullYear(eY, eM - 1, eD);
+        }
         entryDate.setHours(entryParts[0], entryParts[1], 0, 0);
 
-        elapsedSec = Math.max(0, Math.floor((now.getTime() - entryDate.getTime()) / 1000));
+        elapsedSec = Math.max(0, Math.floor((nowDate.getTime() - entryDate.getTime()) / 1000));
         statusPill = '🟢 CÓMPUTO EN TIEMPO REAL';
         statusColor = '#4ade80';
         dotColor = '#22c55e';
@@ -6993,6 +7112,7 @@
           const emp = JSON.parse(savedSession);
           if (emp && (emp.id !== undefined || emp.pesel)) {
             renderUserProfile(emp);
+            syncUserTodayAttendanceLive(true, emp);
             setTimeout(flushPendingFirestoreQueue, 1500);
             return;
           }
