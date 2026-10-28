@@ -4700,8 +4700,8 @@
         return days[d.getDay()] + ' ' + pad2(d.getDate());
       }
 
-      // Calcular operarios reales activos para una fecha y ventana de horas
-      function getActualScans(targetYMD, startH, endH) {
+      // Calcular operarios reales activos para una fecha y ventana de minutos exacta (subida en entrada y bajada en salida)
+      function getActualScans(targetYMD, startH, endH, startM = 0, windowM = 0) {
         let c = 0;
         const seen = new Set();
         const allRecs = (window.allMonthAttendanceRecords && window.allMonthAttendanceRecords.length > 0)
@@ -4711,6 +4711,11 @@
         const [ty, tm, td] = targetYMD.split('-').map(Number);
         const prevD = new Date(ty, tm - 1, td - 1);
         const prevYMD = formatYMD(prevD);
+
+        const bucketStartMins = startH * 60 + startM;
+        const bucketEndMins = (windowM > 0)
+          ? (bucketStartMins + windowM)
+          : (endH > startH ? (endH * 60 + 59) : (bucketStartMins + 30));
 
         allRecs.forEach(rec => {
           const recDate = rec.fecha || (rec.timestamp ? rec.timestamp.split('T')[0] : '');
@@ -4727,23 +4732,45 @@
 
           const t = rec.horaEntrada || (rec.timestamp ? rec.timestamp.split('T')[1] : '');
           if (t && t.includes(':')) {
-            const entryH = parseInt(t.split(':')[0], 10);
+            const entryParts = t.split(':');
+            const entryH = parseInt(entryParts[0], 10);
+            const entryM = parseInt(entryParts[1] || '0', 10);
+            const entryMins = entryH * 60 + entryM;
+
             const tOut = rec.horaSalida || '';
-            const exitH = (tOut && tOut.includes(':')) ? parseInt(tOut.split(':')[0], 10) : null;
+            let exitMins = null;
+            if (tOut && tOut.includes(':')) {
+              const outParts = tOut.split(':');
+              exitMins = parseInt(outParts[0], 10) * 60 + parseInt(outParts[1] || '0', 10);
+            }
+
             let active = false;
 
             if (recDate === targetYMD) {
-              const isNight = (entryH >= 21 || entryH <= 5);
+              const isNight = (entryH >= 21 || entryH <= 5 || String(rec.turno || '') === '3');
               if (isNight) {
-                active = (startH >= 21 || startH <= 6) && (exitH === null || startH <= exitH);
+                if (entryH >= 21) {
+                  // Turno noche iniciado antes de medianoche hoy: activo de entryMins a 1440
+                  const endOfDayMins = exitMins !== null ? exitMins : 1440;
+                  active = (bucketEndMins > entryMins && bucketStartMins < endOfDayMins);
+                } else {
+                  // Turno noche iniciado en la madrugada (ej: Lenny 01:40, María José 03:34)
+                  // Fin efectivo: horaSalida o 06:00 (360 mins)
+                  const shiftEndMins = (exitMins !== null) ? exitMins : Math.min(360, entryMins + 8 * 60);
+                  // La línea sube a la hora de entrada y baja a la hora de salida
+                  active = (bucketEndMins > entryMins && bucketStartMins < shiftEndMins);
+                }
               } else {
-                const shiftEnd = (exitH !== null) ? exitH : (entryH + 8);
-                active = (startH >= entryH && startH <= shiftEnd) || (entryH >= startH && entryH <= endH);
+                // Turnos diurnos (T1: 06:00-14:00, T2: 14:00-22:00)
+                const shiftEndMins = (exitMins !== null) ? exitMins : (entryMins + 8 * 60);
+                active = (bucketEndMins > entryMins && bucketStartMins < shiftEndMins);
               }
-            } else if (recDate === prevYMD && startH <= 6) {
-              const isNight = (entryH >= 21);
-              if (isNight) {
-                active = (exitH === null || startH <= exitH || exitH <= 6);
+            } else if (recDate === prevYMD) {
+              // Turno noche de la víspera que cruzó medianoche a hoy
+              const isNightCross = (entryH >= 21 || String(rec.turno || '') === '3');
+              if (isNightCross) {
+                const shiftEndMinsToday = (exitMins !== null) ? exitMins : 360;
+                active = (bucketStartMins < shiftEndMinsToday);
               }
             }
 
@@ -4787,7 +4814,7 @@
           const d = new Date(baseMs - i * 30 * 60 * 1000);
           const ymd = formatYMD(d);
           const exp = getNoiseFreeExpected(d, plantEmps);
-          const act = getActualScans(ymd, d.getHours(), d.getHours());
+          const act = getActualScans(ymd, d.getHours(), d.getHours(), d.getMinutes(), 30);
           const h = d.getHours(), m = d.getMinutes();
           const axis = (h === 0 && m === 0) ? fmtDay(d) : ((h === 12 && m === 0) ? '12:00' : (i === 0 ? fmtHour(d) : ''));
           pastPoints.push({ timeLabel: fmtHour(d), fullLabel: fmtDay(d) + ' · ' + fmtHour(d), ymdDate: ymd, expected: exp.count, actual: act, isFuture: false, shift: exp.desc, axisLabel: axis });
@@ -4809,7 +4836,7 @@
           const d = new Date(baseMs - i * 60 * 60 * 1000);
           const ymd = formatYMD(d);
           const exp = getNoiseFreeExpected(d, plantEmps);
-          const act = getActualScans(ymd, d.getHours(), d.getHours());
+          const act = getActualScans(ymd, d.getHours(), d.getHours(), 0, 60);
           const h = d.getHours();
           const axis = (h === 0) ? fmtDay(d) : ((h === 12) ? '12:00' : (i === 0 ? pad2(h) + ':00' : ''));
           pastPoints.push({ timeLabel: pad2(h) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(h) + ':00', ymdDate: ymd, expected: exp.count, actual: act, isFuture: false, shift: exp.desc, axisLabel: axis });
@@ -4832,7 +4859,7 @@
           const d = new Date(baseMs - i * 4 * 60 * 60 * 1000);
           const ymd = formatYMD(d);
           const exp = getNoiseFreeExpected(d, plantEmps);
-          const act = getActualScans(ymd, Math.max(0, d.getHours() - 1), Math.min(23, d.getHours() + 2));
+          const act = getActualScans(ymd, d.getHours(), Math.min(23, d.getHours() + 3), 0, 240);
           const h = d.getHours();
           const axis = (h === 0) ? fmtDay(d) : ((h === 12) ? '12:00' : (i === 0 ? pad2(h) + ':00' : ''));
           pastPoints.push({ timeLabel: fmtDay(d) + ' ' + pad2(h) + ':00', fullLabel: fmtDay(d) + ' · ' + pad2(h) + ':00', ymdDate: ymd, expected: exp.count, actual: act, isFuture: false, shift: exp.desc, axisLabel: axis });
