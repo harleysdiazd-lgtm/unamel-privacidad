@@ -3283,14 +3283,36 @@
             });
           } else {
             try {
-              const attUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + dateStr + '/registros?key=' + FIRESTORE_API_KEY + '&pageSize=300';
-              const r = await fetch(attUrl);
+              const queryUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents:runQuery?key=' + FIRESTORE_API_KEY;
+              const queryBody = {
+                structuredQuery: {
+                  from: [{ collectionId: 'registro_asistencia' }],
+                  where: {
+                    fieldFilter: {
+                      field: { fieldPath: 'fecha' },
+                      op: 'EQUAL',
+                      value: { stringValue: dateStr }
+                    }
+                  }
+                }
+              };
+              const r = await fetch(queryUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(queryBody)
+              });
               if (r.ok) {
-                const d = await r.json();
-                (d.documents || []).forEach(doc => {
-                  const f = parseFirestoreDoc(doc.fields);
-                  const empId = f.employeeId || doc.name.split('/').pop();
-                  attendanceRecordsMap[empId] = f;
+                const list = await r.json();
+                (list || []).forEach(item => {
+                  if (item.document && item.document.fields) {
+                    const f = parseFirestoreDoc(item.document.fields);
+                    const docId = item.document.name.split('/').pop();
+                    const pesel = f.pesel || (docId.includes('_') ? docId.split('_')[1].replace('-2', '') : docId);
+                    const empId = f.employeeId || pesel;
+                    if (empId) attendanceRecordsMap[empId] = f;
+                    if (pesel) attendanceRecordsMap[pesel] = f;
+                    attendanceRecordsMap[docId] = f;
+                  }
                 });
               }
             } catch (e) {}
@@ -3351,18 +3373,40 @@
       attendanceRecordsMap = {};
 
       try {
-        const attUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + dateStr + '/registros?key=' + FIRESTORE_API_KEY + '&pageSize=300';
-        const r = await fetch(attUrl, { cache: 'no-cache' });
+        const queryUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents:runQuery?key=' + FIRESTORE_API_KEY;
+        const queryBody = {
+          structuredQuery: {
+            from: [{ collectionId: 'registro_asistencia' }],
+            where: {
+              fieldFilter: {
+                field: { fieldPath: 'fecha' },
+                op: 'EQUAL',
+                value: { stringValue: dateStr }
+              }
+            }
+          }
+        };
+        const r = await fetch(queryUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(queryBody)
+        });
         if (r.ok) {
-          const d = await r.json();
-          (d.documents || []).forEach(doc => {
-            const f = parseFirestoreDoc(doc.fields);
-            const empId = f.employeeId || doc.name.split('/').pop();
-            attendanceRecordsMap[empId] = f;
+          const list = await r.json();
+          (list || []).forEach(item => {
+            if (item.document && item.document.fields) {
+              const f = parseFirestoreDoc(item.document.fields);
+              const docId = item.document.name.split('/').pop();
+              const pesel = f.pesel || (docId.includes('_') ? docId.split('_')[1].replace('-2', '') : docId);
+              const empId = f.employeeId || pesel;
+              if (empId) attendanceRecordsMap[empId] = f;
+              if (pesel) attendanceRecordsMap[pesel] = f;
+              attendanceRecordsMap[docId] = f;
+            }
           });
         }
       } catch (e) {
-        console.warn('Error fetching asistencia_diaria:', e);
+        console.warn('Error fetching registro_asistencia:', e);
       }
 
       renderAttendanceUI();
@@ -3741,8 +3785,13 @@
 
       let savedOk = false;
       try {
-        // 1. Dual-write en registro_asistencia (autorizado 100% en Firestore)
-        const urlFlat = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia/' + encodeURIComponent(dateStr + '_' + w.id) + '?key=' + FIRESTORE_API_KEY;
+        const targetPesel = String(w.pesel || w.id || '').trim();
+        payload.fields.pesel = { stringValue: targetPesel };
+        payload.fields.fecha = { stringValue: dateStr };
+
+        // Guardar EXCLUSIVAMENTE en registro_asistencia
+        const targetDocId = dateStr + '_' + targetPesel;
+        const urlFlat = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia/' + encodeURIComponent(targetDocId) + '?key=' + FIRESTORE_API_KEY;
         try {
           const respFlat = await fetch(urlFlat, {
             method: 'PATCH',
@@ -3751,28 +3800,17 @@
           });
           if (respFlat.ok) savedOk = true;
         } catch(ef) {
-          console.warn('Fallback registro_asistencia warning:', ef);
-        }
-
-        // 2. Guardar también en asistencia_diaria
-        const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + dateStr + '/registros/' + encodeURIComponent(w.id) + '?key=' + FIRESTORE_API_KEY;
-        try {
-          const resp = await fetch(url, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          if (resp.ok) savedOk = true;
-        } catch(ed) {
-          console.warn('asistencia_diaria warning:', ed);
+          console.warn('registro_asistencia warning:', ef);
         }
 
         attendanceRecordsMap[w.id] = {
           employeeId: String(w.id),
+          pesel: targetPesel,
           status: selectedAttendanceStatusChoice,
           notes: notes,
           timestamp: new Date().toISOString()
         };
+        if (targetPesel) attendanceRecordsMap[targetPesel] = attendanceRecordsMap[w.id];
         renderAttendanceUI();
         closeAttendanceModal();
       } catch (e) {
@@ -5809,26 +5847,41 @@
 
     let lastFirestoreSyncTimestamp = 0;
 
-    // Sincronización en tiempo real con Firestore protegida por Throttling (Ahorro estricto de Cuota)
+    // Obtiene la fecha oficial de inicio de turno (especialmente Turno 3: 22:00 a 06:00)
+    function getShiftStartDate(worker, nowDate = new Date()) {
+      if (!worker) return nowDate.toISOString().slice(0, 10);
+      const ymd = nowDate.toISOString().slice(0, 10);
+      const timeStr = String(nowDate.getHours()).padStart(2, '0') + ':' + String(nowDate.getMinutes()).padStart(2, '0');
+      const shift = String(worker.turno_actual || worker.turno || '1');
+      // Turno 3 (22:00 a 06:00): si se escanea antes de las 10:00 AM, el turno inició ayer a las 22:00
+      if (shift === '3' && timeStr < '10:00') {
+        const yest = new Date(nowDate.getTime() - 24 * 3600 * 1000);
+        return yest.toISOString().slice(0, 10);
+      }
+      return ymd;
+    }
+
+    // Sincronización en tiempo real exclusivamente desde /registro_asistencia/
     async function syncUserTodayAttendanceLive(force = false) {
       if (!currentUser) return;
       const now = Date.now();
-      // Throttling de 5 minutos (300,000 ms) para proteger cuota salvo petición forzada (ej. al abrir escáner)
       if (!force && (now - lastFirestoreSyncTimestamp < 300000)) {
         return;
       }
       lastFirestoreSyncTimestamp = now;
       try {
-        const todayStr = new Date().toISOString().slice(0, 10);
+        const pesel = String(currentUser.pesel || currentUser.id || '').trim();
+        const shiftDate = getShiftStartDate(currentUser);
         const candidates = [
-          currentUser.pesel,
-          currentUser.id
+          shiftDate + '_' + pesel,
+          shiftDate + '_' + pesel + '-2',
+          shiftDate + '_' + (currentUser.id || '')
         ].filter(Boolean);
 
         let foundRecord = null;
 
-        for (const empId of candidates) {
-          const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + todayStr + '/registros/' + encodeURIComponent(empId) + '?key=' + FIRESTORE_API_KEY;
+        for (const docId of candidates) {
+          const url = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia/' + encodeURIComponent(docId) + '?key=' + FIRESTORE_API_KEY;
           const res = await fetch(url, { cache: 'no-cache' });
           if (res.ok) {
             const data = await res.json();
@@ -5836,42 +5889,26 @@
             const hEntrada = fields.horaEntrada?.stringValue || fields.hora_entrada?.stringValue || '';
             const hSalida = fields.horaSalida?.stringValue || fields.hora_salida?.stringValue || '';
             const status = fields.status?.stringValue || '';
+            const hCalc = fields.horasCalculadas?.doubleValue ?? fields.horas_calculadas?.doubleValue ?? 0;
             if (hEntrada) {
-              foundRecord = { horaEntrada: hEntrada, horaSalida: hSalida, status: status, empId: empId };
-              break;
-            }
-          }
-        }
-
-        if (!foundRecord) {
-          for (const empId of candidates) {
-            const docId = todayStr + '_' + empId;
-            const url2 = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia/' + encodeURIComponent(docId) + '?key=' + FIRESTORE_API_KEY;
-            const res2 = await fetch(url2, { cache: 'no-cache' });
-            if (res2.ok) {
-              const data2 = await res2.json();
-              const fields2 = data2.fields || {};
-              const hEntrada = fields2.horaEntrada?.stringValue || fields2.hora_entrada?.stringValue || '';
-              const hSalida = fields2.horaSalida?.stringValue || fields2.hora_salida?.stringValue || '';
-              if (hEntrada) {
-                foundRecord = { horaEntrada: hEntrada, horaSalida: hSalida, empId: empId };
-                break;
-              }
+              foundRecord = { horaEntrada: hEntrada, horaSalida: hSalida, status: status, horasCalculadas: hCalc, docId: docId };
+              // Si este registro aún no tiene salida, es el turno activo actual
+              if (!hSalida) break;
             }
           }
         }
 
         if (foundRecord && foundRecord.horaEntrada) {
-          currentUser.ultimo_acceso_fecha = todayStr;
+          currentUser.ultimo_acceso_fecha = shiftDate;
           currentUser.ultima_hora_entrada = foundRecord.horaEntrada;
           currentUser.ultima_hora_salida = foundRecord.horaSalida || '';
+          if (foundRecord.horasCalculadas) currentUser.horas_calculadas_hoy = foundRecord.horasCalculadas;
           localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
           updateGateProfileButton();
           updateLiveShiftCard();
         } else {
-          // Si no hay registro hoy en Firestore para este operario, asegurar que no queden datos de entrada falsos
-          if (currentUser.ultimo_acceso_fecha !== todayStr) {
+          if (currentUser.ultimo_acceso_fecha !== shiftDate) {
             currentUser.ultima_hora_entrada = '';
             currentUser.ultima_hora_salida = '';
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
@@ -5892,11 +5929,10 @@
       if (forcedMode) {
         gateScanCurrentMode = forcedMode;
       } else {
-        // Consultar Firestore en tiempo real bajo demanda (Just-in-Time)
         await syncUserTodayAttendanceLive(true);
-        const todayStr = new Date().toISOString().slice(0, 10);
-        const hasEntryToday = (currentUser && currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_entrada);
-        const hasExitToday = (currentUser && currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_salida && currentUser.ultima_hora_salida.trim().length > 0);
+        const shiftDate = getShiftStartDate(currentUser);
+        const hasEntryToday = (currentUser && currentUser.ultimo_acceso_fecha === shiftDate && currentUser.ultima_hora_entrada && currentUser.ultima_hora_entrada.trim().length > 0);
+        const hasExitToday = (currentUser && currentUser.ultimo_acceso_fecha === shiftDate && currentUser.ultima_hora_salida && currentUser.ultima_hora_salida.trim().length > 0);
         if (hasEntryToday && !hasExitToday) {
           gateScanCurrentMode = 'SALIDA';
         } else if (hasExitToday) {
@@ -6067,15 +6103,18 @@
 
       const now = new Date();
       const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-      const todayYmd = now.toISOString().slice(0, 10);
+      const shiftDate = getShiftStartDate(currentUser, now);
 
-      // Registrar en Firestore
+      // Registrar en Firestore /registro_asistencia/
       try {
         if (currentUser) {
           const empId = String(currentUser.id || currentUser.pesel || '').trim();
+          const pesel = String(currentUser.pesel || currentUser.id || '').trim();
           const isExit = (gateScanCurrentMode === 'SALIDA');
+          const isApoyo = (gateScanCurrentMode === 'ENTRADA_APOYO' || !!currentUser.es_turno_apoyo);
           const statusField = isExit ? 'horaSalida' : 'horaEntrada';
 
+          // Comprobar programación y horario
           const schedStart = currentUser.horario_inicio || (String(currentUser.turno_actual || currentUser.turno) === '2' ? '14:00' : (String(currentUser.turno_actual || currentUser.turno) === '3' ? '22:00' : '06:00'));
           const isLate = (!isExit && timeStr > schedStart);
           const statusVal = isExit ? 'CONFIRMADO_SALIDA' : (isLate ? 'RETARDO' : 'A_TIEMPO');
@@ -6094,29 +6133,36 @@
             const deltaPastShiftMins = diffMins - allowedMins;
 
             if (deltaPastShiftMins <= 15) {
-              // Tolerancia hasta 10-15 min: no se informa a coordinación y los minutos se descartan
               finalCalcHours = baseH + extraH;
             } else {
               if (extraH > 0) {
                 finalCalcHours = Math.round(Math.min(diffMins / 60.0, baseH + extraH) * 10) / 10;
               } else {
                 finalCalcHours = baseH;
-                notifyWebLateExit(empId, timeStr, deltaPastShiftMins);
+                notifyWebLateExit(pesel, timeStr, deltaPastShiftMins);
               }
             }
             currentUser.horas_calculadas_hoy = finalCalcHours;
           }
 
-          const attDocUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + todayYmd + '/registros/' + encodeURIComponent(empId) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=' + statusField + '&updateMask.fieldPaths=status&updateMask.fieldPaths=employeeName&updateMask.fieldPaths=grupo&updateMask.fieldPaths=turno&updateMask.fieldPaths=qrGate&updateMask.fieldPaths=horaInicioEfectiva' + (isExit ? '&updateMask.fieldPaths=horasCalculadas' : '');
-          
+          // Formato estándar obligatorio: {fechaInicioTurno}_{PESEL} o {fechaInicioTurno}_{PESEL}-2
+          const targetDocId = isApoyo ? (shiftDate + '_' + pesel + '-2') : (shiftDate + '_' + pesel);
+          const attDocUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia/' + encodeURIComponent(targetDocId) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=fecha&updateMask.fieldPaths=pesel&updateMask.fieldPaths=employeeId&updateMask.fieldPaths=employeeName&updateMask.fieldPaths=grupo&updateMask.fieldPaths=turno&updateMask.fieldPaths=status&updateMask.fieldPaths=metodoMarcacion&updateMask.fieldPaths=horaInicioEfectiva&updateMask.fieldPaths=qrGate&updateMask.fieldPaths=markedAt&updateMask.fieldPaths=markedBy&updateMask.fieldPaths=' + statusField + (isExit ? '&updateMask.fieldPaths=horasCalculadas' : '');
+
           const payloadFields = {
-            [statusField]: { stringValue: timeStr },
-            status: { stringValue: statusVal },
+            fecha: { stringValue: shiftDate },
+            pesel: { stringValue: pesel },
+            employeeId: { stringValue: empId },
             employeeName: { stringValue: currentUser.nombre_completo || '' },
             grupo: { stringValue: currentUser.grupo || 'A' },
-            turno: { stringValue: String(currentUser.turno_actual || '1') },
+            turno: { stringValue: String(currentUser.turno_actual || currentUser.turno || '1') },
+            status: { stringValue: statusVal },
+            metodoMarcacion: { stringValue: 'QR_GATE' },
             qrGate: { stringValue: raw.slice(0, 30) },
-            horaInicioEfectiva: { stringValue: horaInicioEfec }
+            horaInicioEfectiva: { stringValue: horaInicioEfec },
+            markedAt: { stringValue: new Date().toISOString() },
+            markedBy: { stringValue: currentUser.nombre_completo || 'Usuario' },
+            [statusField]: { stringValue: timeStr }
           };
 
           if (isExit) {
@@ -6126,37 +6172,41 @@
           const payload = { fields: payloadFields };
 
           if (!isExit) {
-            currentUser.ultimo_acceso_fecha = todayYmd;
+            currentUser.ultimo_acceso_fecha = shiftDate;
             currentUser.ultima_hora_entrada = timeStr;
             currentUser.ultima_hora_salida = '';
             currentUser.auto_cierre_5h = false;
+            if (isApoyo) currentUser.sesion_apoyo_activa = true;
           } else {
             currentUser.ultima_hora_salida = timeStr;
+            currentUser.sesion_apoyo_activa = false;
           }
 
-          // 1. GUARDAR INMEDIATAMENTE EN LOCALSTORAGE (A SALVO SI CIERRAN NAVEGADOR)
+          // Guardar inmediatamente en localStorage
           try {
             localStorage.setItem('unamel_user_session', JSON.stringify(currentUser));
-            localStorage.setItem('unamel_today_attendance_' + empId, JSON.stringify({
-              fecha: todayYmd,
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            localStorage.setItem('unamel_today_attendance_' + pesel, JSON.stringify({
+              fecha: shiftDate,
               horaEntrada: currentUser.ultima_hora_entrada,
               horaSalida: currentUser.ultima_hora_salida,
+              horasCalculadas: currentUser.horas_calculadas_hoy || 0,
               auto_cierre_5h: !!currentUser.auto_cierre_5h
             }));
           } catch (e) {}
 
-          const actionId = 'att_' + todayYmd + '_' + empId + '_' + (isExit ? 'SALIDA' : 'ENTRADA');
+          const actionId = 'att_' + shiftDate + '_' + pesel + '_' + (isExit ? 'SALIDA' : 'ENTRADA') + (isApoyo ? '_APOYO' : '');
 
-          // 2. ENCOLAR EN COLA PENDIENTE PROTEGIDA
+          // Encolar acción protegida
           enqueuePendingSyncAction({
             id: actionId,
             url: attDocUrl,
             method: 'PATCH',
             payload: payload,
-            desc: (isExit ? 'Salida' : 'Entrada') + ' de ' + (currentUser.nombre_completo || empId) + ' (' + timeStr + ')'
+            desc: (isExit ? 'Salida' : 'Entrada') + ' de ' + (currentUser.nombre_completo || pesel) + ' (' + timeStr + ')'
           });
 
-          // 3. INTENTAR SUBIR A FIRESTORE SI HAY CUOTA
+          // Subir directamente a Firestore
           fetch(attDocUrl, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -6201,9 +6251,9 @@
       const icon = document.getElementById('btn-gate-scan-icon');
       if (!btn || !txt) return;
 
-      const todayStr = new Date().toISOString().slice(0, 10);
-      const hasEntry = (currentUser && currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_entrada);
-      let hasExit = (currentUser && currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_salida && currentUser.ultima_hora_salida.trim().length > 0);
+      const shiftDate = getShiftStartDate(currentUser);
+      const hasEntry = (currentUser && currentUser.ultimo_acceso_fecha === shiftDate && currentUser.ultima_hora_entrada);
+      let hasExit = (currentUser && currentUser.ultimo_acceso_fecha === shiftDate && currentUser.ultima_hora_salida && currentUser.ultima_hora_salida.trim().length > 0);
 
       const isCoord = (currentUser && (
         currentUser.rol === 'COORDINADOR' || 
@@ -6236,18 +6286,21 @@
             currentUser.auto_cierre_5h = true;
             hasExit = true;
 
-            const empId = String(currentUser.id || currentUser.pesel || '').trim();
+            const pesel = String(currentUser.pesel || currentUser.id || '').trim();
             try {
               localStorage.setItem('unamel_user_session', JSON.stringify(currentUser));
-              localStorage.setItem('unamel_today_attendance_' + empId, JSON.stringify({
-                fecha: todayStr,
+              localStorage.setItem('currentUser', JSON.stringify(currentUser));
+              localStorage.setItem('unamel_today_attendance_' + pesel, JSON.stringify({
+                fecha: shiftDate,
                 horaEntrada: currentUser.ultima_hora_entrada,
                 horaSalida: currentUser.ultima_hora_salida,
+                horasCalculadas: baseH,
                 auto_cierre_5h: true
               }));
             } catch (e) {}
 
-            const attDocUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + todayStr + '/registros/' + encodeURIComponent(empId) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=horaSalida&updateMask.fieldPaths=status&updateMask.fieldPaths=comentario&updateMask.fieldPaths=horasCalculadas';
+            const targetDocId = shiftDate + '_' + pesel;
+            const attDocUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia/' + encodeURIComponent(targetDocId) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=horaSalida&updateMask.fieldPaths=status&updateMask.fieldPaths=comentario&updateMask.fieldPaths=horasCalculadas';
             const payload = {
               fields: {
                 horaSalida: { stringValue: autoExitStr },
@@ -6257,13 +6310,13 @@
               }
             };
 
-            const autoActionId = 'auto_' + todayStr + '_' + empId;
+            const autoActionId = 'auto_' + shiftDate + '_' + pesel;
             enqueuePendingSyncAction({
               id: autoActionId,
               url: attDocUrl,
               method: 'PATCH',
               payload: payload,
-              desc: 'Auto-cierre (+5h) de ' + (currentUser.nombre_completo || empId) + ' (' + baseH + 'h)'
+              desc: 'Auto-cierre (+5h) de ' + (currentUser.nombre_completo || pesel) + ' (' + baseH + 'h)'
             });
 
             fetch(attDocUrl, {
@@ -6353,7 +6406,7 @@
       const cardHours = document.getElementById('box-live-shift-card-hours');
       if (!currentUser) return;
 
-      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayStr = getShiftStartDate(currentUser);
       const hasEntry = (currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_entrada);
       const hasExit = (currentUser.ultimo_acceso_fecha === todayStr && currentUser.ultima_hora_salida && currentUser.ultima_hora_salida.trim().length > 0);
       const isAutoClosed = currentUser.auto_cierre_5h;
@@ -6635,10 +6688,11 @@
           body: JSON.stringify(payload)
         });
 
-        // Si fue aprobado, actualizar directamente asistencia_diaria/{todayStr}/registros/{empId}
+        // Si fue aprobado, actualizar directamente registro_asistencia/{targetDocId}
         if (approve && reqEmpId) {
-          const todayYmd = new Date().toISOString().slice(0, 10);
-          const attUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/asistencia_diaria/' + todayYmd + '/registros/' + encodeURIComponent(reqEmpId) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=horasExtraAutorizadas&updateMask.fieldPaths=requiereAutorizacionExtra&updateMask.fieldPaths=liderSalida';
+          const shiftDate = getShiftStartDate(null);
+          const targetDocId = shiftDate + '_' + reqEmpId;
+          const attUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia/' + encodeURIComponent(targetDocId) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=horasExtraAutorizadas&updateMask.fieldPaths=requiereAutorizacionExtra&updateMask.fieldPaths=liderSalida';
           await fetch(attUrl, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
