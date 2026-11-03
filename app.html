@@ -6007,7 +6007,13 @@ async function checkSyncControlFlagWeb(forced) {
         return;
       }
 
-      logDocs.forEach(d => {
+      const sortedDocs = [...logDocs].sort((a, b) => {
+        const tsA = Number(a.fields?.ultima_conexion_timestamp?.integerValue || 0);
+        const tsB = Number(b.fields?.ultima_conexion_timestamp?.integerValue || 0);
+        return tsB - tsA;
+      });
+
+      sortedDocs.forEach(d => {
         const fields = d.fields || {};
         const idDoc = d.name.split('/').pop();
         if (idDoc === '0' || idDoc === '2023') return;
@@ -6016,7 +6022,22 @@ async function checkSyncControlFlagWeb(forced) {
         const accion = fields.ultima_conexion_accion ? fields.ultima_conexion_accion.stringValue : 'Consulta';
         const plat = fields.ultima_conexion_plataforma ? fields.ultima_conexion_plataforma.stringValue : 'Android/Web';
         const ultCon = fields.ultima_conexion ? fields.ultima_conexion.stringValue : '';
-        const timeStr = ultCon || 'Sin conexión aún';
+        let timeStr = ultCon || 'Sin conexión aún';
+        const ts = Number(fields.ultima_conexion_timestamp ? fields.ultima_conexion_timestamp.integerValue : 0);
+        if (ts > 0 || ultCon) {
+          const tMs = ts > 0 ? ts : new Date(ultCon.replace(' ', 'T')).getTime();
+          if (!isNaN(tMs) && tMs > 0) {
+            const diffDays = Math.floor((Date.now() - tMs) / (1000 * 60 * 60 * 24));
+            const dObj = new Date(tMs);
+            const dateOnly = String(dObj.getDate()).padStart(2, '0') + '/' + String(dObj.getMonth() + 1).padStart(2, '0') + '/' + dObj.getFullYear();
+            const timeOnly = String(dObj.getHours()).padStart(2, '0') + ':' + String(dObj.getMinutes()).padStart(2, '0');
+            if (diffDays === 0) timeStr = 'Hoy ' + timeOnly;
+            else if (diffDays === 1) timeStr = 'Ayer ' + timeOnly;
+            else if (diffDays >= 2 && diffDays < 30) timeStr = dateOnly + ' ' + timeOnly + ' (hace ' + diffDays + 'd)';
+            else if (diffDays >= 30 && diffDays < 60) timeStr = dateOnly + ' (hace más de 1 mes)';
+            else timeStr = dateOnly + ' (hace más de ' + Math.floor(diffDays / 30) + ' meses)';
+          }
+        }
 
         const isAndroid = plat.toLowerCase().includes('android');
         const platIcon = isAndroid ? '📱 Android' : '🌐 Web App';
@@ -6246,13 +6267,16 @@ async function checkSyncControlFlagWeb(forced) {
             updateLiveShiftCard();
           }
         } else {
-          // No hay ningún turno hoy ni turno nocturno activo de ayer -> Limpiar estado para que el primer turno de hoy sea {hoy}_{PESEL}
+          // No hay ningún turno hoy ni turno nocturno activo de ayer -> Limpiar estado de turno activo
+          // pero PRESERVAR el histórico de último acceso para que nunca desaparezca el registro
+          const prevUltAcceso = user.ultimo_acceso_historico_fecha || user.ultimo_acceso_fecha || '';
           user.ultimo_acceso_fecha = '';
           user.ultimo_acceso_doc_id = '';
           user.ultima_hora_entrada = '';
           user.ultima_hora_salida = '';
           user.auto_cierre_5h = false;
           user.turnos_hoy_docs = [];
+          if (prevUltAcceso) user.ultimo_acceso_historico_fecha = prevUltAcceso;
           localStorage.setItem('currentUser', JSON.stringify(user));
           localStorage.setItem('unamel_user_session', JSON.stringify(user));
           if (user === currentUser) {
@@ -6511,45 +6535,59 @@ async function checkSyncControlFlagWeb(forced) {
             const entryRef = isExit ? (currentUser.ultima_hora_entrada || timeStr) : timeStr;
             const entH = parseInt((entryRef.split(':')[0] || '6'), 10);
             effectiveTurno = (entH >= 5 && entH < 13) ? '1' : ((entH >= 13 && entH < 21) ? '2' : '3');
-            schedStart = entryRef;
+            schedStart = (effectiveTurno === '2' ? '14:00' : (effectiveTurno === '3' ? '22:00' : '06:00'));
           }
 
-          const isLate = (!isExit && !isHyphenSupport && timeStr > schedStart);
+          // CLAMPING DE ENTRADA: Llegar antes no computa tiempo anticipado; el conteo inicia a la hora oficial de turno
+          const isLate = (!isExit && timeStr > schedStart);
           const statusVal = isExit ? 'CONFIRMADO_SALIDA' : (isLate ? 'RETARDO' : 'A_TIEMPO');
-          const horaInicioEfec = isHyphenSupport ? (isExit ? (currentUser.ultima_hora_entrada || timeStr) : timeStr) : (isLate ? timeStr : schedStart);
+          const horaInicioEfec = isExit 
+            ? (currentUser.hora_inicio_efectiva || currentUser.ultima_hora_entrada || schedStart)
+            : (isLate ? timeStr : schedStart);
 
           let finalCalcHours = 0.0;
+          let horaSalidaEfec = timeStr;
           if (isExit) {
-            const startComp = currentUser.ultima_hora_entrada || schedStart;
+            const startComp = currentUser.hora_inicio_efectiva || currentUser.ultima_hora_entrada || schedStart;
             const [sH, sM] = startComp.split(':').map(Number);
             const [eH, eM] = timeStr.split(':').map(Number);
             let diffMins = (eH * 60 + eM) - (sH * 60 + sM);
             if (diffMins < 0) diffMins += 24 * 60;
 
-            if (isHyphenSupport) {
-              // En turnos de apoyo (-2, -3) se computa la duración real del bloque apoyado (ej. 14:00-18:00 = 4.0h)
-              finalCalcHours = Math.round((diffMins / 60.0) * 10) / 10;
-            } else {
-              const baseH = Number(currentUser.horas_base_turno) || 8;
-              const extraH = Number(currentUser.horas_extra_autorizadas) || 0;
-              const allowedMins = (baseH + extraH) * 60;
-              const deltaPastShiftMins = diffMins - allowedMins;
+            const baseH = Number(currentUser.horas_base_turno) || 8;
+            const extraH = Number(currentUser.horas_extra_autorizadas) || (esApoyoVal ? 2 : 0);
+            const totalAllowedMins = (baseH + extraH) * 60;
+            const deltaPastShiftMins = diffMins - totalAllowedMins;
 
-              if (deltaPastShiftMins <= 15) {
-                finalCalcHours = baseH + extraH;
+            if (diffMins < 15) {
+              finalCalcHours = 0.0;
+              horaSalidaEfec = timeStr;
+            } else if (diffMins < (totalAllowedMins - 15)) {
+              // Salida temprana real
+              finalCalcHours = Math.round((diffMins / 60.0) * 10) / 10;
+              horaSalidaEfec = timeStr;
+            } else if (deltaPastShiftMins < 30) {
+              // REGLA DE 30 MINUTOS: Para computar minutos adicionales tras el fin de turno, debe quedarse MÍNIMO 30 minutos más.
+              // Si sale dentro de los primeros 29 minutos (ej. 08:06 vs 08:00), no se suman minutos y se trunca exactamente a la jornada programada.
+              finalCalcHours = baseH + extraH;
+              const endTotalMins = (sH * 60 + sM + totalAllowedMins) % (24 * 60);
+              const schedEndH = String(Math.floor(endTotalMins / 60)).padStart(2, '0');
+              const schedEndM = String(endTotalMins % 60).padStart(2, '0');
+              horaSalidaEfec = schedEndH + ':' + schedEndM;
+            } else {
+              // Se quedó AL MENOS 30 minutos más tras fin de turno (deltaPastShiftMins >= 30)
+              horaSalidaEfec = timeStr;
+              if (extraH > 0 || isHyphenSupport) {
+                finalCalcHours = Math.round((diffMins / 60.0) * 10) / 10;
               } else {
-                if (extraH > 0) {
-                  finalCalcHours = Math.round(Math.min(diffMins / 60.0, baseH + extraH) * 10) / 10;
-                } else {
-                  finalCalcHours = baseH;
-                  notifyWebLateExit(pesel, timeStr, deltaPastShiftMins);
-                }
+                finalCalcHours = baseH;
+                notifyWebLateExit(pesel, timeStr, deltaPastShiftMins);
               }
             }
             currentUser.horas_calculadas_hoy = finalCalcHours;
           }
 
-          const attDocUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia/' + encodeURIComponent(targetDocId) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=fecha&updateMask.fieldPaths=pesel&updateMask.fieldPaths=employeeId&updateMask.fieldPaths=employeeName&updateMask.fieldPaths=grupo&updateMask.fieldPaths=turno&updateMask.fieldPaths=shiftType&updateMask.fieldPaths=esApoyo&updateMask.fieldPaths=status&updateMask.fieldPaths=metodoMarcacion&updateMask.fieldPaths=horaInicioEfectiva&updateMask.fieldPaths=qrGate&updateMask.fieldPaths=markedAt&updateMask.fieldPaths=markedBy&updateMask.fieldPaths=' + statusField + (isExit ? '&updateMask.fieldPaths=horasCalculadas' : '');
+          const attDocUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/registro_asistencia/' + encodeURIComponent(targetDocId) + '?key=' + FIRESTORE_API_KEY + '&updateMask.fieldPaths=fecha&updateMask.fieldPaths=pesel&updateMask.fieldPaths=employeeId&updateMask.fieldPaths=employeeName&updateMask.fieldPaths=grupo&updateMask.fieldPaths=turno&updateMask.fieldPaths=shiftType&updateMask.fieldPaths=esApoyo&updateMask.fieldPaths=status&updateMask.fieldPaths=metodoMarcacion&updateMask.fieldPaths=horaInicioEfectiva&updateMask.fieldPaths=qrGate&updateMask.fieldPaths=markedAt&updateMask.fieldPaths=markedBy&updateMask.fieldPaths=' + statusField + (isExit ? '&updateMask.fieldPaths=horasCalculadas&updateMask.fieldPaths=horaSalidaEfectiva' : '');
 
           const payloadFields = {
             fecha: { stringValue: attDate },
@@ -6571,6 +6609,7 @@ async function checkSyncControlFlagWeb(forced) {
 
           if (isExit) {
             payloadFields.horasCalculadas = { doubleValue: finalCalcHours };
+            payloadFields.horaSalidaEfectiva = { stringValue: horaSalidaEfec };
           }
 
           const payload = { fields: payloadFields };
@@ -6579,6 +6618,7 @@ async function checkSyncControlFlagWeb(forced) {
             currentUser.ultimo_acceso_fecha = attDate;
             currentUser.ultimo_acceso_doc_id = targetDocId;
             currentUser.ultima_hora_entrada = timeStr;
+            currentUser.hora_inicio_efectiva = horaInicioEfec;
             currentUser.ultima_hora_salida = '';
             currentUser.auto_cierre_5h = false;
             if (!Array.isArray(currentUser.turnos_hoy_docs)) currentUser.turnos_hoy_docs = [];
@@ -6586,6 +6626,7 @@ async function checkSyncControlFlagWeb(forced) {
             if (isApoyo) currentUser.sesion_apoyo_activa = true;
           } else {
             currentUser.ultima_hora_salida = timeStr;
+            currentUser.hora_salida_efectiva = horaSalidaEfec;
             currentUser.sesion_apoyo_activa = false;
           }
 
