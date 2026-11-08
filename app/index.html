@@ -5367,8 +5367,9 @@ async function checkSyncControlFlagWeb(forced) {
         const processedIds = new Set();
         const items = [];
 
-        // Filtrar programados en este turno
-        const scheduled = allEmps.filter(d => {
+        // Filtrar programados en este turno (respetando descanso de fin de semana)
+        const isWeekendRest = (pt.shift && pt.shift.includes('Descanso')) || (pt.expected === 0 && (!pt.shift || !pt.shift.includes('Turno 3')));
+        const scheduled = isWeekendRest ? [] : allEmps.filter(d => {
           if (targetShift === 'ALL') return true;
           const grp = String(getEmpField(d, 'grupo') || '').toUpperCase().trim();
           let empShift = String(getEmpField(d, 'turno_actual') || '');
@@ -5455,6 +5456,10 @@ async function checkSyncControlFlagWeb(forced) {
           }
         }
 
+        const ptHour = (pt.timeLabel ? parseInt(pt.timeLabel.split(':')[0], 10) : 6) || 0;
+        const bucketStartMins = ptHour * 60;
+        const bucketEndMins = bucketStartMins + 60;
+
         scheduled.forEach(d => {
           const empId = getEmpId(d);
           const empPesel = String(getEmpField(d, 'pesel') || empId);
@@ -5486,8 +5491,8 @@ async function checkSyncControlFlagWeb(forced) {
           });
         });
 
-        // Operarios de apoyo (-2, -3) u otros turnos que escanearon en este bloque
-        const allBreakdownRecs = (targetShift === '3') ? dateRecs.concat(prevDateRecs) : dateRecs;
+        // Operarios activos en planta a esta hora (Presentes y Apoyos)
+        const allBreakdownRecs = dateRecs.concat(prevDateRecs);
         allBreakdownRecs.forEach(a => {
           const aid = a.employeeId || a.pesel || '';
           const apesel = a.pesel || '';
@@ -5502,22 +5507,50 @@ async function checkSyncControlFlagWeb(forced) {
 
           const alreadyInShift = (!isHyphenApoyo) && (processedIds.has(aid) || processedIds.has(apesel));
           if (!alreadyInShift && !processedIds.has(uniqueRecKey) && hEnt && hEnt.includes(':')) {
-            const entH = parseInt(hEnt.split(':')[0], 10);
-            let matches = (targetShift === 'ALL');
-            if (targetShift === '1' && entH >= 5 && entH <= 13 && a.fecha === ptYmd) matches = true;
-            if (targetShift === '2' && entH >= 13 && entH <= 21 && a.fecha === ptYmd) matches = true;
-            if (targetShift === '3') {
-              if (a.fecha === ptYmd && (entH >= 21 || entH <= 5)) matches = true;
-              else if (a.fecha === prevYmd && entH >= 21) matches = true;
+            const entParts = hEnt.split(':');
+            const entH = parseInt(entParts[0], 10);
+            const entM = parseInt(entParts[1] || '0', 10);
+            const entryMins = entH * 60 + entM;
+
+            const tOut = a.horaSalida || '';
+            let exitMins = null;
+            if (tOut && tOut.includes(':')) {
+              const outParts = tOut.split(':');
+              exitMins = parseInt(outParts[0], 10) * 60 + parseInt(outParts[1] || '0', 10);
             }
 
-            if (matches) {
+            let isActive = false;
+            if (a.fecha === ptYmd) {
+              const isNightShift = (entH >= 21 || entH <= 4);
+              if (isNightShift) {
+                if (entH >= 21) {
+                  const endOfDayMins = exitMins !== null ? exitMins : 1440;
+                  isActive = bucketEndMins > entryMins && bucketStartMins < endOfDayMins;
+                } else {
+                  const shiftEndMins = exitMins !== null ? exitMins : Math.min(6 * 60, entryMins + 8 * 60);
+                  isActive = bucketEndMins > entryMins && bucketStartMins < shiftEndMins;
+                }
+              } else {
+                const shiftEndMins = exitMins !== null ? exitMins : Math.max(14 * 60, entryMins + 8 * 60);
+                isActive = bucketEndMins > entryMins && bucketStartMins < shiftEndMins;
+              }
+            } else if (a.fecha === prevYmd) {
+              const isNightShiftCross = (entH >= 21);
+              if (isNightShiftCross) {
+                const shiftEndMinsToday = exitMins !== null ? exitMins : (8 * 60);
+                isActive = bucketStartMins < shiftEndMinsToday;
+              }
+            }
+
+            if (isActive) {
               const matchedShift = (entH >= 5 && entH < 13) ? '1' : ((entH >= 13 && entH < 21) ? '2' : '3');
               const stInfo = evaluateStatus(aid, aname, a, false, matchedShift);
-              if (isHyphenApoyo && stInfo.status === 'RETARDO') {
-                stInfo.status = 'PRESENTE';
-                stInfo.label = 'APOYO';
-              }
+              stInfo.status = 'PRESENTE';
+              stInfo.label = '✅ APOYO';
+              stInfo.bg = '#064e3b';
+              stInfo.border = '#10b981';
+              stInfo.color = '#34d399';
+
               const grpLabel = isHyphenApoyo
                 ? ((a.grupo ? (a.grupo + ' · ') : '') + 'Apoyo')
                 : String(a.grupo || 'Apoyo');
@@ -5548,20 +5581,22 @@ async function checkSyncControlFlagWeb(forced) {
 
         const totalCnt = items.length;
         const scanCnt = items.filter(x => x.stInfo.status === 'PRESENTE' || x.stInfo.status === 'RETARDO').length;
-        const absCnt = Math.max(0, totalCnt - scanCnt);
+        const absCnt = items.filter(x => x.stInfo.status === 'INASISTENCIA' || x.stInfo.status === 'PROGRAMADO').length;
 
         // SINCRONIZAR TARJETAS KPI SUPERIORES CON LOS CONTEOS EXACTOS
         const elProg = document.getElementById('chart-kpi-prog');
-        if (elProg) elProg.innerText = totalCnt;
+        if (elProg) elProg.innerText = (pt.expected !== undefined) ? pt.expected : totalCnt;
         const elScan = document.getElementById('chart-kpi-scan');
         if (elScan) elScan.innerText = pt.isFuture ? '-' : scanCnt;
         const elAdh = document.getElementById('chart-kpi-adh');
         if (elAdh) {
           if (pt.isFuture) {
             elAdh.innerText = '--';
-          } else {
-            const pAdhVal = totalCnt > 0 ? Math.min(100, (scanCnt / totalCnt) * 100).toFixed(1) : '100.0';
+          } else if (pt.expected && pt.expected > 0) {
+            const pAdhVal = Math.min(100, (scanCnt / pt.expected) * 100).toFixed(1);
             elAdh.innerText = pAdhVal + '%';
+          } else {
+            elAdh.innerText = scanCnt > 0 ? '100.0%' : '100.0%';
           }
         }
 
