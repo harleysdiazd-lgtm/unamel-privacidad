@@ -4739,6 +4739,43 @@ async function checkSyncControlFlagWeb(forced) {
       const h = dt.getHours();
       const ymd = formatYMD(dt);
 
+      // Programación específica de la semana 9 al 15 de Noviembre
+      if (ymd === '2026-11-09') {
+        if (h >= 8 && h < 18) {
+          return { count: 14, desc: 'Jornada Completa · 08:00-18:00' };
+        }
+        return { count: 0, desc: 'Fuera de Jornada' };
+      }
+      if (ymd === '2026-11-10') {
+        if (h >= 8 && h < 18) {
+          let c = 14;
+          if (h >= 8 && h < 12) c = 15; // Alfiya entra 8:30
+          else if (h >= 12 && h < 17) c = 14; // Maged sale 12:00
+          else if (h >= 17) c = 13; // Alfiya sale 17:00
+          return { count: c, desc: 'Jornada Completa · 08:00-18:00' };
+        }
+        return { count: 0, desc: 'Fuera de Jornada' };
+      }
+      if (ymd === '2026-11-11') {
+        if (h >= 8 && h < 18) {
+          const c = (h >= 8 && h < 16) ? 7 : 6; // Dylan termina 16:00, Xamse no programado
+          return { count: c, desc: 'Turno Festivo Especial · 08:00-18:00' };
+        }
+        return { count: 0, desc: 'Festivo Nacional · Fuera de Turno' };
+      }
+      if (ymd === '2026-11-12' || ymd === '2026-11-13') {
+        if (h >= 6 && h < 14) {
+          return { count: 13, desc: 'Turno 1 (Mañana · 06:00-14:00)' }; // Lenny Marcela excluida por permiso
+        } else if (h >= 14 && h < 22) {
+          return { count: 13, desc: 'Turno 2 (Tarde · 14:00-22:00)' };
+        } else {
+          return { count: 0, desc: 'Turno 3 (Descanso)' };
+        }
+      }
+      if (ymd === '2026-11-14' || ymd === '2026-11-15') {
+        return { count: 0, desc: 'Fin de Semana (Descanso)' };
+      }
+
       // 1. Si existe historial de proyección guardado para esta fecha previa (Lunes o Martes congelados), preservarlo
       if (window.historialProyecciones && window.historialProyecciones[ymd]) {
         const dayRecord = window.historialProyecciones[ymd];
@@ -5389,32 +5426,105 @@ async function checkSyncControlFlagWeb(forced) {
         const processedIds = new Set();
         const items = [];
 
-        // Filtrar programados en este turno (respetando descanso de fin de semana)
-        const isWeekendRest = (pt.shift && pt.shift.includes('Descanso')) || (pt.expected === 0 && (!pt.shift || !pt.shift.includes('Turno 3')));
-        const scheduled = isWeekendRest ? [] : allEmps.filter(d => {
-          if (targetShift === 'ALL') return true;
-          const grp = String(getEmpField(d, 'grupo') || '').toUpperCase().trim();
-          let empShift = String(getEmpField(d, 'turno_actual') || '');
-          if (!empShift || empShift === '0') {
-            empShift = (grp === 'C') ? '1' : ((grp === 'A') ? '2' : ((grp === 'B') ? '3' : '1'));
-          }
-          if (empShift === targetShift) return true;
+        const ptHour = (pt.timeLabel ? parseInt(pt.timeLabel.split(':')[0], 10) : 6) || 0;
+        const bucketStartMins = ptHour * 60;
+        const bucketEndMins = bucketStartMins + 60;
 
-          // Compatibilidad horaria dinámica: verificar si la hora de inicio y fin del operario cubre este turno
-          const hIni = String(getEmpField(d, 'hora_inicio_turno') || '');
-          const hFin = String(getEmpField(d, 'hora_fin_turno') || '');
-          if (hIni && hIni.includes(':')) {
-            const sH = parseInt(hIni.split(':')[0], 10);
-            const eH = hFin.includes(':') ? parseInt(hFin.split(':')[0], 10) : (sH + 8);
-            if (shiftStartHour !== undefined) {
-              if (sH < eH) return (shiftStartHour >= sH && shiftStartHour < eH);
-              if (sH > eH) return (shiftStartHour >= sH || shiftStartHour < eH);
-            }
+        // Filtrar programados en este turno (respetando descanso de fin de semana y programación especial)
+        const isWeekendRest = (pt.shift && pt.shift.includes('Descanso')) || (pt.expected === 0 && (!pt.shift || !pt.shift.includes('Turno 3')));
+        let scheduled = [];
+        if (ptYmd === '2026-11-09') {
+          if (ptHour >= 8 && ptHour < 18) {
+            const nov9Keys = ['myriam', 'elkin', 'lilian', 'wilber', 'yaritza', 'francisco', 'daily', 'flor', 'sanjeev', 'surendra', 'edison', 'khalid', 'maria jose', 'nur'];
+            scheduled = allEmps.filter(d => {
+              const nom = (getEmpField(d, 'nombre_completo') || getEmpField(d, 'nombre') || '').toLowerCase();
+              return nov9Keys.some(k => nom.includes(k));
+            });
           }
-          return false;
-        });
+        } else if (ptYmd === '2026-11-10') {
+          if (ptHour >= 8 && ptHour < 18) {
+            const nov10Keys = ['kateryna', 'qaid', 'myriam', 'lilian', 'francisco', 'daily', 'joan david', 'flor', 'sanjeev', 'surendra', 'edison', 'alkhalaf', 'xamse', 'maged', 'alfiya'];
+            scheduled = allEmps.filter(d => {
+              const nom = (getEmpField(d, 'nombre_completo') || getEmpField(d, 'nombre') || '').toLowerCase();
+              if (nom.includes('maged') && ptHour >= 12) return false;
+              if (nom.includes('alfiya') && ptHour >= 17) return false;
+              return nov10Keys.some(k => nom.includes(k));
+            });
+          }
+        } else if (ptYmd === '2026-11-11') {
+          if (ptHour >= 8 && ptHour < 18) {
+            const nov11Keys = ['qaid', 'francisco', 'daily', 'edison', 'alkhalaf', 'maria jose', 'dylan'];
+            scheduled = allEmps.filter(d => {
+              const nom = (getEmpField(d, 'nombre_completo') || getEmpField(d, 'nombre') || '').toLowerCase();
+              if (nom.includes('xamse')) return false;
+              if (nom.includes('dylan') && ptHour >= 16) return false;
+              return nov11Keys.some(k => nom.includes(k));
+            });
+          }
+        } else if (ptYmd === '2026-11-12' || ptYmd === '2026-11-13') {
+          if (ptHour >= 6 && ptHour < 14) {
+            const t1Keys = ['mariia', 'kateryna', 'hery', 'qaid', 'myriam', 'svitlana', 'elkin', 'francisco', 'daily', 'edison', 'alkhalaf', 'maria jose', 'alfiya'];
+            scheduled = allEmps.filter(d => {
+              const nom = (getEmpField(d, 'nombre_completo') || getEmpField(d, 'nombre') || '').toLowerCase();
+              return !nom.includes('lenny') && t1Keys.some(k => nom.includes(k));
+            });
+          } else if (ptHour >= 14 && ptHour < 22) {
+            const t2Keys = ['zakarie', 'lilian', 'maged', 'wilber', 'yaritza', 'joan david', 'kevin', 'flor', 'sanjeev', 'surendra', 'khalid', 'xamse', 'nur'];
+            scheduled = allEmps.filter(d => {
+              const nom = (getEmpField(d, 'nombre_completo') || getEmpField(d, 'nombre') || '').toLowerCase();
+              return t2Keys.some(k => nom.includes(k));
+            });
+          }
+        } else if (isWeekendRest) {
+          scheduled = [];
+        } else {
+          scheduled = allEmps.filter(d => {
+            if (targetShift === 'ALL') return true;
+            const grp = String(getEmpField(d, 'grupo') || '').toUpperCase().trim();
+            let empShift = String(getEmpField(d, 'turno_actual') || '');
+            if (!empShift || empShift === '0') {
+              empShift = (grp === 'C') ? '1' : ((grp === 'A') ? '2' : ((grp === 'B') ? '3' : '1'));
+            }
+            if (empShift === targetShift) return true;
+
+            const hIni = String(getEmpField(d, 'hora_inicio_turno') || '');
+            const hFin = String(getEmpField(d, 'hora_fin_turno') || '');
+            if (hIni && hIni.includes(':')) {
+              const sH = parseInt(hIni.split(':')[0], 10);
+              const eH = hFin.includes(':') ? parseInt(hFin.split(':')[0], 10) : (sH + 8);
+              if (shiftStartHour !== undefined) {
+                if (sH < eH) return (shiftStartHour >= sH && shiftStartHour < eH);
+                if (sH > eH) return (shiftStartHour >= sH || shiftStartHour < eH);
+              }
+            }
+            return false;
+          });
+        }
 
         function evaluateStatus(empId, empName, rec, isFuture, empShift) {
+          const empNomLow = String(empName || '').toLowerCase();
+          if (empNomLow.includes('lenny')) {
+            return {
+              status: 'PROGRAMADO',
+              label: '🏖️ Permiso Aprobado',
+              timeDetail: 'Permiso aprobado toda la semana',
+              exitDetail: '',
+              bg: '#1e3a8a', border: '#3b82f6', color: '#93c5fd'
+            };
+          }
+
+          const isUnjust = (ptYmd === '2026-11-09' && (empNomLow.includes('wilber') || empNomLow.includes('yaritza') || empNomLow.includes('khalid') || empNomLow.includes('nur'))) ||
+                          (ptYmd === '2026-11-10' && (empNomLow.includes('joan david') || empNomLow.includes('flor')));
+          if (isUnjust && (!rec || !rec.horaEntrada)) {
+            return {
+              status: 'INASISTENCIA',
+              label: '❌ Inasistencia Injustificada',
+              timeDetail: 'Ausencia no autorizada (0 hrs)',
+              exitDetail: '',
+              bg: '#450a0a', border: '#ef4444', color: '#f87171'
+            };
+          }
+
           const effShift = empShift || targetShift;
           const isTurno3 = (effShift === '3');
           const schedH = (effShift === '1' ? 6 : (effShift === '2' ? 14 : 22));
@@ -5477,10 +5587,6 @@ async function checkSyncControlFlagWeb(forced) {
             };
           }
         }
-
-        const ptHour = (pt.timeLabel ? parseInt(pt.timeLabel.split(':')[0], 10) : 6) || 0;
-        const bucketStartMins = ptHour * 60;
-        const bucketEndMins = bucketStartMins + 60;
 
         scheduled.forEach(d => {
           const empId = getEmpId(d);
