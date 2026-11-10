@@ -4824,7 +4824,13 @@ async function checkSyncControlFlagWeb(forced) {
       const plantEmps = (dispList || []).filter(e => {
         const eid = String(e.id || '');
         const eName = (e.nombre_completo || e.nombre || '').toLowerCase();
-        return !eid.startsWith('900') && eid !== '9001' && eid !== '9002' && eid !== '9003' && !eName.includes('(ia)') && e.id !== '0' && e.id !== '2023';
+        const activo = e.activo !== false && String(e.activo) !== 'false';
+        const estado = String(e.estadoLaboral || e.estado || 'Disponible').trim().toLowerCase();
+        const grp = String(e.grupo || '').trim();
+        return !eid.startsWith('900') && eid !== '9001' && eid !== '9002' && eid !== '9003' &&
+               !eName.includes('(ia)') && !eName.includes('operarioia') && !eName.includes('lideria') && !eName.includes('coordinadoria') &&
+               eid !== '0' && eid !== '2023' &&
+               activo && estado === 'disponible' && grp.length > 0;
       });
 
       const now = new Date();
@@ -4919,12 +4925,23 @@ async function checkSyncControlFlagWeb(forced) {
           }
         });
 
-        // Historial en días trabajados detalle para fechas pasadas
-        if (c === 0) {
-          const dNum = parseInt(targetYMD.split('-')[2], 10);
+        // Historial en días trabajados detalle ÚNICAMENTE para fechas pasadas de meses cerrados (NUNCA para hoy ni futuro)
+        const todayStr = formatYMD(new Date());
+        if (c === 0 && targetYMD < todayStr) {
+          const [tY, tM, tD] = targetYMD.split('-').map(Number);
+          const monthNames = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+          const targetMonthName = monthNames[tM] || '';
+          const dNum = tD;
+
           plantEmps.forEach(emp => {
-            if (emp.dias_trabajados_detalle) {
-              const match = emp.dias_trabajados_detalle.some(d => d.dia === dNum && d.horasTrabajadas > 0);
+            const histMes = String(emp.mes_reporte || emp.mesReporte || '').toLowerCase();
+            const sameMonth = histMes === targetMonthName || (tY === 2026 && tM === 10 && histMes.includes('oct'));
+            if (sameMonth && emp.dias_trabajados_detalle) {
+              const match = emp.dias_trabajados_detalle.some(d => {
+                const dMes = String(d.mes || '').toLowerCase();
+                const dMesMatch = !dMes || dMes === targetMonthName || dMes.includes(targetMonthName);
+                return d.dia === dNum && d.horasTrabajadas > 0 && dMesMatch;
+              });
               if (match) {
                 const s = String(emp.turno_actual || (emp.grupo === 'A' ? '1' : (emp.grupo === 'B' ? '2' : '3')));
                 let covers = false;
@@ -5180,8 +5197,8 @@ async function checkSyncControlFlagWeb(forced) {
           }
         });
 
-        const totalProg = shiftEmps.length > 0 ? shiftEmps.length : (pt.expected || 15);
-        const totalScan = pt.isFuture ? 0 : Math.max(shiftScanCount, pt.actual);
+        const totalProg = (pt.expected !== undefined) ? pt.expected : (shiftEmps.length > 0 ? shiftEmps.length : 15);
+        const totalScan = pt.isFuture ? 0 : (pt.actual !== undefined ? pt.actual : shiftScanCount);
 
         const hActTitle = document.getElementById('chart-hud-scan-title');
         const hAct = document.getElementById('chart-hud-actual');
@@ -5349,12 +5366,17 @@ async function checkSyncControlFlagWeb(forced) {
           return '';
         }
 
-        // Extraer operarios de planta (Excluyendo cuentas administrativas y pruebas)
+        // Extraer operarios de planta (Excluyendo cuentas administrativas, pruebas y bajas)
         const allEmps = (window.rawCoordDispDocs || []).filter(d => {
           const id = getEmpId(d);
           const pesel = String(getEmpField(d, 'pesel') || '');
           const nom = String(getEmpField(d, 'nombre_completo') || getEmpField(d, 'nombre') || '');
-          return id && id !== '0' && id !== '2023' && pesel !== '95071616157' && !id.startsWith('900') && !nom.toLowerCase().includes('harley') && !nom.toLowerCase().includes('santiago');
+          const activo = getEmpField(d, 'activo') !== false && String(getEmpField(d, 'activo')) !== 'false';
+          const estado = String(getEmpField(d, 'estadoLaboral') || getEmpField(d, 'estado') || 'Disponible').trim().toLowerCase();
+          const grp = String(getEmpField(d, 'grupo') || '').trim();
+          return id && id !== '0' && id !== '2023' && pesel !== '95071616157' && !id.startsWith('900') &&
+                 !nom.toLowerCase().includes('harley') && !nom.toLowerCase().includes('santiago') &&
+                 activo && estado === 'disponible' && grp.length > 0;
         });
 
         const ptYmd = pt.ymdDate || (pt.fullLabel && pt.fullLabel.includes('-') ? pt.fullLabel.split(' · ')[0] : formatYMD(new Date()));
