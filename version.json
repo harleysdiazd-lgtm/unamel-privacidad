@@ -1,6 +1,6 @@
 {
-  "version": 1793526725928,
-  "buildDate": "2026-11-01 10:50:00",
+  "version": 1795291147536,
+  "buildDate": "2026-11-21 20:59:00",
   "appName": "UNAMEL Coordinacion",
   "features": [
     "granular-pesel-versions-clean-labels",
@@ -8,6 +8,7 @@
     "last-active-user-strict-emergency-login",
     "offline-quota-safe-sync-and-session-protection",
     "universal-role-sync-no-logout",
-    "month-standard-localization-2026-11"
+    "month-standard-localization-2026-11",
+    "strict-pesel-session-verification-auto-logout"
   ]
 }
