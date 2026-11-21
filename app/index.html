@@ -2018,68 +2018,129 @@
     let _lastSyncControlWebCheck = 0;
     const SYNC_CONTROL_INTERVAL_MS = 300000; // 5 minutos (300.000 ms)
 
+    // ==========================================
+    // VERIFICACIÓN ESTRICTA DE IDENTIDAD POR PESEL
+    // ==========================================
+    function normalizePeselWeb(val) {
+      const raw = String(val || '').trim().toLowerCase().replace(/\s+/g, '');
+      if (!raw) return '';
+      if (raw === '0') return '95071616157';
+      if (raw === '2023' || raw === '2424') return raw;
+      const digits = raw.replace(/\D/g, '');
+      if (!digits) return raw;
+      if (digits.length === 10) return '0' + digits;
+      return digits;
+    }
+
+    function getSessionOwnerPesel() {
+      try {
+        return normalizePeselWeb(localStorage.getItem('unamel_session_owner_pesel') || '');
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function forceSecurityLogout(reason) {
+      console.warn('[SECURITY] Auto-logout:', reason);
+      try {
+        logout();
+      } catch (e) {}
+      const errBox = document.getElementById('login-error');
+      if (errBox) {
+        errBox.innerText = '🔒 Sesión cerrada por seguridad: la información descargada no coincide con el PESEL de su cuenta. Por favor inicie sesión nuevamente.';
+        errBox.style.display = 'block';
+      }
+    }
+
+    function verifyDownloadedPeselOrLogout(downloadedEmp, expectedOverride) {
+      const expected = normalizePeselWeb(expectedOverride || getSessionOwnerPesel() || (currentUser && currentUser.pesel) || '');
+      const actual = normalizePeselWeb((downloadedEmp && downloadedEmp.pesel) || '');
+      if (expected === '2023' && (actual === '2023' || String((downloadedEmp && downloadedEmp.id) || '') === '2023')) {
+        return true;
+      }
+      if (expected === '2424' && (actual === '2424' || String((downloadedEmp && downloadedEmp.id) || '') === '2424')) {
+        return true;
+      }
+      if (!expected || !actual || expected !== actual) {
+        forceSecurityLogout('PESEL mismatch: expected=' + expected + ', actual=' + actual);
+        return false;
+      }
+      return true;
+    }
+
         // Sincronización universal del colaborador activo desde Cloud Firestore (TODOS los roles)
     async function refreshCurrentUserFromFirestore(notify = false) {
       if (!currentUser) return;
-      const rawPesel = String(currentUser.pesel || currentUser.id || '').trim();
-      const normPesel = (rawPesel.length === 10 && /^\d+$/.test(rawPesel)) ? ('0' + rawPesel) : rawPesel;
-      const isSantiago = (rawPesel === '0' || rawPesel === '95071616157' || normPesel === '95071616157' || (currentUser.nombre_completo && currentUser.nombre_completo.toLowerCase().includes('santiago')));
-      const docKey = isSantiago ? '95071616157' : (normPesel || currentUser.id);
-      if (!docKey) return;
+      const ownerPesel = getSessionOwnerPesel() || normalizePeselWeb(currentUser.pesel || '');
+      if (ownerPesel === '2424') return;
+      if (!ownerPesel) {
+        forceSecurityLogout('Sesión sin PESEL propietario');
+        return;
+      }
+      const docKey = (ownerPesel === '0') ? '95071616157' : ownerPesel;
 
       try {
         const docUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles/' + encodeURIComponent(docKey) + '?key=' + FIRESTORE_API_KEY;
         const resp = await _originalFetch(docUrl, { cache: 'no-cache' });
+        if (resp.status === 404) {
+          forceSecurityLogout('Cuenta no encontrada en Firestore (docKey=' + docKey + ')');
+          return;
+        }
         if (resp.ok) {
           const docData = await resp.json();
           const fresh = parseFirestoreDoc(docData.fields);
-          if (fresh && (fresh.nombre_completo || fresh.nombre || fresh.id)) {
-            fresh.id = fresh.id || currentUser.id || docKey;
-            fresh.pesel = fresh.pesel || currentUser.pesel || docKey;
-            fresh.rol_app = fresh.rol_app || currentUser.rol_app;
-            if (!fresh.historial_meses) fresh.historial_meses = currentUser.historial_meses || {};
+          if (!fresh || !(fresh.nombre_completo || fresh.nombre || fresh.id)) {
+            forceSecurityLogout('Documento de empleado inválido o vacío en Firestore');
+            return;
+          }
+          if (!verifyDownloadedPeselOrLogout(fresh, docKey)) return;
 
-            // Traer subcolección asistencia/2026-10 si hiciera falta
-            if (!fresh.historial_meses['2026-10'] || !fresh.historial_meses['2026-10'].dias || fresh.historial_meses['2026-10'].dias.length === 0) {
-              try {
-                const u = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles/' + encodeURIComponent(docKey) + '/asistencia/2026-10?key=' + FIRESTORE_API_KEY;
-                const r = await _originalFetch(u, { cache: 'no-cache' });
-                if (r.ok) {
-                  const d = await r.json();
-                  const o = parseFirestoreDoc(d.fields);
-                  if (o && (o.dias || o.total_horas_mes !== undefined)) {
-                    fresh.historial_meses['2026-10'] = {
-                      total_horas: o.total_horas_mes !== undefined ? o.total_horas_mes : (o.total_horas || 0),
-                      total_horas_mes: o.total_horas_mes,
-                      dias: o.dias || []
-                    };
-                    if (o.dias) fresh.dias_trabajados_detalle = o.dias;
-                    if (o.total_horas_mes !== undefined) fresh.horas_mes_actual = o.total_horas_mes;
-                  }
-                }
-              } catch(eSub) {}
-            }
+          fresh.id = fresh.id || currentUser.id || docKey;
+          fresh.pesel = fresh.pesel || currentUser.pesel || docKey;
+          fresh.rol_app = fresh.rol_app || currentUser.rol_app;
+          if (!fresh.historial_meses) fresh.historial_meses = currentUser.historial_meses || {};
 
-            // Si mes_reporte es Octubre, enlazar directamente 2026-10
-            if ((fresh.mes_reporte === 'Octubre' || fresh.mesReporte === 'Octubre') && fresh.horas_mes_actual) {
-              if (!fresh.historial_meses['2026-10']) {
-                fresh.historial_meses['2026-10'] = { total_horas: Number(fresh.horas_mes_actual), total_horas_mes: Number(fresh.horas_mes_actual), dias: fresh.dias_trabajados_detalle || [] };
-              } else {
-                fresh.historial_meses['2026-10'].total_horas = Number(fresh.horas_mes_actual);
-                if (fresh.dias_trabajados_detalle && fresh.dias_trabajados_detalle.length > 0) {
-                  fresh.historial_meses['2026-10'].dias = fresh.dias_trabajados_detalle;
+          // Traer subcolección asistencia/2026-10 si hiciera falta
+          if (!fresh.historial_meses['2026-10'] || !fresh.historial_meses['2026-10'].dias || fresh.historial_meses['2026-10'].dias.length === 0) {
+            try {
+              const u = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles/' + encodeURIComponent(docKey) + '/asistencia/2026-10?key=' + FIRESTORE_API_KEY;
+              const r = await _originalFetch(u, { cache: 'no-cache' });
+              if (r.ok) {
+                const d = await r.json();
+                const o = parseFirestoreDoc(d.fields);
+                if (o && (o.dias || o.total_horas_mes !== undefined)) {
+                  fresh.historial_meses['2026-10'] = {
+                    total_horas: o.total_horas_mes !== undefined ? o.total_horas_mes : (o.total_horas || 0),
+                    total_horas_mes: o.total_horas_mes,
+                    dias: o.dias || []
+                  };
+                  if (o.dias) fresh.dias_trabajados_detalle = o.dias;
+                  if (o.total_horas_mes !== undefined) fresh.horas_mes_actual = o.total_horas_mes;
                 }
               }
-            }
+            } catch(eSub) {}
+          }
 
-            currentUser = fresh;
-            localStorage.setItem('unamel_user_session', JSON.stringify(fresh));
-            localStorage.setItem('unamel_last_active_user', JSON.stringify(fresh));
-            renderUserProfile(fresh);
-            renderSelectedMonthHours();
-            if (notify) {
-              showCleanToast('Horas y datos actualizados en vivo', '#059669');
+          // Si mes_reporte es Octubre, enlazar directamente 2026-10
+          if ((fresh.mes_reporte === 'Octubre' || fresh.mesReporte === 'Octubre') && fresh.horas_mes_actual) {
+            if (!fresh.historial_meses['2026-10']) {
+              fresh.historial_meses['2026-10'] = { total_horas: Number(fresh.horas_mes_actual), total_horas_mes: Number(fresh.horas_mes_actual), dias: fresh.dias_trabajados_detalle || [] };
+            } else {
+              fresh.historial_meses['2026-10'].total_horas = Number(fresh.horas_mes_actual);
+              if (fresh.dias_trabajados_detalle && fresh.dias_trabajados_detalle.length > 0) {
+                fresh.historial_meses['2026-10'].dias = fresh.dias_trabajados_detalle;
+              }
             }
+          }
+
+          currentUser = fresh;
+          localStorage.setItem('unamel_session_owner_pesel', docKey);
+          localStorage.setItem('unamel_user_session', JSON.stringify(fresh));
+          localStorage.setItem('unamel_last_active_user', JSON.stringify(fresh));
+          renderUserProfile(fresh);
+          renderSelectedMonthHours();
+          if (notify) {
+            showCleanToast('Horas y datos actualizados en vivo', '#059669');
           }
         }
       } catch (err) {
@@ -2344,8 +2405,9 @@ async function checkSyncControlFlagWeb(forced) {
           } catch(e) {}
 
           errBox.style.display = 'none';
+          localStorage.setItem('unamel_session_owner_pesel', '95071616157');
           renderUserProfile(santiagoEmp);
-          localStorage.setItem('unamel_cached_id', peselInput);
+          localStorage.setItem('unamel_cached_id', '95071616157');
           localStorage.setItem('unamel_cached_pin', pinInput);
           localStorage.setItem('unamel_user_session', JSON.stringify(santiagoEmp));
           localStorage.setItem('unamel_last_active_user', JSON.stringify(santiagoEmp));
@@ -2380,8 +2442,9 @@ async function checkSyncControlFlagWeb(forced) {
             horas_base_turno: 8
           };
           errBox.style.display = 'none';
+          localStorage.setItem('unamel_session_owner_pesel', '2023');
           renderUserProfile(adminEmp);
-          localStorage.setItem('unamel_cached_id', peselInput);
+          localStorage.setItem('unamel_cached_id', '2023');
           localStorage.setItem('unamel_cached_pin', pinInput);
           localStorage.setItem('unamel_user_session', JSON.stringify(adminEmp));
           localStorage.setItem('unamel_last_active_user', JSON.stringify(adminEmp));
@@ -2418,8 +2481,9 @@ async function checkSyncControlFlagWeb(forced) {
             horas_base_turno: 8
           };
           errBox.style.display = 'none';
+          localStorage.setItem('unamel_session_owner_pesel', '2424');
           renderUserProfile(monitorEmp);
-          localStorage.setItem('unamel_cached_id', peselInput);
+          localStorage.setItem('unamel_cached_id', '2424');
           localStorage.setItem('unamel_cached_pin', pinInput);
           localStorage.setItem('unamel_user_session', JSON.stringify(monitorEmp));
           localStorage.setItem('unamel_last_active_user', JSON.stringify(monitorEmp));
@@ -2436,16 +2500,22 @@ async function checkSyncControlFlagWeb(forced) {
 
       // 2. Consulta a Firestore (si hay cuota disponible)
       try {
-        const queryId = normPeselInput;
-        const docUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles/' + queryId + '?key=' + FIRESTORE_API_KEY;
+        const queryId = normalizePeselWeb(normPeselInput);
+        const docUrl = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles/' + encodeURIComponent(queryId) + '?key=' + FIRESTORE_API_KEY;
         const firestoreResp = await fetch(docUrl, { cache: 'no-cache' });
 
         if (firestoreResp.ok) {
           const docData = await firestoreResp.json();
           const emp = parseFirestoreDoc(docData.fields);
-          const ePesel = (emp.pesel || '').toString().trim().toLowerCase().replace(/\s+/g, '');
-          const normEPesel = (ePesel.length === 10 && /^\d+$/.test(ePesel)) ? ('0' + ePesel) : ePesel;
-          
+          const normEPesel = normalizePeselWeb(emp.pesel || '');
+
+          if (!normEPesel || normEPesel !== queryId) {
+            errBox.innerText = '🔒 Error de seguridad: el PESEL descargado (' + (normEPesel || 'vacío') + ') no coincide con la cuenta solicitada.';
+            errBox.style.display = 'block';
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Ingresar al Sistema'; }
+            return;
+          }
+
           const expectedPin = (emp.clave_pin || '').toString().trim();
           const peselLast4 = normEPesel.length >= 4 ? normEPesel.slice(-4) : '';
           
@@ -2454,7 +2524,7 @@ async function checkSyncControlFlagWeb(forced) {
           if (pinMatches) {
             if (!emp.historial_meses) emp.historial_meses = {};
             try {
-              const u = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles/' + (emp.pesel || queryId) + '/asistencia/2026-10?key=' + FIRESTORE_API_KEY;
+              const u = 'https://firestore.googleapis.com/v1/projects/' + FIRESTORE_PROJECT_ID + '/databases/(default)/documents/disponibles/' + encodeURIComponent(normEPesel) + '/asistencia/2026-10?key=' + FIRESTORE_API_KEY;
               const r = await fetch(u, { cache: 'no-cache' });
               if (r.ok) {
                 const d = await r.json();
@@ -2472,10 +2542,11 @@ async function checkSyncControlFlagWeb(forced) {
             } catch(attErr) {}
 
             errBox.style.display = 'none';
+            localStorage.setItem('unamel_session_owner_pesel', normEPesel);
             // Consultar inmediatamente /registro_asistencia/ para poblar el estado de hoy antes de renderizar
             await syncUserTodayAttendanceLive(true, emp);
             renderUserProfile(emp);
-            localStorage.setItem('unamel_cached_id', peselInput);
+            localStorage.setItem('unamel_cached_id', normEPesel);
             localStorage.setItem('unamel_cached_pin', pinInput);
             localStorage.setItem('unamel_user_session', JSON.stringify(emp));
             localStorage.setItem('unamel_last_active_user', JSON.stringify(emp));
@@ -2494,15 +2565,15 @@ async function checkSyncControlFlagWeb(forced) {
         console.warn('Consulta a Firestore falló (o cuota agotada):', e);
       }
 
-      // 3. Modo de Emergencia Offline: Restringido estrictamente al ÚLTIMO USUARIO que haya iniciado sesión
+      // 3. Modo de Emergencia Offline: Restringido estrictamente al ÚLTIMO USUARIO que haya iniciado sesión (solo por PESEL)
       try {
         const lastUserRaw = localStorage.getItem('unamel_last_active_user');
         if (lastUserRaw) {
           const lastUser = JSON.parse(lastUserRaw);
           const lastPin = localStorage.getItem('unamel_last_active_pin') || '';
-          const lastPesel = String(lastUser.pesel || '').toLowerCase().replace(/\s+/g, '');
-          const lastId = String(lastUser.id || '');
-          const isMatchUser = (peselInput === lastPesel || normPeselInput === lastPesel || peselInput === lastId || (lastUser.rol_app === 'COORDINADOR' && isSantiagoQuery));
+          const lastPesel = normalizePeselWeb(lastUser.pesel || '');
+          const cleanNormInput = normalizePeselWeb(normPeselInput);
+          const isMatchUser = Boolean(lastPesel && (cleanNormInput === lastPesel || (lastUser.rol_app === 'COORDINADOR' && isSantiagoQuery && lastPesel === '95071616157')));
 
           if (isMatchUser) {
             const expPin = String(lastUser.clave_pin || lastPin).trim();
@@ -2511,9 +2582,10 @@ async function checkSyncControlFlagWeb(forced) {
 
             if (pinOk) {
               errBox.style.display = 'none';
+              localStorage.setItem('unamel_session_owner_pesel', lastPesel);
               await syncUserTodayAttendanceLive(true, lastUser);
               renderUserProfile(lastUser);
-              localStorage.setItem('unamel_cached_id', peselInput);
+              localStorage.setItem('unamel_cached_id', lastPesel);
               localStorage.setItem('unamel_cached_pin', pinInput);
               localStorage.setItem('unamel_user_session', JSON.stringify(lastUser));
               if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Ingresar al Sistema'; }
@@ -3454,7 +3526,7 @@ async function checkSyncControlFlagWeb(forced) {
               return false;
             }
 
-            const rec = attendanceRecordsMap[w.id + '_EXTRA'] || attendanceRecordsMap[w.id + '_SHIFT_3'] || attendanceRecordsMap[w.id];
+            const rec = getAttendanceRecForWorker(w, true);
             const hasScanned = rec && rec.horaEntrada && rec.status !== 'PENDIENTE';
 
             return Boolean(hasScanned);
@@ -3559,8 +3631,32 @@ async function checkSyncControlFlagWeb(forced) {
       return inWindow(p1) || inWindow(p2);
     }
 
+    function getAttendanceRecForWorker(w, isSupport = false) {
+      if (!w) return null;
+      const rawP = String(w.pesel || '').trim();
+      const normP = normalizePeselWeb(rawP);
+      if (isSupport) {
+        if (normP && (attendanceRecordsMap[normP + '_EXTRA'] || attendanceRecordsMap[normP + '_SHIFT_3'])) {
+          return attendanceRecordsMap[normP + '_EXTRA'] || attendanceRecordsMap[normP + '_SHIFT_3'];
+        }
+        if (rawP && (attendanceRecordsMap[rawP + '_EXTRA'] || attendanceRecordsMap[rawP + '_SHIFT_3'])) {
+          return attendanceRecordsMap[rawP + '_EXTRA'] || attendanceRecordsMap[rawP + '_SHIFT_3'];
+        }
+      }
+      if (normP && attendanceRecordsMap[normP]) return attendanceRecordsMap[normP];
+      if (rawP && attendanceRecordsMap[rawP]) return attendanceRecordsMap[rawP];
+      if (!rawP && w.id !== undefined && w.id !== null) {
+        const wid = String(w.id).trim();
+        if (isSupport && (attendanceRecordsMap[wid + '_EXTRA'] || attendanceRecordsMap[wid + '_SHIFT_3'])) {
+          return attendanceRecordsMap[wid + '_EXTRA'] || attendanceRecordsMap[wid + '_SHIFT_3'];
+        }
+        return attendanceRecordsMap[wid] || null;
+      }
+      return null;
+    }
+
     function getWorkerPlantStatus(worker, nowHHmm) {
-      const rec = attendanceRecordsMap[worker.id];
+      const rec = getAttendanceRecForWorker(worker);
       const hasEntry = rec && rec.horaEntrada && rec.horaEntrada.trim().length > 0;
       const hasExit = rec && rec.horaSalida && rec.horaSalida.trim().length > 0;
 
@@ -3627,8 +3723,14 @@ async function checkSyncControlFlagWeb(forced) {
       const mainContainer = document.getElementById('main-group-cards-list');
       if (mainContainer) {
         mainContainer.innerHTML = '';
-        const pendingMain = activeGroupMembers.filter(w => !attendanceRecordsMap[w.id] || attendanceRecordsMap[w.id].status === 'PENDIENTE');
-        const markedMain = activeGroupMembers.filter(w => attendanceRecordsMap[w.id] && attendanceRecordsMap[w.id].status !== 'PENDIENTE');
+        const pendingMain = activeGroupMembers.filter(w => {
+          const r = getAttendanceRecForWorker(w);
+          return !r || r.status === 'PENDIENTE';
+        });
+        const markedMain = activeGroupMembers.filter(w => {
+          const r = getAttendanceRecForWorker(w);
+          return r && r.status !== 'PENDIENTE';
+        });
 
         pendingMain.forEach(w => {
           mainContainer.appendChild(createWorkerAttendanceCard(w, false, dict));
@@ -3663,8 +3765,14 @@ async function checkSyncControlFlagWeb(forced) {
       const suppContainer = document.getElementById('support-group-cards-list');
       if (suppContainer) {
         suppContainer.innerHTML = '';
-        const pendingSupp = activeSupportWorkers.filter(w => !attendanceRecordsMap[w.id] || attendanceRecordsMap[w.id].status === 'PENDIENTE');
-        const markedSupp = activeSupportWorkers.filter(w => attendanceRecordsMap[w.id] && attendanceRecordsMap[w.id].status !== 'PENDIENTE');
+        const pendingSupp = activeSupportWorkers.filter(w => {
+          const r = getAttendanceRecForWorker(w, true);
+          return !r || r.status === 'PENDIENTE';
+        });
+        const markedSupp = activeSupportWorkers.filter(w => {
+          const r = getAttendanceRecForWorker(w, true);
+          return r && r.status !== 'PENDIENTE';
+        });
 
         pendingSupp.forEach(w => {
           suppContainer.appendChild(createWorkerAttendanceCard(w, true, dict));
@@ -3703,7 +3811,7 @@ async function checkSyncControlFlagWeb(forced) {
           const item = document.createElement('div');
           item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; background:#ffffff; border:1px solid #dbeafe; border-radius:10px; margin-bottom:6px; cursor:pointer;';
           item.onclick = () => openAttendanceModalFor(mem.id);
-          const rec = attendanceRecordsMap[mem.id];
+          const rec = getAttendanceRecForWorker(mem);
           const st = rec ? (rec.status === 'ASISTIO' ? '✅' : (rec.status === 'RETARDO' ? '⏱️' : (rec.status === 'NO_ASISTIO' ? '❌' : '⏳'))) : '⏳';
           item.innerHTML = `
             <div>
@@ -3742,7 +3850,7 @@ async function checkSyncControlFlagWeb(forced) {
 
     function createWorkerAttendanceCard(worker, isSupport, dict) {
       const isLeader = (worker.rol_app === 'LIDER_LINEA' || (worker.posicion && worker.posicion.toLowerCase().includes('lider')));
-      const rec = attendanceRecordsMap[worker.id];
+      const rec = getAttendanceRecForWorker(worker, isSupport);
       const status = rec ? rec.status : 'PENDIENTE';
 
       let statusBadgeText = dict.status_pending || '⏳ معلق';
@@ -3861,7 +3969,7 @@ async function checkSyncControlFlagWeb(forced) {
       document.getElementById('modal-att-date-val').innerText = formatDMY(currentAttendanceDate);
       document.getElementById('modal-att-notes').value = '';
 
-      const rec = attendanceRecordsMap[w.id];
+      const rec = getAttendanceRecForWorker(w);
       selectedAttendanceStatusChoice = (rec && rec.status) ? rec.status : 'ASISTIO';
       highlightSelectedAttChoice(selectedAttendanceStatusChoice);
 
@@ -4546,7 +4654,7 @@ async function checkSyncControlFlagWeb(forced) {
       });
 
       filtered.forEach(emp => {
-        const rec = attMap[String(emp.id)] || (emp.pesel ? attMap[String(emp.pesel)] : null) || { status: 'PENDIENTE', notes: '' };
+        const rec = (emp.pesel ? (attMap[normalizePeselWeb(emp.pesel)] || attMap[String(emp.pesel)]) : null) || (!emp.pesel ? attMap[String(emp.id)] : null) || { status: 'PENDIENTE', notes: '' };
         const st = (rec.status || 'PENDIENTE').toUpperCase();
 
         if (st === 'ASISTIO' || st === 'A_TIEMPO' || st === 'PRESENTES' || st === 'NORMAL' || st === 'PRESENTE') {
@@ -4583,7 +4691,7 @@ async function checkSyncControlFlagWeb(forced) {
         }
 
         filtered.forEach(emp => {
-          const rec = attMap[String(emp.id)] || (emp.pesel ? attMap[String(emp.pesel)] : null) || { status: 'PENDIENTE', notes: '' };
+          const rec = (emp.pesel ? (attMap[normalizePeselWeb(emp.pesel)] || attMap[String(emp.pesel)]) : null) || (!emp.pesel ? attMap[String(emp.id)] : null) || { status: 'PENDIENTE', notes: '' };
           const st = (rec.status || 'PENDIENTE').toUpperCase();
 
           let badgeBg = '#f1f5f9';
@@ -6253,10 +6361,22 @@ async function checkSyncControlFlagWeb(forced) {
 
     function logout() {
       currentUser = null;
+      if (typeof liveShiftTimerInterval !== 'undefined' && liveShiftTimerInterval) {
+        clearInterval(liveShiftTimerInterval);
+        liveShiftTimerInterval = null;
+      }
       updateFirestoreWebBadge();
+      localStorage.removeItem('unamel_session_owner_pesel');
       localStorage.removeItem('unamel_cached_id');
       localStorage.removeItem('unamel_cached_pin');
       localStorage.removeItem('unamel_user_session');
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('unamel_last_active_user');
+      localStorage.removeItem('unamel_last_active_pin');
+      localStorage.removeItem('unamel_web_cached_disponibles');
+      localStorage.removeItem('unamel_web_cached_all_month_attendance');
+      localStorage.removeItem('unamel_coord_excel_matrix');
+      localStorage.removeItem('unamel_coord_excel_timestamp');
       document.getElementById('screen-app').classList.add('hidden');
       document.getElementById('bottom-nav').classList.add('hidden');
       document.getElementById('btn-logout').classList.add('hidden');
@@ -7555,6 +7675,15 @@ async function checkSyncControlFlagWeb(forced) {
         if (savedSession) {
           const emp = JSON.parse(savedSession);
           if (emp && (emp.id !== undefined || emp.pesel)) {
+            const empPesel = normalizePeselWeb(emp.pesel || '');
+            const ownerPesel = getSessionOwnerPesel();
+            if (!empPesel || (ownerPesel && ownerPesel !== empPesel)) {
+              forceSecurityLogout('Discrepancia de PESEL al restaurar sesión (owner=' + ownerPesel + ', emp=' + empPesel + ')');
+              return;
+            }
+            if (!ownerPesel) {
+              localStorage.setItem('unamel_session_owner_pesel', empPesel);
+            }
             renderUserProfile(emp);
             syncUserTodayAttendanceLive(true, emp);
             setTimeout(flushPendingFirestoreQueue, 1500);
